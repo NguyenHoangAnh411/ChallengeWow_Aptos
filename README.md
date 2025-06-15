@@ -27,7 +27,7 @@
 ## 🔐 Proof of Challenge with zk-SNARK
 
 Each completed challenge is cryptographically sealed using **zk-SNARK**:
-- The winner’s result is transformed into a **zero-knowledge proof**.
+- The winner's result is transformed into a **zero-knowledge proof**.
 - The zk-proof is submitted to the **OLYM3 Testnet** as an immutable on-chain **Challenge Block**.
 - This block includes:
   - Player IDs (hashed)
@@ -76,3 +76,83 @@ This isn't just a quiz game — it's a **Challenge Wave**.
 > 🏁 **Play Fast. Think Smart. Prove It Onchain.**
 
 ---
+
+# Challenge Wave GameFi Backend
+
+A FastAPI-based backend for the Challenge Wave GameFi application that allows players to create and join challenge rooms, answer questions, and compete for rewards.
+
+## Features
+
+- Create and join challenge rooms (2-4 players)
+- Real-time game updates via WebSocket
+- 3-minute countdown when enough players join
+- 15-second time limit for each question
+- Score calculation based on answer speed
+- zk-SNARK proof generation for winners
+- Supabase integration for questions database
+
+## Setup
+
+1. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Create a `.env` file with your Supabase credentials:
+```
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+```
+
+4. Run the application:
+```bash
+uvicorn main:app --reload
+```
+
+The API will be available at `http://localhost:8000`
+
+## API Endpoints
+
+### REST Endpoints
+
+- `POST /create-room`: Create a new game room
+- `POST /join-room`: Join an existing room
+- `POST /submit-answer`: Submit an answer for the current question
+- `GET /room/{room_id}`: Get current room status
+
+### WebSocket Endpoint
+
+- `WS /ws/{room_id}`: Real-time game updates
+
+## Game Flow
+
+1. Player creates a room or joins an existing one
+2. When 2-4 players join, a 3-minute countdown starts
+3. After countdown, players have 15 seconds to answer each question
+4. Score is calculated based on answer speed (15 - time taken)
+5. After all questions, winner is determined and zk-SNARK proof is generated
+6. Results are saved to Supabase
+
+## Development
+
+The project structure:
+```
+.
+├── main.py           # FastAPI application and endpoints
+├── models.py         # Pydantic models and schemas
+├── database.py       # Supabase connection and database operations
+├── game_logic.py     # Game mechanics and helper functions
+└── requirements.txt  # Project dependencies
+```
+
+## Notes
+
+- Currently using in-memory storage for rooms (should be moved to database in production)
+- zk-SNARK proof generation is simulated
+- Supabase integration is prepared but needs actual database setup
