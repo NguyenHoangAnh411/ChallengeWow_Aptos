@@ -1,8 +1,14 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from server.models.models import Room, Player, CreateRoomRequest, JoinRoomRequest, AnswerSubmission, GameResult
-from server.config.database import get_room, save_room, get_random_question
-from server.services.game_logic import start_countdown, calculate_score
+
+from models.create_room_request import CreateRoomRequest
+from models.join_request import JoinRoomRequest
+from models.answer_submission import AnswerSubmission
+from models.player import Player
+from models.room import Room
+
+from config.database import get_room, save_room, get_random_question
+from services.game_logic import start_countdown, calculate_score
 import asyncio
 from typing import Dict, List
 import json
@@ -10,7 +16,7 @@ import os
 
 app = FastAPI(title="Challenge Wave API")
 
-PORT = os.getenv("PORT", 8000);
+PORT = int(os.getenv("PORT", 9000))
 
 # Add CORS middleware
 app.add_middleware(

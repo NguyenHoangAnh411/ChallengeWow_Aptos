@@ -3,8 +3,10 @@ from datetime import datetime, timedelta
 from typing import List, Dict
 import json
 import hashlib
-from server.models.models import Room, Player
-from server.config.database import get_random_question, save_game_result
+
+from models.room import Room
+from models.player import Player
+from config.database import get_random_question, save_game_result
 
 async def start_countdown(room: Room):
     """Start 3-minute countdown for room"""

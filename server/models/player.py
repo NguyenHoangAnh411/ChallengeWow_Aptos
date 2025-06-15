@@ -3,6 +3,8 @@ from typing import List
 from datetime import datetime, timezone
 import uuid
 
+from models.answer import Answer
+
 # 👤 Người chơi trong phòng
 class Player(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

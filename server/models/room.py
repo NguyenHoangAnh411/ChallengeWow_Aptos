@@ -1,13 +1,18 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
+
+from models.player import Player
+from models.question import Question
+from models.zkproof import ZKProof
+from enums.game_status import GAME_STATUS
 
 # 🏠 Phòng chơi
 class Room(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     players: List[Player] = []
-    status: str = "waiting"  # waiting, counting_down, in_progress, finished
+    status: str = GAME_STATUS.WAITING
     current_question: Optional[Question] = None
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
