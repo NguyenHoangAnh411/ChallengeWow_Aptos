@@ -6,6 +6,7 @@ import uuid
 class ZKProof(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     room_id: str
+    score: float
     winner_hashed_id: str
     proof_ipfs_url: str
     onchain_tx_hash: str

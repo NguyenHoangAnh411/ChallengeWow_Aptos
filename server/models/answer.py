@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 class Answer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question_id: str
-    user_id: str
+    wallet_id: str
     room_id: str
     selected_index: int
     is_correct: bool
