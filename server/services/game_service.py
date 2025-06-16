@@ -57,7 +57,7 @@ class GameService:
     async def end_game(self, room: Room):
         room.status = GAME_STATUS.FINISHED
         winner = max(room.players, key=lambda p: p.score)
-        room.winner = winner.id
+        room.winner_wallet_id = winner.id
 
         proof = self.generate_fake_proof(room)
         room.proof = proof
@@ -74,7 +74,7 @@ class GameService:
     def generate_fake_proof(self, room: Room) -> str:
         data = {
             "room_id": room.id,
-            "winner": room.winner,
+            "winner_wallet_id": room.winner_wallet_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "scores": [{"player_id": p.id, "score": p.score} for p in room.players],
         }

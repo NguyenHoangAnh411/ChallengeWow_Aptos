@@ -8,10 +8,10 @@ class ZkProofController:
         self.zkproof_service = zkproof_service
 
     def submit_proof(
-        self, room_id: str, winner_id: str, proof: str, scores: List[dict]
+        self, room_id: str, winner_wallet_id: str, proof: str, scores: List[dict]
     ):
         try:
-            self.zkproof_service.store_proof(room_id, winner_id, proof, scores)
+            self.zkproof_service.store_proof(room_id, winner_wallet_id, proof, scores)
             return {"success": True}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))

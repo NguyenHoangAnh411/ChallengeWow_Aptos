@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime, timezone
 
-
 # 📤 Kết quả game
 class GameResult(BaseModel):
     room_id: str

@@ -19,7 +19,7 @@ class RoomRepository(IRoomRepository):
                 "current_question": (
                     json.dumps(room.current_question) if room.current_question else None
                 ),
-                "winner": room.winner,
+                "winner_wallet_id": room.winner_wallet_id,
                 "proof": room.proof,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }

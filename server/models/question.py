@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from typing import List
 import uuid
 
-
 # ❓ Câu hỏi
 class Question(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
