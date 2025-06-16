@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from services.question_service import QuestionService
 
+
 class QuestionController:
     def __init__(self, question_service: QuestionService):
         self.question_service = question_service

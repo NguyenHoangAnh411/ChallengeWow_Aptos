@@ -8,8 +8,14 @@ from enums.game_status import GAME_STATUS
 import hashlib
 import json
 
+
 class GameService:
-    def __init__(self, room_service: RoomService, question_service: QuestionService, zkproof_service: ZkProofService):
+    def __init__(
+        self,
+        room_service: RoomService,
+        question_service: QuestionService,
+        zkproof_service: ZkProofService,
+    ):
         self.room_service = room_service
         self.question_service = question_service
         self.zkproof_service = zkproof_service
@@ -39,12 +45,12 @@ class GameService:
             await asyncio.sleep(15)
 
             for player in room.players:
-                if not any(a.get("question_id") == question["id"] for a in player.answers):
-                    player.answers.append({
-                        "question_id": question["id"],
-                        "answer": None,
-                        "score": 0
-                    })
+                if not any(
+                    a.get("question_id") == question["id"] for a in player.answers
+                ):
+                    player.answers.append(
+                        {"question_id": question["id"], "answer": None, "score": 0}
+                    )
 
         await self.end_game(room)
 
@@ -58,7 +64,10 @@ class GameService:
 
         self.room_service.save_room(room)
 
-        scores = [{"player_id": p.id, "username": p.username, "score": p.score} for p in room.players]
+        scores = [
+            {"player_id": p.id, "username": p.username, "score": p.score}
+            for p in room.players
+        ]
 
         self.zkproof_service.store_proof(room.id, winner.id, proof, scores)
 
@@ -67,7 +76,7 @@ class GameService:
             "room_id": room.id,
             "winner": room.winner,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "scores": [{"player_id": p.id, "score": p.score} for p in room.players]
+            "scores": [{"player_id": p.id, "score": p.score} for p in room.players],
         }
         return hashlib.sha256(json.dumps(data).encode()).hexdigest()
 

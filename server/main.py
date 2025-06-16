@@ -3,10 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from repositories.implement.room_repo_impl import RoomRepository
-from repositories.implement.player_repo_impl  import PlayerRepository
-from repositories.implement.question_repo_impl  import QuestionRepository
-from repositories.implement.answer_repo_impl  import AnswerRepository
-from repositories.implement.zkproof_repo_impl  import ZkProofRepository
+from repositories.implement.player_repo_impl import PlayerRepository
+from repositories.implement.question_repo_impl import QuestionRepository
+from repositories.implement.answer_repo_impl import AnswerRepository
+from repositories.implement.zkproof_repo_impl import ZkProofRepository
 
 from services.game_service import GameService
 from services.room_service import RoomService
@@ -72,4 +72,5 @@ HOST = "0.0.0.0"
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host=HOST, port=PORT, reload=True)

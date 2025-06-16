@@ -8,6 +8,7 @@ from models.question import Question
 from models.zkproof import ZKProof
 from enums.game_status import GAME_STATUS
 
+
 # 🏠 Phòng chơi
 class Room(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

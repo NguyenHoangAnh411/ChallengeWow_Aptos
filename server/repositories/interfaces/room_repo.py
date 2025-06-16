@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from models.room import Room
 
+
 class IRoomRepository(ABC):
     @abstractmethod
     def get(self, room_id: str) -> Room | None:

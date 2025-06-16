@@ -6,6 +6,7 @@ from models.room import Room
 from repositories.interfaces.player_repo import IPlayerRepository
 from models.player import Player
 
+
 class RoomService:
     def __init__(self, room_repo: IRoomRepository, player_repo: IPlayerRepository):
         self.room_repo = room_repo
@@ -15,7 +16,7 @@ class RoomService:
         room = Room(
             id=str(uuid.uuid4()),
             players=[player],
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         self.room_repo.save(room)
         self.player_repo.save_all(room.id, room.players)

@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from services.player_service import PlayerService
 
+
 class PlayerController:
     def __init__(self, player_service: PlayerService):
         self.player_service = player_service

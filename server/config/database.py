@@ -5,6 +5,7 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
+
 def init_supabase() -> Client:
     """
     Initialize and return a Supabase client.
@@ -21,6 +22,7 @@ def init_supabase() -> Client:
         return client
     except Exception as e:
         raise Exception(f"Failed to initialize Supabase client: {str(e)}")
+
 
 # Initialize Supabase client
 supabase: Client = init_supabase()

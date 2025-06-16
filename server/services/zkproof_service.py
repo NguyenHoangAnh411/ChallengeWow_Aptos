@@ -1,6 +1,7 @@
 from repositories.interfaces.zkproof_repo import IZkProofRepository
 from typing import List
 
+
 class ZkProofService:
     def __init__(self, zk_repo: IZkProofRepository):
         self.zk_repo = zk_repo

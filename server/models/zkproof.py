@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 import uuid
 
+
 # 🔐 Zero-knowledge proof lưu trên IPFS/on-chain
 class ZKProof(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

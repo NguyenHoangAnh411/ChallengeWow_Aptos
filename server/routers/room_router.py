@@ -4,6 +4,7 @@ from models.join_request import JoinRoomRequest
 from models.answer_submission import AnswerSubmission
 from controllers.room_controller import RoomController
 
+
 def create_room_router(room_controller: RoomController):
     router = APIRouter()
 
@@ -26,5 +27,5 @@ def create_room_router(room_controller: RoomController):
     @router.websocket("/ws/{room_id}")
     async def websocket_endpoint(websocket: WebSocket, room_id: str):
         await room_controller.handle_websocket(websocket, room_id)
-    
+
     return router

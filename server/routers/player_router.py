@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from controllers.player_controller import PlayerController
 
+
 def create_player_router(controller: PlayerController):
     router = APIRouter()
 

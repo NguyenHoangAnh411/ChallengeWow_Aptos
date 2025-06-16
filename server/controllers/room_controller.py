@@ -6,6 +6,7 @@ from services.room_service import RoomService
 from services.game_service import GameService
 import asyncio
 
+
 class RoomController:
     def __init__(self, room_service: RoomService, game_service: GameService):
         self.room_service = room_service
@@ -16,7 +17,11 @@ class RoomController:
         player = Player(wallet_id=request.wallet_id, username=request.username)
         room = Room(players=[player])
         self.room_service.save_room(room)
-        return {"room_id": room.id, "player_id": player.id, "wallet_id": player.wallet_id}
+        return {
+            "room_id": room.id,
+            "player_id": player.id,
+            "wallet_id": player.wallet_id,
+        }
 
     def join_room(self, request):
         room = self.room_service.get_room(request.room_id)
@@ -26,7 +31,7 @@ class RoomController:
             raise HTTPException(status_code=400, detail="Room is full")
         if room.status != GAME_STATUS.WAITING:
             raise HTTPException(status_code=400, detail="Game already in progress")
-        
+
         player = Player(wallet_id=request.wallet_id, username=request.username)
         room.players.append(player)
         self.room_service.save_room(room)
@@ -42,17 +47,19 @@ class RoomController:
             raise HTTPException(status_code=404, detail="Room not found")
         if room.status != GAME_STATUS.IN_PROGRESS:
             raise HTTPException(status_code=400, detail="Game is not in progress")
-        
+
         player = next((p for p in room.players if p.id == submission.player_id), None)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
-        
+
         score = self.game_service.calculate_score(submission.timestamp, room.start_time)
-        player.answers.append({
-            "question_id": room.current_question["id"],
-            "answer": submission.answer,
-            "score": score
-        })
+        player.answers.append(
+            {
+                "question_id": room.current_question["id"],
+                "answer": submission.answer,
+                "score": score,
+            }
+        )
         player.score += score
         self.room_service.save_room(room)
         return {"score": score}
@@ -63,10 +70,17 @@ class RoomController:
             raise HTTPException(status_code=404, detail="Room not found")
         return {
             "status": room.status,
-            "players": [{"id": p.id, "username": p.username, "score": p.score} for p in room.players],
-            "current_question": room.current_question if room.status == GAME_STATUS.IN_PROGRESS else None
+            "players": [
+                {"id": p.id, "username": p.username, "score": p.score}
+                for p in room.players
+            ],
+            "current_question": (
+                room.current_question
+                if room.status == GAME_STATUS.IN_PROGRESS
+                else None
+            ),
         }
-        
+
     async def handle_websocket(self, websocket: WebSocket, room_id: str):
         if room_id not in self.manager:
             self.manager[room_id] = []

@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from controllers.zkproof_controller import ZkProofController
 from models.zkproof import ZKProof
 
+
 def create_zkproof_router(controller: ZkProofController):
     router = APIRouter()
 
@@ -11,7 +12,7 @@ def create_zkproof_router(controller: ZkProofController):
             request.room_id,
             request.winner_hashed_id,
             request.proof_ipfs_url,
-            request.onchain_tx_hash
+            request.onchain_tx_hash,
         )
 
     return router

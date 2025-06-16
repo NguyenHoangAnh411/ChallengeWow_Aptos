@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from controllers.answer_controller import AnswerController
 from models.answer_submission import AnswerSubmission
 
+
 def create_answer_router(controller: AnswerController):
     router = APIRouter()
 
@@ -14,7 +15,7 @@ def create_answer_router(controller: AnswerController):
             submission.question_id,
             submission.answer,
             submission.score,
-            submission.timestamp
+            submission.timestamp,
         )
 
     return router
