@@ -1,48 +1,47 @@
-# Environment variables
+# === General System & IDE ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# === Logs ===
+logs/
+*.log
+
+# === Node.js (Next.js Frontend) ===
+frontend/node_modules/
+frontend/.next/
+frontend/.vercel/
+frontend/.turbo/
+
+# === Python (FastAPI Backend) ===
+server/__pycache__/
+server/*.py[cod]
+server/*.so
+server.Python
+server/build/
+server/dist/
+server/venv/
+server/.venv/
+server/env/
+server/.pytest_cache/
+server/.mypy_cache/
+server/.ruff_cache/
+server/.coverage
+server/coverage.xml
+
+# === Environment Variables ===
 .env
 .env.*
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# === Dependency Folders ===
+client/.pnpm-store/
+client/.yarn/cache/
+client/.yarn/install-state.gz
+server/.pip-cache/
 
-# Virtual Environment
-venv/
-ENV/
-env/
-.venv/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-.DS_Store
-
-# Logs
-*.log
-logs/
-
-server/.env
-
-.pytest_cache/
-
-client/node_modules/
+# === Git & Project Config ===
+.git/
+!.gitignore
