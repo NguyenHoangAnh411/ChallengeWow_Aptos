@@ -44,3 +44,5 @@ logs/
 server/.env
 
 .pytest_cache/
+
+client/node_modules/
