@@ -8,7 +8,7 @@ from models.answer import Answer
 # 👤 Người chơi trong phòng
 class Player(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str
+    wallet_id: str
     username: str
     score: float = 0.0
     joined_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

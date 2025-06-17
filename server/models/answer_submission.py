@@ -5,5 +5,7 @@ from datetime import datetime, timezone
 class AnswerSubmission(BaseModel):
     room_id: str
     player_id: str
-    selected_index: int
+    question_id: str
+    answer: int
+    score: float
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

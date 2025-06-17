@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 class Answer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question_id: str
-    user_id: str
+    wallet_id: str
     room_id: str
-    selected_index: int
+    answer: str
     is_correct: bool
     time_taken: float
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
