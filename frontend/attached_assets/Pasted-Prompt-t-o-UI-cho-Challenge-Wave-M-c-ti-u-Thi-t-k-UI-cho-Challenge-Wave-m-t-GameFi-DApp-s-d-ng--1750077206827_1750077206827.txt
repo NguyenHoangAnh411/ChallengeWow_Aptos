@@ -1,0 +1,229 @@
+Prompt tạo UI cho Challenge Wave
+
+Mục tiêu: Thiết kế UI cho Challenge Wave, một GameFi DApp sử dụng OLYM3 Testnet và zk-SNARK, tập trung vào quiz cạnh tranh thời gian thực. Giao diện phải hiện đại, tương tác, và phản ánh tính cạnh tranh, minh bạch blockchain.
+
+Phong cách:
+
+
+
+
+
+Chủ đề: Cyberpunk, dark theme, neon (xanh lam #00D4FF, tím #8B5CF6).
+
+
+
+Font: Sans-serif hiện đại (Inter hoặc Orbitron).
+
+
+
+Hiệu ứng: Neon glow, animation mượt cho timer và thông báo.
+
+
+
+Responsive: Mobile-first, tương thích desktop.
+
+Màn hình chính:
+
+
+
+
+
+Landing Page:
+
+
+
+
+
+Logo Challenge Wave (sóng + blockchain).
+
+
+
+Nút "Join Challenge" (neon, glow hover).
+
+
+
+Motion graphic gameplay (quiz, timer, blockchain proof).
+
+
+
+Liên kết Whitepaper, OLYM3 Explorer (footer).
+
+
+
+Nút kết nối ví (Wagmi).
+
+
+
+Bố cục: Hero section, footer gọn.
+
+
+
+Lobby:
+
+
+
+
+
+Danh sách phòng (card): Room ID, số người (2–4), trạng thái, nút "Join".
+
+
+
+Nút "Create Room" (neon CTA).
+
+
+
+Sidebar: Tên người chơi, ví hash, điểm số.
+
+
+
+Hiệu ứng: Hover scale, loading animation.
+
+
+
+Bố cục: Grid cho phòng, sidebar trái (ẩn mobile).
+
+
+
+Challenge Room:
+
+
+
+
+
+Câu hỏi (font lớn), 4 đáp án (radio/cards, hover).
+
+
+
+Timer 15s (vòng tròn neon, xanh → đỏ), timer phòng 3 phút.
+
+
+
+Danh sách người chơi: Tên, trạng thái, thời gian trả lời.
+
+
+
+Thông báo blockchain: Trạng thái zk-SNARK proof, OLYM3 submission.
+
+
+
+Hiệu ứng: Chuyển tiếp câu hỏi, confetti cho chiến thắng.
+
+
+
+Bố cục: Câu hỏi 60%, người chơi bên phải, timer trên cùng.
+
+
+
+Result Screen:
+
+
+
+
+
+Bảng xếp hạng: Tên, thời gian, đúng/sai, điểm (15 - time_taken).
+
+
+
+Người thắng nổi bật (neon, badge).
+
+
+
+Blockchain: Hash Challenge Block, nút "View on Explorer".
+
+
+
+Nút "Play Again", "Back to Lobby".
+
+
+
+Hiệu ứng: Animation xếp hạng, glow cho người thắng.
+
+
+
+Bố cục: Xếp hạng trung tâm, blockchain info dưới.
+
+
+
+Leaderboard:
+
+
+
+
+
+Top người chơi: Tên, điểm, số trận thắng.
+
+
+
+Bộ lọc (tuần/tháng), nút "View My Rank".
+
+
+
+Bố cục: Bảng hoặc card, top 3 dạng podium.
+
+
+
+Settings:
+
+
+
+
+
+Kết nối ví, tùy chỉnh giao diện (sáng/tối), ngôn ngữ.
+
+
+
+Nút đăng xuất.
+
+
+
+Bố cục: Danh sách với toggle switches.
+
+Tính năng:
+
+
+
+
+
+Thông báo: Hiển thị trạng thái phòng, câu hỏi, blockchain (tích hợp backend Python).
+
+
+
+NFT Badges: Placeholder cho tương lai.
+
+
+
+Accessibility: Tương phản WCAG 2.1, hỗ trợ screen reader.
+
+Tài nguyên:
+
+
+
+
+
+Logo: Sóng + blockchain.
+
+
+
+Liên kết: DApp Preview, Whitepaper, OLYM3 Explorer.
+
+
+
+Icon: Blockchain, ví, zk-SNARK.
+
+Công cụ:
+
+
+
+
+
+Frontend: React/TypeScript, Tailwind/Chakra UI.
+
+
+
+Animation: Framer Motion.
+
+
+
+Prototyping: Figma.
+
+Tinh thần: Nhanh, thông minh, minh bạch, nhấn mạnh cạnh tranh và blockchain.

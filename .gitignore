@@ -1,47 +1,63 @@
-# === General System & IDE ===
+# === OS System Files ===
 .DS_Store
 Thumbs.db
+
+# === Editor/IDE Folders ===
+.vscode/
+.idea/
 *.swp
 *.swo
-.idea/
-.vscode/
 
 # === Logs ===
 logs/
 *.log
-
-# === Node.js (Next.js Frontend) ===
-frontend/node_modules/
-frontend/.next/
-frontend/.vercel/
-frontend/.turbo/
-
-# === Python (FastAPI Backend) ===
-server/__pycache__/
-server/*.py[cod]
-server/*.so
-server.Python
-server/build/
-server/dist/
-server/venv/
-server/.venv/
-server/env/
-server/.pytest_cache/
-server/.mypy_cache/
-server/.ruff_cache/
-server/.coverage
-server/coverage.xml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # === Environment Variables ===
 .env
 .env.*
+*.env.local
 
-# === Dependency Folders ===
+# === Node.js / Next.js (Frontend) ===
+frontend/**/node_modules/
+frontend/**/.next/
+frontend/**/.turbo/
+frontend/**/.vercel/
+frontend/**/.eslintcache
+frontend/**/dist/
+frontend/**/build/
+
+# === Python / FastAPI (Backend) ===
+server/**/__pycache__/
+server/**/*.py[cod]
+server/**/.pytest_cache/
+server/**/.mypy_cache/
+server/**/.ruff_cache/
+server/**/.coverage
+server/**/coverage.xml
+server/**/build/
+server/**/dist/
+server/**/.venv/
+server/**/venv/
+server/**/env/
+
+# === Dependency & Package Managers ===
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
 client/.pnpm-store/
 client/.yarn/cache/
 client/.yarn/install-state.gz
 server/.pip-cache/
 
-# === Git & Project Config ===
+# === Misc ===
+*.sqlite3
+*.db
+*.pid
+*.pid.lock
+
+# === Git ===
 .git/
 !.gitignore
