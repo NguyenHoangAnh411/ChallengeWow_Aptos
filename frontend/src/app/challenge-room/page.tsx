@@ -1,7 +1,7 @@
-'use client';
+ 'use client';
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +17,8 @@ import type { Question, User } from "@/types/schema";
 
 export default function ChallengeRoom() {
   const router = useRouter();
-  const { roomId } = router.query;
+  const searchParams = useSearchParams();
+  const roomId = searchParams.get("roomId");
   const { toast } = useToast();
   const { currentUser, currentRoom, setCurrentRoom, players, setPlayers, updatePlayerStatus } = useGameState();
   
@@ -262,7 +263,7 @@ export default function ChallengeRoom() {
                   initial={{ opacity: 0, x: 50, rotateY: -15 }}
                   animate={{ opacity: 1, x: 0, rotateY: 0 }}
                   exit={{ opacity: 0, x: -50, rotateY: 15 }}
-                  transition={{ duration: 0.8, ease: "easeOutCubic" }}
+                  transition={{ duration: 0.8, ease: [0.33, 1, 0.68, 1] }}
                 >
                   <Card className="glass-morphism rounded-lg p-8 mb-8 hologram-border relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 animate-pulse"></div>

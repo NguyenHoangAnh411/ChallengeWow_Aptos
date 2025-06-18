@@ -1,12 +1,14 @@
+'use client';
+
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Crown, RotateCcw, Home, Trophy, ExternalLink, Box } from "lucide-react";
 import { motion } from "framer-motion";
 import PlayerCard from "@/components/player-card";
 import { useGameState } from "@/lib/game-state";
-import type { User } from "@shared/schema";
+import type { User } from "@/types/schema";
 
 interface GameResult extends User {
   finalScore: number;
@@ -18,7 +20,8 @@ interface GameResult extends User {
 
 export default function Results() {
   const router = useRouter();
-  const { gameId } = router.query;
+  const searchParams = useSearchParams();
+  const gameId = searchParams.get("gameId");
   const { currentUser } = useGameState();
   const [winner, setWinner] = useState<GameResult | null>(null);
   const [finalResults, setFinalResults] = useState<GameResult[]>([]);

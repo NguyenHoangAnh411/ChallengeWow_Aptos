@@ -1,21 +1,20 @@
 import { create } from "zustand";
-import type { User, Room, Question } from "@shared/schema";
 
 interface GameState {
-  currentUser: User | null;
-  currentRoom: Room | null;
-  currentQuestion: Question | null;
+  currentUser: any | null;
+  currentRoom: any | null;
+  currentQuestion: any | null;
   timeRemaining: number;
   isGameActive: boolean;
-  players: (User & { status?: string; responseTime?: number })[];
+  players: (any & { status?: string; responseTime?: number })[];
   
   // Actions
-  setCurrentUser: (user: User | null) => void;
-  setCurrentRoom: (room: Room | null) => void;
-  setCurrentQuestion: (question: Question | null) => void;
+  setCurrentUser: (user: any | null) => void;
+  setCurrentRoom: (room: any | null) => void;
+  setCurrentQuestion: (question: any | null) => void;
   setTimeRemaining: (time: number) => void;
   setIsGameActive: (active: boolean) => void;
-  setPlayers: (players: (User & { status?: string; responseTime?: number })[]) => void;
+  setPlayers: (players: (any & { status?: string; responseTime?: number })[]) => void;
   updatePlayerStatus: (playerId: number, status: string, responseTime?: number) => void;
 }
 

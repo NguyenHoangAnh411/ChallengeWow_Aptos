@@ -1,5 +1,7 @@
+'use client';
+
 import { useState } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +9,7 @@ import { ArrowLeft, Search, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import PlayerCard from "@/components/player-card";
 import { useGameState } from "@/lib/game-state";
-import type { User } from "@shared/schema";
+import type { User } from "@/types/schema";
 
 export default function Leaderboard() {
   const router = useRouter();
