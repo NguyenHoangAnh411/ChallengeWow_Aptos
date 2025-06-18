@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['localhost'],
+    domains: ["localhost"],
   },
   webpack: (config) => {
     config.resolve.fallback = {
@@ -14,6 +14,14 @@ const nextConfig = {
     };
     return config;
   },
-}
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:9000/api/:path*",
+      },
+    ];
+  },
+};
 
-module.exports = nextConfig 
+module.exports = nextConfig;

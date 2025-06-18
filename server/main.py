@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from repositories.implement.room_repo_impl import RoomRepository
@@ -59,18 +59,21 @@ question_controller = QuestionController(question_service)
 answer_controller = AnswerController(answer_service)
 zkproof_controller = ZkProofController(zkproof_service)
 
-# Routers
-app.include_router(create_room_router(room_controller))
-app.include_router(create_player_router(player_controller))
-app.include_router(create_question_router(question_controller))
-app.include_router(create_answer_router(answer_controller))
-app.include_router(create_zkproof_router(zkproof_controller))
+# Router
+api_router = APIRouter(prefix="/api")
 
+# Add your routers to the api_router
+api_router.include_router(create_room_router(room_controller))
+api_router.include_router(create_player_router(player_controller))
+api_router.include_router(create_question_router(question_controller))
+api_router.include_router(create_answer_router(answer_controller))
+api_router.include_router(create_zkproof_router(zkproof_controller))
+
+app.include_router(api_router)
 
 PORT = int(os.getenv("PORT")) or 9000
 HOST = "0.0.0.0"
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("main:app", host=HOST, port=PORT, reload=True)

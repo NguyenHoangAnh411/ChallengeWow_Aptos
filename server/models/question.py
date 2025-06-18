@@ -10,3 +10,7 @@ class Question(BaseModel):
     options: List[str]
     correct_option_index: int
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    @property
+    def correct_text(self) -> str:
+        return self.options[self.correct_option_index]

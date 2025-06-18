@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import uuid
+from typing import List
 
 from repositories.interfaces.room_repo import IRoomRepository
 from models.room import Room
@@ -11,6 +12,9 @@ class RoomService:
     def __init__(self, room_repo: IRoomRepository, player_repo: IPlayerRepository):
         self.room_repo = room_repo
         self.player_repo = player_repo
+    
+    def get_rooms(self) -> List[Room]:
+        return self.room_repo.get_all()
 
     def create_room(self, player: Player) -> Room:
         room = Room(

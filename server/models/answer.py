@@ -1,9 +1,11 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 import uuid
 from datetime import datetime, timezone
 
+from models.base import CamelModel
+
 # ✅ Trả lời của người chơi
-class Answer(BaseModel):
+class Answer(CamelModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question_id: str
     wallet_id: str

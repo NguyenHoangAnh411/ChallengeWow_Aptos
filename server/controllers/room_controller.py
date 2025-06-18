@@ -1,5 +1,8 @@
+from datetime import datetime, timezone
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 from models.player import Player
+#TODO: TEST ONLY
+from models.question import Question
 from models.room import Room
 from enums.game_status import GAME_STATUS
 from services.room_service import RoomService
@@ -13,6 +16,35 @@ class RoomController:
         self.game_service = game_service
         self.manager: dict[str, list[WebSocket]] = {}
 
+    def get_rooms(self):
+        rooms = self.room_service.get_rooms()
+        if not rooms:
+            rooms = [
+                Room(
+                    id="room-002",
+                    players=[
+                        Player(wallet_id="wallet_abc123", username="Alice"),
+                        Player(wallet_id="wallet_xyz456", username="Bob")
+                    ],
+                    status=GAME_STATUS.IN_PROGRESS,
+                    current_question=Question(
+                        id="q1",
+                        content="What is the capital of France?",
+                        options=["Paris", "London", "Berlin", "Rome"],
+                        correct_option_index=0
+                    ),
+                    winner_wallet_id=None,
+                    proof=None,
+                    created_at=datetime(2025, 6, 18, 12, 30, tzinfo=timezone.utc),
+                    start_time=datetime(2025, 6, 18, 12, 45, tzinfo=timezone.utc),
+                    started_at=datetime(2025, 6, 18, 12, 50, tzinfo=timezone.utc),
+                    ended_at=None
+                )
+            ]
+            
+        return rooms
+
+        
     def create_room(self, request):
         player = Player(wallet_id=request.wallet_id, username=request.username)
         room = Room(players=[player])

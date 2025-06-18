@@ -1,8 +1,13 @@
 from abc import ABC, abstractmethod
+from typing import List
+
 from models.room import Room
 
-
 class IRoomRepository(ABC):
+    @abstractmethod
+    def get_all(self) -> List[Room]:
+        pass
+    
     @abstractmethod
     def get(self, room_id: str) -> Room | None:
         pass

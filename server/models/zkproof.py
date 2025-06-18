@@ -2,8 +2,10 @@ from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 import uuid
 
+from models.base import CamelModel
+
 # 🔐 Zero-knowledge proof lưu trên IPFS/on-chain
-class ZKProof(BaseModel):
+class ZKProof(CamelModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     room_id: str
     score: float

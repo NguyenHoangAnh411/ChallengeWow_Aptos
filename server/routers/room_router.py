@@ -1,14 +1,21 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import List
+from fastapi import APIRouter, WebSocket
+
 from models.create_room_request import CreateRoomRequest
 from models.join_request import JoinRoomRequest
 from models.answer_submission import AnswerSubmission
 from controllers.room_controller import RoomController
+from models.room import Room
 
 
 def create_room_router(room_controller: RoomController):
     router = APIRouter()
+    
+    @router.get("/rooms", response_model=List[Room])
+    async def get_rooms():
+        return room_controller.get_rooms()
 
-    @router.post("/create-room")
+    @router.post("/rooms")
     async def create_room(request: CreateRoomRequest):
         return room_controller.create_room(request)
 
@@ -20,7 +27,7 @@ def create_room_router(room_controller: RoomController):
     async def submit_answer(submission: AnswerSubmission):
         return room_controller.submit_answer(submission)
 
-    @router.get("/room/{room_id}")
+    @router.get("/rooms/{room_id}")
     async def get_room_status(room_id: str):
         return room_controller.get_room_status(room_id)
 

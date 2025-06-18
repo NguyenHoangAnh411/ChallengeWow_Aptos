@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -21,7 +21,7 @@ export default function Lobby() {
   const [onlineStats, setOnlineStats] = useState({
     activeRooms: 8,
     playersOnline: 127,
-    avgResponseTime: "3.2s"
+    avgResponseTime: "3.2s",
   });
 
   // Mock current user if not set
@@ -34,28 +34,28 @@ export default function Lobby() {
         totalScore: 2847,
         gamesWon: 23,
         rank: 142,
-        createdAt: new Date()
+        createdAt: new Date(),
       });
     }
   }, [currentUser, setCurrentUser]);
 
   const { data: rooms = [], isLoading } = useQuery<Room[]>({
-    queryKey: ["/api/rooms"],
-    refetchInterval: 5000, // Refresh every 5 seconds
+    queryKey: ["/rooms"],
+    refetchInterval: 5000,
   });
 
   const createRoomMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/rooms", {
+      const response = await apiRequest("POST", "/rooms", {
         hostId: currentUser?.id,
         maxPlayers: 4,
         prize: 150,
-        duration: 180
+        duration: 180,
       });
       return response.json();
     },
     onSuccess: (room) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["/rooms"] });
       toast({
         title: "Room Created",
         description: `Room #${room.roomCode} has been created!`,
@@ -68,18 +68,18 @@ export default function Lobby() {
         description: "Failed to create room. Please try again.",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const joinRoomMutation = useMutation({
-    mutationFn: async (roomId: number) => {
-      const response = await apiRequest("POST", `/api/rooms/${roomId}/join`, {
-        playerId: currentUser?.id
+    mutationFn: async (roomId: String) => {
+      const response = await apiRequest("POST", `/rooms/${roomId}/join`, {
+        playerId: currentUser?.id,
       });
       return response.json();
     },
     onSuccess: (_, roomId) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["/rooms"] });
       toast({
         title: "Room Joined",
         description: "Successfully joined the room!",
@@ -92,22 +92,22 @@ export default function Lobby() {
         description: "Failed to join room. It might be full or unavailable.",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const { sendMessage } = useWebSocket({
     onMessage: (data) => {
       if (data.type === "room_update") {
-        queryClient.invalidateQueries({ queryKey: ["/api/rooms"] });
+        queryClient.invalidateQueries({ queryKey: ["/rooms"] });
       }
-    }
+    },
   });
 
   const handleCreateRoom = () => {
     createRoomMutation.mutate();
   };
 
-  const handleJoinRoom = (roomId: number) => {
+  const handleJoinRoom = (roomId: String) => {
     joinRoomMutation.mutate(roomId);
   };
 
@@ -122,7 +122,7 @@ export default function Lobby() {
       <header className="relative z-10 bg-cyber-darker/80 backdrop-blur-xl border-b border-neon-blue/30 px-4 py-4">
         <div className="container mx-auto">
           <div className="flex justify-between items-center">
-            <motion.div 
+            <motion.div
               className="flex items-center space-x-4"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -146,7 +146,7 @@ export default function Lobby() {
               </div>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="flex items-center space-x-4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -189,7 +189,9 @@ export default function Lobby() {
                     <div className="w-8 h-8 bg-gradient-to-r from-neon-blue to-neon-purple rounded-lg flex items-center justify-center">
                       <Users className="w-4 h-4 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold text-neon-blue">Player Info</h3>
+                    <h3 className="text-xl font-semibold text-neon-blue">
+                      Player Info
+                    </h3>
                   </div>
                   {currentUser && (
                     <div className="space-y-4">
@@ -200,25 +202,39 @@ export default function Lobby() {
                           </span>
                         </div>
                         <div className="flex-1">
-                          <div className="font-medium text-white">{currentUser.username}</div>
+                          <div className="font-medium text-white">
+                            {currentUser.username}
+                          </div>
                           <div className="text-xs text-gray-400 font-mono">
                             {currentUser.walletAddress || "No wallet connected"}
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 gap-3">
                         <div className="flex justify-between items-center p-2 bg-neon-blue/10 rounded">
-                          <span className="text-gray-300 text-sm">Total Score:</span>
-                          <span className="text-neon-blue font-bold text-lg">{currentUser.totalScore}</span>
+                          <span className="text-gray-300 text-sm">
+                            Total Score:
+                          </span>
+                          <span className="text-neon-blue font-bold text-lg">
+                            {currentUser.totalScore}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center p-2 bg-green-400/10 rounded">
-                          <span className="text-gray-300 text-sm">Games Won:</span>
-                          <span className="text-green-400 font-bold">{currentUser.gamesWon}</span>
+                          <span className="text-gray-300 text-sm">
+                            Games Won:
+                          </span>
+                          <span className="text-green-400 font-bold">
+                            {currentUser.gamesWon}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center p-2 bg-neon-purple/10 rounded">
-                          <span className="text-gray-300 text-sm">Global Rank:</span>
-                          <span className="text-neon-purple font-bold">#{currentUser.rank}</span>
+                          <span className="text-gray-300 text-sm">
+                            Global Rank:
+                          </span>
+                          <span className="text-neon-purple font-bold">
+                            #{currentUser.rank}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -239,23 +255,37 @@ export default function Lobby() {
                     <div className="w-8 h-8 bg-gradient-to-r from-neon-purple to-purple-500 rounded-lg flex items-center justify-center">
                       <Crown className="w-4 h-4 text-white" />
                     </div>
-                    <h3 className="text-lg font-semibold text-neon-purple">Live Stats</h3>
+                    <h3 className="text-lg font-semibold text-neon-purple">
+                      Live Stats
+                    </h3>
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-2 bg-neon-blue/10 rounded">
-                      <span className="text-gray-300 text-sm">Active Rooms:</span>
+                      <span className="text-gray-300 text-sm">
+                        Active Rooms:
+                      </span>
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-neon-blue">{onlineStats.activeRooms}</span>
+                        <span className="font-bold text-neon-blue">
+                          {onlineStats.activeRooms}
+                        </span>
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                       </div>
                     </div>
                     <div className="flex justify-between items-center p-2 bg-neon-purple/10 rounded">
-                      <span className="text-gray-300 text-sm">Players Online:</span>
-                      <span className="font-bold text-neon-purple">{onlineStats.playersOnline}</span>
+                      <span className="text-gray-300 text-sm">
+                        Players Online:
+                      </span>
+                      <span className="font-bold text-neon-purple">
+                        {onlineStats.playersOnline}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center p-2 bg-orange-400/10 rounded">
-                      <span className="text-gray-300 text-sm">Avg. Response:</span>
-                      <span className="font-bold text-orange-400">{onlineStats.avgResponseTime}</span>
+                      <span className="text-gray-300 text-sm">
+                        Avg. Response:
+                      </span>
+                      <span className="font-bold text-orange-400">
+                        {onlineStats.avgResponseTime}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -266,7 +296,7 @@ export default function Lobby() {
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* Enhanced Create Room Button */}
-            <motion.div 
+            <motion.div
               className="mb-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -296,8 +326,10 @@ export default function Lobby() {
 
             {/* Room List */}
             <div className="space-y-4">
-              <h2 className="text-2xl font-orbitron font-bold mb-6">Available Rooms</h2>
-              
+              <h2 className="text-2xl font-orbitron font-bold mb-6">
+                Available Rooms
+              </h2>
+
               {isLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-blue mx-auto"></div>
@@ -307,8 +339,12 @@ export default function Lobby() {
                 <Card className="glass-morphism rounded-lg p-12 text-center">
                   <CardContent className="p-0">
                     <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No Active Rooms</h3>
-                    <p className="text-gray-400 mb-6">Be the first to create a room and start a challenge!</p>
+                    <h3 className="text-xl font-semibold mb-2">
+                      No Active Rooms
+                    </h3>
+                    <p className="text-gray-400 mb-6">
+                      Be the first to create a room and start a challenge!
+                    </p>
                     <Button
                       onClick={handleCreateRoom}
                       disabled={createRoomMutation.isPending}
@@ -320,7 +356,7 @@ export default function Lobby() {
                   </CardContent>
                 </Card>
               ) : (
-                <motion.div 
+                <motion.div
                   className="space-y-4"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -334,6 +370,7 @@ export default function Lobby() {
                       transition={{ duration: 0.3, delay: index * 0.1 }}
                     >
                       <RoomCard
+                        index={index}
                         room={room}
                         onJoin={handleJoinRoom}
                       />

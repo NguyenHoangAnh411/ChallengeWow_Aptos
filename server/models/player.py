@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import List
 from datetime import datetime, timezone
 import uuid
 
 from models.answer import Answer
+from models.base import CamelModel
 
 # 👤 Người chơi trong phòng
-class Player(BaseModel):
+class Player(CamelModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     wallet_id: str
     username: str

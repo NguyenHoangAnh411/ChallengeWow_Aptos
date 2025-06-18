@@ -1,6 +1,7 @@
 from config.database import supabase
 import json
 from datetime import datetime, timezone, timedelta
+from typing import List
 
 from models.room import Room
 from repositories.interfaces.room_repo import IRoomRepository
@@ -8,6 +9,15 @@ from repositories.interfaces.room_repo import IRoomRepository
 
 class RoomRepository(IRoomRepository):
     table = "challenge_rooms"
+
+    def get_all(self) -> List[Room]:
+        try:
+            response = supabase.table(RoomRepository.table).select("*").execute()
+            data = response.data
+            return [Room(**item) for item in data]
+        except Exception as e:
+            print(f"Error fetching rooms: {e}")
+            return []
 
     def save(self, room: Room) -> bool:
         try:
