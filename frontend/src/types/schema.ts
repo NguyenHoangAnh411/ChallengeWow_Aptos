@@ -5,7 +5,7 @@ export interface Room {
   players: Player[];
   status: RoomStatus;
   totalQuestions: number;
-  timePerQuestion: number; // in second
+  timePerQuestion: number;
   prize: number;
   currentQuestion?: Question | null;
   winnerWalletId?: string | null;

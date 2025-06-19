@@ -6,8 +6,6 @@ from datetime import datetime
 
 from services.room_service import RoomService
 
-# TODO: This function is only calc for only 1 question => What if there 4p with 10 quest / game = 40 req => 10 room => 400 req
-# TODO: Need to be optmized later
 class AnswerController:
     def __init__(self, answer_service: AnswerService, room_service: RoomService):
         self.answer_service = answer_service

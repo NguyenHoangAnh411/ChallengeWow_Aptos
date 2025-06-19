@@ -17,15 +17,12 @@ def create_room_router(room_controller: RoomController):
 
     @router.post("/rooms")
     async def create_room(request: CreateRoomRequest):
+        print('called: ', request)
         return room_controller.create_room(request)
 
     @router.post("/join-room")
     async def join_room(request: JoinRoomRequest):
         return room_controller.join_room(request)
-
-    @router.post("/submit-answer")
-    async def submit_answer(submission: AnswerSubmission):
-        return room_controller.submit_answer(submission)
 
     @router.get("/rooms/{room_id}")
     async def get_room_status(room_id: str):

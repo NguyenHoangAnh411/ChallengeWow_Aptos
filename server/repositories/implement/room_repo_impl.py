@@ -22,7 +22,7 @@ class RoomRepository(IRoomRepository):
     def save(self, room: Room) -> bool:
         try:
             data = {
-                "id": room.id,
+                "id": room.room_id,
                 "status": room.status,
                 "created_at": room.created_at.isoformat(),
                 "start_time": room.start_time.isoformat() if room.start_time else None,
@@ -37,7 +37,7 @@ class RoomRepository(IRoomRepository):
             supabase.table(RoomRepository.table).upsert(data).execute()
             return True
         except Exception as e:
-            print(f"Error saving room {room.id} to Supabase: {str(e)}")
+            print(f"Error saving room {room.room_id} to Supabase: {str(e)}")
             return False
 
     def get(self, room_id: str) -> Room | None:

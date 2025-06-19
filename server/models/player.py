@@ -16,5 +16,4 @@ class Player(CamelModel):
     score: float = 0.0
     joined_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_winner: bool = False
-    answers: List["Answer"] = []
     is_host: bool = False

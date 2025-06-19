@@ -1,4 +1,4 @@
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
@@ -11,20 +11,16 @@ from enums.game_status import GAME_STATUS
 
 # 🏠 Phòng chơi
 class Room(CamelModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    room_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     players: List[Player] = []
     status: str = GAME_STATUS.WAITING
     current_question: Optional[Question] = None
     winner_wallet_id: Optional[str] = None
     proof: Optional["ZKProof"] = None
-    time_per_question: int = 20 # in second
     total_questions: int = 10
     countdown_duration: int = 10
     entry_fee: float = 0
     prize: float = 0
-    base_score_per_question: int = 100
-    speed_bonus_enabled: bool = True 
-    max_speed_bonus: int = 50 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     start_time: Optional[datetime] = None
     started_at: Optional[datetime] = None
@@ -39,3 +35,5 @@ class Room(CamelModel):
         if not self.players:
             raise ValueError("Room must have at least one player.")
         return self
+    
+    model_config = ConfigDict(ser_enum_as_value=True)

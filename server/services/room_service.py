@@ -23,7 +23,7 @@ class RoomService:
             created_at=datetime.now(timezone.utc),
         )
         self.room_repo.save(room)
-        self.player_repo.save_all(room.id, room.players)
+        self.player_repo.save_all(room.room_id, room.players)
         return room
 
     def get_room(self, room_id: str) -> Room | None:
@@ -34,7 +34,7 @@ class RoomService:
 
     def save_room(self, room: Room):
         self.room_repo.save(room)
-        self.player_repo.save_all(room.id, room.players)
+        self.player_repo.save_all(room.room_id, room.players)
 
     def calculate_score(is_correct: bool, time_taken: float, room: Room) -> int:
         if not is_correct:

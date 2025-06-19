@@ -13,23 +13,23 @@ class PlayerRepository(IPlayerRepository):
 
         data = []
         for p in players:
+            print(p)
             data.append(
                 {
-                    "id": p.id,
                     "room_id": room_id,
                     "wallet_id": p.wallet_id,
                     "username": p.username,
                     "score": p.score,
-                    "answers": json.dumps(p.answers),
+                    "user_id": p.user_id,
                     "joined_at": p.joined_at.isoformat(),
                 }
             )
         if data:
-            supabase.table("room_players").insert(data).execute()
+            supabase.table(PlayerRepository.table).insert(data).execute()
 
     def get_by_room(self, room_id: str) -> list[Player]:
         res = (
-            supabase.table("room_players").select("*").eq("room_id", room_id).execute()
+            supabase.table(PlayerRepository.table).select("*").eq("room_id", room_id).execute()
         )
         players = []
         for p in res.data:

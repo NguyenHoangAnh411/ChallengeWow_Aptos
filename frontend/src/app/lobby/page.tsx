@@ -13,6 +13,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types/schema";
+import { randomUUID } from "crypto";
 
 export default function Lobby() {
   const router = useRouter();
@@ -44,13 +45,15 @@ export default function Lobby() {
     refetchInterval: 5000,
   });
 
+  // Mock Create Room
   const createRoomMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/rooms", {
-        hostId: currentUser?.id,
-        maxPlayers: 4,
-        prize: 150,
-        duration: 180,
+        userId: randomUUID(),
+        username: "user 1",
+        walletId: "wallet_xyz",
+        totalQuestions: 10,
+        countdownDuration: 10,
       });
       return response.json();
     },

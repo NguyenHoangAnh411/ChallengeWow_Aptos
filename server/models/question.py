@@ -1,12 +1,15 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime, timezone
 from typing import List
 import uuid
+
+from enums.question_difficulty import QUESTION_DIFFICULTY
 
 # ❓ Câu hỏi
 class Question(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     content: str
+    difficulty: QUESTION_DIFFICULTY
     options: List[str]
     correct_option_index: int
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -15,3 +18,6 @@ class Question(BaseModel):
     @property
     def correct_text(self) -> str:
         return self.options[self.correct_option_index].lower().strip()
+
+    model_config = ConfigDict(ser_enum_as_value=True)
+    

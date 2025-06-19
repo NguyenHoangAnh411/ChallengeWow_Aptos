@@ -1,5 +1,7 @@
 import asyncio
 from datetime import datetime, timezone
+from config.question_config import QUESTION_CONFIG
+from models.question import Question
 from models.room import Room
 from services.question_service import QuestionService
 from services.zkproof_service import ZkProofService
@@ -69,19 +71,30 @@ class GameService:
             for p in room.players
         ]
 
-        self.zkproof_service.store_proof(room.id, winner.id, proof, scores)
+        self.zkproof_service.store_proof(room.room_id, winner.id, proof, scores)
 
     def generate_fake_proof(self, room: Room) -> str:
         data = {
-            "room_id": room.id,
+            "room_id": room.room_id,
             "winner_wallet_id": room.winner_wallet_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "scores": [{"player_id": p.id, "score": p.score} for p in room.players],
         }
         return hashlib.sha256(json.dumps(data).encode()).hexdigest()
 
-    def calculate_score(self, answer_time: datetime, question_time: datetime) -> int:
-        time_diff = (answer_time - question_time).total_seconds()
-        if time_diff <= 15:
-            return max(0, 15 - int(time_diff))
-        return 0
+    def calculate_score(is_correct: bool, time_taken: float, question: Question) -> float:
+        if not is_correct:
+            return 0
+
+        config = QUESTION_CONFIG.get(question.difficulty)
+        if not config:
+            raise ValueError(f"Unknown difficulty level: {question.difficulty}")
+
+        base_score = config["score"]
+        time_limit = config["time"]
+     
+        bonus = 0
+        if config.get("speed_bonus_enabled", False):
+            bonus = max(config["max_speed_bonus"] * (1 - time_taken / time_limit), 0)
+
+        return base_score + int(bonus)
