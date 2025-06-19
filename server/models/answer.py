@@ -8,8 +8,9 @@ from models.base import CamelModel
 class Answer(CamelModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question_id: str
-    wallet_id: str
+    user_id: str
     room_id: str
+    selected_index: int
     answer: str
     is_correct: bool
     time_taken: float

@@ -56,7 +56,7 @@ game_service = GameService(room_service, question_service, zkproof_service)
 room_controller = RoomController(room_service, game_service)
 player_controller = PlayerController(player_service)
 question_controller = QuestionController(question_service)
-answer_controller = AnswerController(answer_service)
+answer_controller = AnswerController(answer_service, room_service)
 zkproof_controller = ZkProofController(zkproof_service)
 
 # Router

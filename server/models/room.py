@@ -22,6 +22,9 @@ class Room(CamelModel):
     countdown_duration: int = 10
     entry_fee: float = 0
     prize: float = 0
+    base_score_per_question: int = 100
+    speed_bonus_enabled: bool = True 
+    max_speed_bonus: int = 50 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     start_time: Optional[datetime] = None
     started_at: Optional[datetime] = None

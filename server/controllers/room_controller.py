@@ -50,9 +50,9 @@ class RoomController:
         room = Room(players=[player])
         self.room_service.save_room(room)
         return {
-            "room_id": room.id,
-            "player_id": player.id,
-            "wallet_id": player.wallet_id,
+            "roomId": room.id,
+            "playerId": player.id,
+            "walletId": player.wallet_id,
         }
 
     def join_room(self, request):
@@ -71,7 +71,7 @@ class RoomController:
         if len(room.players) >= 2:
             asyncio.create_task(self.game_service.start_countdown(room))
 
-        return {"room_id": room.id, "player_wallet_id": player.wallet_id}
+        return {"roomId": room.id, "playerWalletId": player.wallet_id}
 
     def submit_answer(self, submission):
         room = self.room_service.get_room(submission.room_id)
@@ -87,7 +87,7 @@ class RoomController:
         score = self.game_service.calculate_score(submission.timestamp, room.start_time)
         player.answers.append(
             {
-                "question_id": room.current_question["id"],
+                "questionId": room.current_question["id"],
                 "answer": submission.answer,
                 "score": score,
             }
@@ -106,7 +106,7 @@ class RoomController:
                 {"id": p.id, "username": p.username, "score": p.score}
                 for p in room.players
             ],
-            "current_question": (
+            "currentQuestion": (
                 room.current_question
                 if room.status == GAME_STATUS.IN_PROGRESS
                 else None

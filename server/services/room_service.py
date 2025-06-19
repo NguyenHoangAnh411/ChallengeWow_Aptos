@@ -35,3 +35,15 @@ class RoomService:
     def save_room(self, room: Room):
         self.room_repo.save(room)
         self.player_repo.save_all(room.id, room.players)
+
+    def calculate_score(is_correct: bool, time_taken: float, room: Room) -> int:
+        if not is_correct:
+            return 0
+        score = room.base_score_per_question
+
+        if room.speed_bonus_enabled:
+            speed_factor = max(0, (room.time_per_question - time_taken) / room.time_per_question)
+            bonus = int(speed_factor * room.max_speed_bonus)
+            score += bonus
+
+        return score
