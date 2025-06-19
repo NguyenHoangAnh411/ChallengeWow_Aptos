@@ -10,7 +10,6 @@ from models.base import CamelModel
 class Player(CamelModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     room_id: str
-    user_id: str
     wallet_id: str
     username: str
     score: float = 0.0

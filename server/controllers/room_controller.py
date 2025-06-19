@@ -22,7 +22,6 @@ class RoomController:
         
     def create_room(self, request: CreateRoomRequest):
         player = Player(
-            user_id=request.user_id,
             wallet_id=request.wallet_id,
             username=request.username,
             room_id=''
@@ -34,13 +33,12 @@ class RoomController:
             countdown_duration=request.countdown_duration,
         )
         
-        player.room_id = room.room_id
+        player.room_id = room.id
 
-        room.players.append(player)
         self.room_service.save_room(room)
 
         return {
-            "roomId": room.room_id,
+            "roomId": room.id,
             "playerId": player.id,
             "walletId": player.wallet_id,
         }
@@ -55,14 +53,14 @@ class RoomController:
         if room.status != GAME_STATUS.WAITING:
             raise HTTPException(status_code=400, detail="Game already in progress")
 
-        player = Player(wallet_id=request.wallet_id, username=request.username)
+        player = Player(wallet_id=request.wallet_id, username=request.username, room_id=room.id)
         room.players.append(player)
         self.room_service.save_room(room)
 
         if len(room.players) >= 2:
             asyncio.create_task(self.game_service.start_countdown(room))
 
-        return {"roomId": room.room_id, "playerWalletId": player.wallet_id}
+        return {"roomId": room.id, "playerWalletId": player.wallet_id}
 
     def get_room_status(self, room_id: str):
         room = self.room_service.get_room(room_id)

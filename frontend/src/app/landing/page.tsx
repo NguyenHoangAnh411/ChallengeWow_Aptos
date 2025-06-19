@@ -19,19 +19,39 @@ import {
   FileText,
   Wallet,
 } from "lucide-react";
+import { ethers } from "ethers";
+import '@rainbow-me/rainbowkit/styles.css';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
 export default function Landing() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   const handleConnectWallet = async () => {
     setIsConnecting(true);
-    // Simulate wallet connection
-    setTimeout(() => {
-      setIsConnecting(false);
-      setIsConnected(true);
-    }, 2000);
+    try {
+      if (window.ethereum) {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        const address = accounts[0];
+        setWalletAddress(address);
+        setIsConnected(true);
+      } else {
+        alert("Please install Metamask or a compatible wallet extension.");
+      }
+    } catch (err) {
+      alert("Failed to connect wallet");
+    }
+    setIsConnecting(false);
   };
 
   const handleJoinChallenge = () => {
@@ -80,37 +100,7 @@ export default function Landing() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <Button
-                onClick={handleConnectWallet}
-                disabled={isConnecting}
-                className={`relative overflow-hidden px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 ${
-                  isConnected
-                    ? "bg-green-600 hover:bg-green-700 neon-glow-blue"
-                    : "bg-gradient-to-r from-neon-purple to-purple-600 hover:from-purple-600 hover:to-neon-purple neon-glow-purple"
-                }`}
-              >
-                <div className="relative z-10 flex items-center">
-                  {isConnecting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Connecting...
-                    </>
-                  ) : isConnected ? (
-                    <>
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Connected
-                    </>
-                  ) : (
-                    <>
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Connect Wallet
-                    </>
-                  )}
-                </div>
-                {!isConnected && (
-                  <div className="absolute inset-0 data-stream"></div>
-                )}
-              </Button>
+              <ConnectButton />
             </motion.div>
           </div>
         </div>

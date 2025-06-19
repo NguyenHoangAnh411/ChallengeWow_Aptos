@@ -120,7 +120,7 @@ transformers==4.52.4
 typing-inspection==0.4.1
 typing_extensions==4.14.0
 tzdata==2024.2
-urllib3==2.4.0
+urllib3>=1.25.4,<1.27
 uvicorn==0.34.3
 virtualenv==20.27.1
 wcwidth==0.2.13

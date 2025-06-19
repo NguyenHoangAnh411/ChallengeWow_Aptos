@@ -10,11 +10,24 @@ from repositories.interfaces.room_repo import IRoomRepository
 class RoomRepository(IRoomRepository):
     table = "challenge_rooms"
 
+    def __init__(self, player_repo=None):
+        self.player_repo = player_repo
+
     def get_all(self) -> List[Room]:
         try:
             response = supabase.table(RoomRepository.table).select("*").execute()
             data = response.data
-            return [Room(**item) for item in data]
+            rooms = []
+            for item in data:
+                room = Room(**item)
+                if self.player_repo:
+                    room.players = self.player_repo.get_by_room(room.id)
+                else:
+                    room.players = []
+                if not room.players:
+                    continue
+                rooms.append(room)
+            return rooms
         except Exception as e:
             print(f"Error fetching rooms: {e}")
             return []
@@ -22,22 +35,24 @@ class RoomRepository(IRoomRepository):
     def save(self, room: Room) -> bool:
         try:
             data = {
-                "id": room.room_id,
-                "status": room.status,
-                "created_at": room.created_at.isoformat(),
-                "start_time": room.start_time.isoformat() if room.start_time else None,
-                "current_question": (
-                    json.dumps(room.current_question) if room.current_question else None
-                ),
-                "winner_wallet_id": room.winner_wallet_id,
-                "proof": room.proof,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "id": room.id,
+                "status": room.status.value if hasattr(room.status, "value") else str(room.status),
+                "time_per_question": getattr(room, "time_per_question", 20),
+                "total_questions": getattr(room, "total_questions", 10),
+                "countdown_duration": getattr(room, "countdown_duration", 10),
+                "entry_fee": getattr(room, "entry_fee", 0),
+                "prize": getattr(room, "prize", 0),
+                "created_at": room.created_at.isoformat() if hasattr(room, "created_at") else None,
+                "start_time": room.start_time.isoformat() if getattr(room, "start_time", None) else None,
+                "started_at": room.started_at.isoformat() if getattr(room, "started_at", None) else None,
+                "ended_at": room.ended_at.isoformat() if getattr(room, "ended_at", None) else None,
+                "winner_wallet_id": getattr(room, "winner_wallet_id", None),
+                # Bỏ qua room_id vì không dùng nữa
             }
-
             supabase.table(RoomRepository.table).upsert(data).execute()
             return True
         except Exception as e:
-            print(f"Error saving room {room.room_id} to Supabase: {str(e)}")
+            print(f"Error saving room {room.id} to Supabase: {str(e)}")
             return False
 
     def get(self, room_id: str) -> Room | None:

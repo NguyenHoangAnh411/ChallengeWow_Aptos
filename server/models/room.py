@@ -11,7 +11,7 @@ from enums.game_status import GAME_STATUS
 
 # 🏠 Phòng chơi
 class Room(CamelModel):
-    room_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     players: List[Player] = []
     status: str = GAME_STATUS.WAITING
     current_question: Optional[Question] = None

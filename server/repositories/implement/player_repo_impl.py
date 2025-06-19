@@ -20,7 +20,6 @@ class PlayerRepository(IPlayerRepository):
                     "wallet_id": p.wallet_id,
                     "username": p.username,
                     "score": p.score,
-                    "user_id": p.user_id,
                     "joined_at": p.joined_at.isoformat(),
                 }
             )

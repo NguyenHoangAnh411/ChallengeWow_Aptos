@@ -14,51 +14,56 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types/schema";
 import { randomUUID } from "crypto";
+import { fetchRooms, createRoom, joinRoom, fetchUserByWallet, updateUser } from "@/lib/api";
+
+import { useAccount } from 'wagmi';
 
 export default function Lobby() {
   const router = useRouter();
   const { toast } = useToast();
   const { currentUser, setCurrentUser } = useGameState();
+  const { isConnected, address } = useAccount();
   const [onlineStats, setOnlineStats] = useState({
     activeRooms: 8,
     playersOnline: 127,
     avgResponseTime: "3.2s",
   });
+  const [usernameInput, setUsernameInput] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   // Mock current user if not set
   useEffect(() => {
     if (!currentUser) {
-      setCurrentUser({
-        id: 1,
-        username: "Player_7834",
-        walletAddress: "0x1234...5678",
-        totalScore: 2847,
-        gamesWon: 23,
-        rank: 142,
-        createdAt: new Date(),
-      });
+      // Không set user mock nữa
+      // setCurrentUser({ ... })
     }
   }, [currentUser, setCurrentUser]);
 
+  useEffect(() => {
+    if (!currentUser && isConnected && address) {
+      fetchUserByWallet(address).then(user => {
+        if (user) setCurrentUser(user);
+      });
+    }
+  }, [currentUser, isConnected, address, setCurrentUser]);
+
   const { data: rooms = [], isLoading } = useQuery<Room[]>({
-    queryKey: ["/rooms"],
+    queryKey: ["rooms"],
+    queryFn: fetchRooms,
     refetchInterval: 5000,
   });
 
-  // Mock Create Room
   const createRoomMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/rooms", {
-        userId: randomUUID(),
-        username: "user 1",
-        walletId: "wallet_xyz",
-        totalQuestions: 10,
-        countdownDuration: 10,
+      return createRoom({
+        username: currentUser?.username,
+        wallet_id: currentUser?.walletAddress,
+        total_questions: 10,
+        countdown_duration: 10,
       });
-      return response.json();
     },
     onSuccess: (room) => {
-      queryClient.invalidateQueries({ queryKey: ["/rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({
         title: "Room Created",
         description: `Room #${room.roomCode} has been created!`,
@@ -75,14 +80,14 @@ export default function Lobby() {
   });
 
   const joinRoomMutation = useMutation({
-    mutationFn: async (roomId: String) => {
-      const response = await apiRequest("POST", `/rooms/${roomId}/join`, {
+    mutationFn: async (roomId: string) => {
+      return joinRoom({
+        roomId,
         playerId: currentUser?.id,
       });
-      return response.json();
     },
     onSuccess: (_, roomId) => {
-      queryClient.invalidateQueries({ queryKey: ["/rooms"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({
         title: "Room Joined",
         description: "Successfully joined the room!",
@@ -101,17 +106,38 @@ export default function Lobby() {
   const { sendMessage } = useWebSocket({
     onMessage: (data) => {
       if (data.type === "room_update") {
-        queryClient.invalidateQueries({ queryKey: ["/rooms"] });
+        queryClient.invalidateQueries({ queryKey: ["rooms"] });
       }
     },
   });
 
   const handleCreateRoom = () => {
+    if (!currentUser?.username || !currentUser?.walletAddress) {
+      toast({
+        title: "Missing info",
+        description: "Please connect wallet and set username.",
+        variant: "destructive",
+      });
+      return;
+    }
     createRoomMutation.mutate();
   };
 
-  const handleJoinRoom = (roomId: String) => {
+  const handleJoinRoom = (roomId: string) => {
     joinRoomMutation.mutate(roomId);
+  };
+
+  const handleSaveUsername = async () => {
+    if (!currentUser?.walletAddress || !usernameInput.trim()) return;
+    setIsSavingUsername(true);
+    try {
+      await updateUser(currentUser.walletAddress, usernameInput.trim());
+      setCurrentUser({ ...currentUser, username: usernameInput.trim() });
+      toast({ title: "Username updated!", description: "You can now create a room." });
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to update username.", variant: "destructive" });
+    }
+    setIsSavingUsername(false);
   };
 
   return (
@@ -180,6 +206,7 @@ export default function Lobby() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Enhanced Sidebar */}
           <div className="lg:col-span-1 space-y-6">
+
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -201,15 +228,17 @@ export default function Lobby() {
                       <div className="flex items-center space-x-3 p-3 bg-cyber-accent/30 rounded-lg">
                         <div className="w-12 h-12 bg-gradient-to-r from-neon-blue to-neon-purple rounded-full flex items-center justify-center animate-glow-pulse">
                           <span className="text-white font-bold text-lg">
-                            {currentUser.username.substring(0, 2)}
+                            {currentUser?.username?.substring(0, 2) ||
+                              (currentUser?.walletAddress ? currentUser.walletAddress.substring(2, 4) : "--")}
                           </span>
                         </div>
                         <div className="flex-1">
                           <div className="font-medium text-white">
-                            {currentUser.username}
+                            {currentUser?.username ||
+                              (currentUser?.walletAddress ? currentUser.walletAddress.substring(0, 8) + '...' : "--")}
                           </div>
                           <div className="text-xs text-gray-400 font-mono">
-                            {currentUser.walletAddress || "No wallet connected"}
+                            {currentUser?.walletAddress || "No wallet connected"}
                           </div>
                         </div>
                       </div>
@@ -220,7 +249,7 @@ export default function Lobby() {
                             Total Score:
                           </span>
                           <span className="text-neon-blue font-bold text-lg">
-                            {currentUser.totalScore}
+                            {currentUser?.totalScore}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-2 bg-green-400/10 rounded">
@@ -228,7 +257,7 @@ export default function Lobby() {
                             Games Won:
                           </span>
                           <span className="text-green-400 font-bold">
-                            {currentUser.gamesWon}
+                            {currentUser?.gamesWon}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-2 bg-neon-purple/10 rounded">
@@ -236,7 +265,7 @@ export default function Lobby() {
                             Global Rank:
                           </span>
                           <span className="text-neon-purple font-bold">
-                            #{currentUser.rank}
+                            #{currentUser?.rank}
                           </span>
                         </div>
                       </div>
@@ -326,6 +355,27 @@ export default function Lobby() {
                 </div>
               </Button>
             </motion.div>
+
+            {/* Hiển thị form nhập username nếu thiếu */}
+            {currentUser?.walletAddress && !currentUser?.username && (
+              <div className="mb-6 p-4 bg-cyber-accent/20 rounded-lg" style={{ zIndex: 1000, position: 'relative' }}>
+                <h3 className="font-bold mb-2 text-neon-blue">Set your username</h3>
+                <input
+                  className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-full mb-2"
+                  placeholder="Enter username"
+                  value={usernameInput}
+                  onChange={e => setUsernameInput(e.target.value)}
+                  // disabled={isSavingUsername}
+                />
+                <Button
+                  onClick={handleSaveUsername}
+                  disabled={isSavingUsername || !usernameInput.trim()}
+                  className="w-full"
+                >
+                  {isSavingUsername ? "Saving..." : "Save Username"}
+                </Button>
+              </div>
+            )}
 
             {/* Room List */}
             <div className="space-y-4">

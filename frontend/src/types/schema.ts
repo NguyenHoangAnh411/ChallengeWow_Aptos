@@ -17,15 +17,13 @@ export interface Room {
 }
 
 export interface User {
-  id: number;
-  username: string;
-  walletAddress?: string;
+  id: string;
+  username?: string | null;
+  walletAddress: string;
   totalScore: number;
   gamesWon: number;
   rank: number;
-  createdAt: Date;
-  status?: "thinking" | "answered" | "timeout";
-  responseTime?: number;
+  createdAt?: string;
 }
 
 export interface Player {

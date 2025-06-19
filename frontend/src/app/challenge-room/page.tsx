@@ -97,12 +97,11 @@ export default function ChallengeRoom() {
     // Set current question
     if (!currentQuestion) {
       setCurrentQuestion({
-        id: 1,
-        text: "Which programming language is known as the 'mother of all languages'?",
+        id: "1",
+        content: "Which programming language is known as the 'mother of all languages'?",
         options: ["Assembly Language", "C Programming", "FORTRAN", "COBOL"],
-        correctAnswer: "C Programming",
-        category: "technology",
-        difficulty: "medium"
+        correctOptionIndex: 1,
+        createdAt: new Date().toISOString()
       });
     }
   }, [roomId, currentRoom, setCurrentRoom, players, setPlayers, currentQuestion]);
@@ -276,7 +275,7 @@ export default function ChallengeRoom() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.3 }}
                       >
-                        {currentQuestion.text}
+                        {currentQuestion.content}
                       </motion.h2>
 
                       {/* Enhanced Answer Options */}

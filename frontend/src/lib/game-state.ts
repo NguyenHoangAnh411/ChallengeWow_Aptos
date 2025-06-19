@@ -1,7 +1,8 @@
 import { create } from "zustand";
+import type { User } from "@/types/schema";
 
 interface GameState {
-  currentUser: any | null;
+  currentUser: User | null;
   currentRoom: any | null;
   currentQuestion: any | null;
   timeRemaining: number;
@@ -9,7 +10,7 @@ interface GameState {
   players: (any & { status?: string; responseTime?: number })[];
   
   // Actions
-  setCurrentUser: (user: any | null) => void;
+  setCurrentUser: (user: User | null) => void;
   setCurrentRoom: (room: any | null) => void;
   setCurrentQuestion: (question: any | null) => void;
   setTimeRemaining: (time: number) => void;

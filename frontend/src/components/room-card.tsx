@@ -11,7 +11,7 @@ import { RoomStatus } from "@/types/RoomStatus";
 interface RoomCardProps {
   index: number;
   room: Room;
-  onJoin: (roomId: String) => void;
+  onJoin: (roomId: string) => void;
 }
 
 export default function RoomCard({ index, room, onJoin }: RoomCardProps) {

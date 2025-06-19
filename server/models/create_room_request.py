@@ -2,7 +2,6 @@ from models.base import CamelModel
 
 # 📥 Request: Tạo phòng
 class CreateRoomRequest(CamelModel):
-    user_id: str
     username: str
     wallet_id: str
     total_questions: int = 10
