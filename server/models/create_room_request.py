@@ -6,5 +6,4 @@ class CreateRoomRequest(CamelModel):
     wallet_id: str
     total_questions: int = 10
     countdown_duration: int = 10
-
     

@@ -3,7 +3,6 @@ from fastapi import APIRouter, WebSocket
 
 from models.create_room_request import CreateRoomRequest
 from models.join_request import JoinRoomRequest
-from models.answer_submission import AnswerSubmission
 from controllers.room_controller import RoomController
 from models.room import Room
 

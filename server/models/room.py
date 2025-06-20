@@ -25,15 +25,5 @@ class Room(CamelModel):
     start_time: Optional[datetime] = None
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
-
-    @property
-    def duration(self) -> int:
-        return self.total_questions * self.time_per_question
-
-    @model_validator(mode="after")
-    def check_at_least_one_player(self) -> "Room":
-        if not self.players:
-            raise ValueError("Room must have at least one player.")
-        return self
     
     model_config = ConfigDict(ser_enum_as_value=True)

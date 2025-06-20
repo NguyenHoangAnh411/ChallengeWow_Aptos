@@ -34,10 +34,10 @@ class PlayerRepository(IPlayerRepository):
         for p in res.data:
             player = Player(
                 id=p["id"],
+                room_id=p["room_id"],
                 wallet_id=p["wallet_id"],
                 username=p["username"],
                 score=p["score"],
-                answers=json.loads(p["answers"]),
                 joined_at=datetime.fromisoformat(p["joined_at"].replace("Z", "+00:00")),
             )
             players.append(player)

@@ -4,13 +4,14 @@ from datetime import datetime, timezone, timedelta
 from typing import List
 
 from models.room import Room
+from repositories.implement.player_repo_impl import PlayerRepository
 from repositories.interfaces.room_repo import IRoomRepository
 
 
 class RoomRepository(IRoomRepository):
     table = "challenge_rooms"
 
-    def __init__(self, player_repo=None):
+    def __init__(self, player_repo: PlayerRepository=None):
         self.player_repo = player_repo
 
     def get_all(self) -> List[Room]:
@@ -20,10 +21,7 @@ class RoomRepository(IRoomRepository):
             rooms = []
             for item in data:
                 room = Room(**item)
-                if self.player_repo:
-                    room.players = self.player_repo.get_by_room(room.id)
-                else:
-                    room.players = []
+                room.players = self.player_repo.get_by_room(room.id)
                 if not room.players:
                     continue
                 rooms.append(room)
