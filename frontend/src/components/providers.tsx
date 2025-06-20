@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
 import { TooltipProvider } from "@radix-ui/react-tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import '@rainbow-me/rainbowkit/styles.css';
-import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import { WagmiProvider, http, useAccount } from 'wagmi';
-import { baseSepolia } from 'wagmi/chains';
-import { useEffect } from 'react';
-import { loginUser } from '@/lib/api';
-import { useGameState } from '@/lib/game-state';
+import "@rainbow-me/rainbowkit/styles.css";
+import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { WagmiProvider, http, useAccount } from "wagmi";
+import { baseSepolia } from "wagmi/chains";
+import { useEffect } from "react";
+import { loginUser } from "@/lib/api";
+import { useGameState } from "@/lib/game-state";
+import { Toaster } from "./ui/toaster";
 
 const config = getDefaultConfig({
-  appName: 'Challenge Wave',
-  projectId: '325fbe143f7ef647abd49c4a299b304a', // Đăng ký free tại https://cloud.walletconnect.com/
+  appName: "Challenge Wave",
+  projectId: "325fbe143f7ef647abd49c4a299b304a", // Đăng ký free tại https://cloud.walletconnect.com/
   chains: [baseSepolia],
   transports: {
     [baseSepolia.id]: http(),
@@ -26,7 +27,7 @@ function UserAutoLogin({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isConnected && address) {
-      loginUser(address).then(user => {
+      loginUser(address).then((user) => {
         setCurrentUser(user);
       });
     }
@@ -35,16 +36,23 @@ function UserAutoLogin({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function Providers({ children }: { children: JSX.Element | JSX.Element[] }) {
+export default function Providers({
+  children,
+}: {
+  children: JSX.Element | JSX.Element[];
+}) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
         <RainbowKitProvider>
           <TooltipProvider>
-            <UserAutoLogin>{children}</UserAutoLogin>
+            <UserAutoLogin>
+              {children}
+              <Toaster />
+            </UserAutoLogin>
           </TooltipProvider>
         </RainbowKitProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );
-} 
+}

@@ -102,7 +102,7 @@ export default function RoomCard({ index, room, onJoin }: RoomCardProps) {
               </div>
             </div>
 
-            <div className="mt-4 md:mt-0 md:ml-4">
+            <div className="mt-4 md:mt-0 md:ml-4 cursor-pointer">
               <ClientMotion
                 onClick={() => onJoin(room.id)}
                 disabled={!canJoin}
@@ -114,7 +114,7 @@ export default function RoomCard({ index, room, onJoin }: RoomCardProps) {
                 whileHover={canJoin ? { scale: 1.05 } : {}}
                 whileTap={canJoin ? { scale: 0.95 } : {}}
               >
-                <div className="relative z-10">
+                <div className="relative z-10 flex justify-center items-center">
                   {isFull ? "Room Full" : canJoin ? "Join Room" : "Unavailable"}
                 </div>
                 {canJoin && (

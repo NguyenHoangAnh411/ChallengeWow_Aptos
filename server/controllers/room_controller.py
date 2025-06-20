@@ -37,11 +37,7 @@ class RoomController:
 
         self.room_service.save_room(room)
 
-        return {
-            "roomId": room.id,
-            "playerId": player.id,
-            "walletId": player.wallet_id,
-        }
+        return room
 
 
     def join_room(self, request):

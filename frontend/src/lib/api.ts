@@ -12,23 +12,23 @@ async function fetchData(endpoint: string, options: RequestInit = {}) {
 
 // Lấy danh sách phòng
 export async function fetchRooms() {
-  return fetchData('/rooms');
+  return fetchData("/rooms");
 }
 
 // Tạo phòng mới
 export async function createRoom(data: any) {
-  return fetchData('/rooms', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return fetchData("/rooms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 }
 
 // Tham gia phòng
 export async function joinRoom(data: any) {
-  return fetchData('/join-room', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return fetchData("/join-room", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 }
@@ -45,32 +45,32 @@ export async function fetchPlayers(roomId: string) {
 
 // Lấy câu hỏi ngẫu nhiên
 export async function fetchRandomQuestion() {
-  return fetchData('/question/random');
+  return fetchData("/question/random");
 }
 
 // Gửi đáp án
 export async function submitAnswer(data: any) {
-  return fetchData('/submit-answer', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return fetchData("/submit-answer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 }
 
 // Gửi zk-proof
 export async function submitZkProof(data: any) {
-  return fetchData('/zk-proof', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return fetchData("/zk-proof", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 }
 
 // Đăng nhập hoặc tạo user bằng ví
 export async function loginUser(wallet_address: string, username?: string) {
-  return fetchData('/users/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return fetchData("/users/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ wallet_address, username }),
   });
 }
@@ -82,9 +82,9 @@ export async function fetchUserByWallet(wallet_address: string) {
 
 // Cập nhật username cho user
 export async function updateUser(walletAddress: string, username: string) {
-  return fetchData('/users/update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return fetchData("/users/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ wallet_address: walletAddress, username }),
   });
 }
@@ -95,4 +95,4 @@ export async function updateUser(walletAddress: string, username: string) {
 // const players = await fetchPlayers('room-id');
 // const randomQuestion = await fetchRandomQuestion();
 // const answerSubmission = await submitAnswer({ questionId: 'question-id', answer: 'answer' });
-// const zkProofSubmission = await submitZkProof({ proof: 'zk-proof' }); 
+// const zkProofSubmission = await submitZkProof({ proof: 'zk-proof' });

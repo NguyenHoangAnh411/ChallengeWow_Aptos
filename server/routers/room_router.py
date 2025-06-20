@@ -14,9 +14,8 @@ def create_room_router(room_controller: RoomController):
     async def get_rooms():
         return room_controller.get_rooms()
 
-    @router.post("/rooms")
+    @router.post("/rooms", response_model=Room)
     async def create_room(request: CreateRoomRequest):
-        print('called: ', request)
         return room_controller.create_room(request)
 
     @router.post("/join-room")

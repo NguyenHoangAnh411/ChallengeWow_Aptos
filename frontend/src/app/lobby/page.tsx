@@ -13,14 +13,24 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Room } from "@/types/schema";
-import { randomUUID } from "crypto";
-import { fetchRooms, createRoom, joinRoom, fetchUserByWallet, updateUser } from "@/lib/api";
+import {
+  fetchRooms,
+  createRoom,
+  joinRoom,
+  fetchUserByWallet,
+  updateUser,
+} from "@/lib/api";
 
-import { useAccount } from 'wagmi';
+import { useAccount } from "wagmi";
+import ConnectWalletModal from "@/components/connect-wallet-modal";
 
 export default function Lobby() {
   const router = useRouter();
   const { toast } = useToast();
+
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
   const { currentUser, setCurrentUser } = useGameState();
   const { isConnected, address } = useAccount();
   const [onlineStats, setOnlineStats] = useState({
@@ -28,21 +38,34 @@ export default function Lobby() {
     playersOnline: 127,
     avgResponseTime: "3.2s",
   });
+
   const [usernameInput, setUsernameInput] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
-  // Mock current user if not set
-  useEffect(() => {
-    if (!currentUser) {
-      // Không set user mock nữa
-      // setCurrentUser({ ... })
+  // Connect Wallet Modal
+  const requireWallet = (callback: () => void) => {
+    if (!isConnected) {
+      setPendingAction(() => callback);
+      setShowConnectModal(true);
+    } else {
+      callback();
     }
-  }, [currentUser, setCurrentUser]);
+  };
+
+  useEffect(() => {
+    if (isConnected && pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+      setShowConnectModal(false);
+    }
+  }, [isConnected, pendingAction]);
 
   useEffect(() => {
     if (!currentUser && isConnected && address) {
-      fetchUserByWallet(address).then(user => {
-        if (user) setCurrentUser(user);
+      fetchUserByWallet(address).then((user) => {
+        if (user) {
+          setCurrentUser(user);
+        }
       });
     }
   }, [currentUser, isConnected, address, setCurrentUser]);
@@ -53,22 +76,44 @@ export default function Lobby() {
     refetchInterval: 5000,
   });
 
+  useEffect(() => {
+    if (!rooms || rooms.length === 0) return;
+
+    const activeRooms = rooms.length;
+
+    const playersOnline = rooms.reduce((total, room) => {
+      return total + (room.players?.length || 0);
+    }, 0);
+
+    // Fake avg response time
+    const avgResponseTime = `${(Math.random() * 2 + 1).toFixed(1)}s`;
+
+    setOnlineStats({
+      activeRooms,
+      playersOnline,
+      avgResponseTime,
+    });
+  }, [rooms]);
+
   const createRoomMutation = useMutation({
     mutationFn: async () => {
       return createRoom({
         username: currentUser?.username,
-        wallet_id: currentUser?.walletAddress,
-        total_questions: 10,
-        countdown_duration: 10,
+        walletId: currentUser?.walletAddress,
       });
     },
-    onSuccess: (room) => {
+    onSuccess: (room: Room) => {
+      console.log(room);
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({
         title: "Room Created",
-        description: `Room #${room.roomCode} has been created!`,
+        description: `Room #${onlineStats.activeRooms} has been created!`,
       });
-      router.push(`/room/${room.id}`);
+
+      // Wait 0.5s for redirect
+      setTimeout(() => {
+        router.push(`/room/${room.id}`);
+      }, 500);
     },
     onError: () => {
       toast({
@@ -92,7 +137,11 @@ export default function Lobby() {
         title: "Room Joined",
         description: "Successfully joined the room!",
       });
-      router.push(`/room/${roomId}`);
+
+      // Wait 0.5s for redirect
+      setTimeout(() => {
+        router.push(`/room/${roomId}`);
+      }, 500);
     },
     onError: () => {
       toast({
@@ -112,30 +161,50 @@ export default function Lobby() {
   });
 
   const handleCreateRoom = () => {
+    if (!isConnected) {
+      setShowConnectModal(true);
+      return;
+    }
+
     if (!currentUser?.username || !currentUser?.walletAddress) {
       toast({
         title: "Missing info",
-        description: "Please connect wallet and set username.",
+        description: "Please set your username before creating a room.",
         variant: "destructive",
       });
       return;
     }
+
     createRoomMutation.mutate();
   };
 
   const handleJoinRoom = (roomId: string) => {
-    joinRoomMutation.mutate(roomId);
+    requireWallet(() => {
+      joinRoomMutation.mutate(roomId);
+    });
   };
 
   const handleSaveUsername = async () => {
     if (!currentUser?.walletAddress || !usernameInput.trim()) return;
+    if (usernameInput.length < 2) return;
     setIsSavingUsername(true);
     try {
-      await updateUser(currentUser.walletAddress, usernameInput.trim());
-      setCurrentUser({ ...currentUser, username: usernameInput.trim() });
-      toast({ title: "Username updated!", description: "You can now create a room." });
+      const finalUsername = `${usernameInput.trim()}#${currentUser.walletAddress.slice(
+        -4
+      )}`;
+      await updateUser(currentUser.walletAddress, finalUsername);
+      setCurrentUser({ ...currentUser, username: finalUsername });
+      setUsernameInput("");
+      toast({
+        title: "Username updated!",
+        description: "You can now create a room.",
+      });
     } catch (e) {
-      toast({ title: "Error", description: "Failed to update username.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to update username.",
+        variant: "destructive",
+      });
     }
     setIsSavingUsername(false);
   };
@@ -206,7 +275,6 @@ export default function Lobby() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Enhanced Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -226,23 +294,43 @@ export default function Lobby() {
                   {currentUser && (
                     <div className="space-y-4">
                       <div className="flex items-center space-x-3 p-3 bg-cyber-accent/30 rounded-lg">
+                        {/* Avatar */}
                         <div className="w-12 h-12 bg-gradient-to-r from-neon-blue to-neon-purple rounded-full flex items-center justify-center animate-glow-pulse">
-                          <span className="text-white font-bold text-lg">
-                            {currentUser?.username?.substring(0, 2) ||
-                              (currentUser?.walletAddress ? currentUser.walletAddress.substring(2, 4) : "--")}
+                          <span className="text-white font-bold text-lg truncate">
+                            {currentUser?.username
+                              ?.substring(0, 2)
+                              .toUpperCase() ||
+                              (currentUser?.walletAddress
+                                ? currentUser.walletAddress
+                                    .substring(2, 4)
+                                    .toUpperCase()
+                                : "--")}
                           </span>
                         </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-white">
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-white truncate">
                             {currentUser?.username ||
-                              (currentUser?.walletAddress ? currentUser.walletAddress.substring(0, 8) + '...' : "--")}
+                              (currentUser?.walletAddress
+                                ? currentUser.walletAddress.substring(0, 8) +
+                                  "..."
+                                : "--")}
                           </div>
-                          <div className="text-xs text-gray-400 font-mono">
-                            {currentUser?.walletAddress || "No wallet connected"}
+                          <div
+                            className="text-xs text-gray-400 font-mono truncate"
+                            title={
+                              currentUser?.walletAddress ||
+                              "No wallet connected"
+                            }
+                          >
+                            {currentUser?.walletAddress ||
+                              "No wallet connected"}
                           </div>
                         </div>
                       </div>
 
+                      {/* Stats */}
                       <div className="grid grid-cols-1 gap-3">
                         <div className="flex justify-between items-center p-2 bg-neon-blue/10 rounded">
                           <span className="text-gray-300 text-sm">
@@ -357,14 +445,19 @@ export default function Lobby() {
             </motion.div>
 
             {/* Hiển thị form nhập username nếu thiếu */}
-            {currentUser?.walletAddress && !currentUser?.username && (
-              <div className="mb-6 p-4 bg-cyber-accent/20 rounded-lg" style={{ zIndex: 1000, position: 'relative' }}>
-                <h3 className="font-bold mb-2 text-neon-blue">Set your username</h3>
+            {currentUser?.walletAddress && (
+              <div
+                className="mb-6 p-4 bg-cyber-accent/20 rounded-lg"
+                style={{ zIndex: 1000, position: "relative" }}
+              >
+                <h3 className="font-bold mb-2 text-neon-blue">
+                  Set your username
+                </h3>
                 <input
                   className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-full mb-2"
-                  placeholder="Enter username"
+                  placeholder={currentUser.username ?? "Enter username"}
                   value={usernameInput}
-                  onChange={e => setUsernameInput(e.target.value)}
+                  onChange={(e) => setUsernameInput(e.target.value)}
                   // disabled={isSavingUsername}
                 />
                 <Button
@@ -435,6 +528,12 @@ export default function Lobby() {
           </div>
         </div>
       </div>
+
+      {/* If user has not connected wallet yet */}
+      <ConnectWalletModal
+        open={showConnectModal}
+        onOpenChange={setShowConnectModal}
+      />
     </div>
   );
 }
