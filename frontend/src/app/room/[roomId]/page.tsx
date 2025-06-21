@@ -1,7 +1,7 @@
- 'use client';
+'use client';
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,10 +15,9 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import type { Question, User } from "@/types/schema";
 
-export default function ChallengeRoom() {
+export default function ChallengeRoom({ params }: { params: { roomId: string } }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const roomId = searchParams.get("roomId");
+  const { roomId } = params;
   const { toast } = useToast();
   const { currentUser, currentRoom, setCurrentRoom, players, setPlayers, updatePlayerStatus } = useGameState();
   
@@ -249,140 +248,88 @@ export default function ChallengeRoom() {
                 <TimerCircle
                   duration={15}
                   onTimeUp={handleTimeUp}
+                  isPaused={hasAnswered}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-3xl font-orbitron font-bold text-white">
+                    {hasAnswered ? 'Waiting' : 'Go!'}
+                  </span>
+                </div>
               </div>
             </motion.div>
 
-            {/* Enhanced Question Card */}
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               {currentQuestion && (
                 <motion.div
                   key={currentQuestion.id}
-                  initial={{ opacity: 0, x: 50, rotateY: -15 }}
-                  animate={{ opacity: 1, x: 0, rotateY: 0 }}
-                  exit={{ opacity: 0, x: -50, rotateY: 15 }}
-                  transition={{ duration: 0.8, ease: [0.33, 1, 0.68, 1] }}
+                  initial={{ opacity: 0, y: 50, filter: 'blur(10px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -50, filter: 'blur(10px)' }}
+                  transition={{ duration: 0.5 }}
                 >
-                  <Card className="glass-morphism rounded-lg p-8 mb-8 hologram-border relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 animate-pulse"></div>
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-l from-neon-blue/10 to-transparent rounded-full blur-2xl"></div>
-                    
-                    <CardContent className="p-0 relative z-10">
-                      <motion.h2 
-                        className="text-2xl md:text-4xl font-semibold mb-8 text-center leading-relaxed bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.3 }}
-                      >
-                        {currentQuestion.content}
-                      </motion.h2>
+                  <Card className="glass-morphism-deep border border-neon-blue/30 shadow-neon-glow-md">
+                    <CardContent className="p-8">
+                      <div className="flex justify-between items-start mb-6">
+                        <div>
+                          <Badge variant="secondary" className="bg-neon-blue/20 text-neon-blue border-neon-blue/50 mb-2 font-semibold">Question {questionNumber}</Badge>
+                          <h2 className="text-2xl md:text-3xl font-bold text-gray-100 leading-tight">
+                            {currentQuestion.content}
+                          </h2>
+                        </div>
+                        <Button variant="ghost" size="icon" className="text-gray-500 hover:text-neon-blue transition-all">
+                          <ExternalLink className="w-5 h-5" />
+                        </Button>
+                      </div>
 
-                      {/* Enhanced Answer Options */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {currentQuestion.options.map((option, index) => {
-                          const letter = String.fromCharCode(65 + index); // A, B, C, D
-                          const isSelected = selectedAnswer === option;
-                          
-                          return (
-                            <motion.button
-                              key={index}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                        {currentQuestion.options.map((option, index) => (
+                          <motion.div
+                            key={index}
+                            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Button
+                              variant="outline"
+                              className={`
+                                w-full h-auto text-left justify-start p-6 text-lg rounded-lg transition-all duration-300 
+                                border-2 
+                                ${selectedAnswer === option 
+                                  ? 'bg-neon-purple/80 border-neon-purple text-white shadow-neon-glow-md' 
+                                  : 'bg-cyber-darker/80 border-gray-700 hover:border-neon-purple/70 text-gray-300 hover:bg-cyber-darker'
+                                }
+                                ${hasAnswered ? 'cursor-not-allowed' : ''}
+                              `}
                               onClick={() => handleAnswerSelect(option)}
                               disabled={hasAnswered}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.5, delay: 0.1 * index }}
-                              className={`
-                                relative p-6 rounded-lg text-left transition-all duration-300 group overflow-hidden
-                                ${isSelected 
-                                  ? "bg-gradient-to-r from-neon-blue/20 to-blue-500/20 border-2 border-neon-blue neon-glow-blue" 
-                                  : "glass-morphism border-2 border-transparent hover:border-neon-blue/50 hover:bg-cyber-accent/20"
-                                }
-                                ${hasAnswered ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
-                              `}
-                              whileHover={!hasAnswered ? { scale: 1.02 } : {}}
-                              whileTap={!hasAnswered ? { scale: 0.98 } : {}}
                             >
-                              <div className="flex items-center space-x-4">
-                                <div className={`
-                                  w-8 h-8 rounded-full flex items-center justify-center font-bold
-                                  ${isSelected ? "bg-neon-blue text-white" : "bg-neon-blue text-white"}
-                                `}>
-                                  {letter}
-                                </div>
-                                <span className="text-lg">{option}</span>
-                              </div>
-                            </motion.button>
-                          );
-                        })}
+                              <span className="font-bold mr-4 text-neon-purple">{String.fromCharCode(65 + index)}.</span>
+                              <span>{option}</span>
+                            </Button>
+                          </motion.div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Blockchain Status */}
-            <Card className="glass-morphism rounded-lg p-4">
-              <CardContent className="p-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-gray-400">Blockchain Status:</span>
-                    <span className="text-sm text-green-400">zk-SNARK Proof Generated</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-neon-blue hover:text-blue-400 text-sm transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    View Proof
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
-          {/* Players Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="glass-morphism rounded-lg p-6">
-              <CardContent className="p-0">
-                <h3 className="text-xl font-semibold mb-4 text-neon-purple">Players</h3>
+          {/* Players List */}
+          <aside className="lg:col-span-1">
+            <Card className="glass-morphism-deep border border-neon-purple/30 shadow-neon-glow-sm h-full">
+              <CardContent className="p-6">
+                <h3 className="text-xl font-orbitron font-bold text-neon-purple mb-6 text-center">Players</h3>
                 <div className="space-y-4">
-                  {players.map((player) => (
-                    <PlayerCard
-                      key={player.id}
-                      player={{
-                        ...player,
-                        isCurrentUser: player.id === currentUser?.id
-                      }}
-                    />
+                  {sortedPlayers.map((player) => (
+                    <PlayerCard key={player.id} player={player as User} />
                   ))}
                 </div>
-
-                {/* Current Standings */}
-                <div className="mt-6 pt-4 border-t border-gray-700">
-                  <h4 className="text-sm font-semibold text-gray-400 mb-3">Current Standings</h4>
-                  <div className="space-y-2">
-                    {sortedPlayers.slice(0, 3).map((player, index) => {
-                      const medals = ["🥇", "🥈", "🥉"];
-                      return (
-                        <div key={player.id} className="flex justify-between text-sm">
-                          <span className={`${index === 0 ? "text-yellow-400" : index === 1 ? "text-gray-300" : "text-orange-400"}`}>
-                            {medals[index]} {player.username}
-                          </span>
-                          <span className="font-semibold">{player.totalScore}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
               </CardContent>
             </Card>
-          </div>
+          </aside>
         </div>
       </div>
     </div>
   );
-}
+} 

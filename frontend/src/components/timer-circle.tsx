@@ -7,14 +7,15 @@ interface TimerCircleProps {
   duration: number; // in seconds
   onTimeUp?: () => void;
   className?: string;
+  isPaused?: boolean;
 }
 
-export default function TimerCircle({ duration, onTimeUp, className = "" }: TimerCircleProps) {
+export default function TimerCircle({ duration, onTimeUp, className = "", isPaused = false }: TimerCircleProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isPaused) return;
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -28,7 +29,7 @@ export default function TimerCircle({ duration, onTimeUp, className = "" }: Time
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, onTimeUp]);
+  }, [isActive, onTimeUp, isPaused]);
 
   const progress = (duration - timeLeft) / duration;
   const circumference = 2 * Math.PI * 45;
