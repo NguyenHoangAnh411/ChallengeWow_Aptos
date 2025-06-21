@@ -1,8 +1,7 @@
-from config.database import supabase
-import json
 from datetime import datetime, timezone, timedelta
 from typing import List
 
+from config.database import supabase
 from models.room import Room
 from repositories.implement.player_repo_impl import PlayerRepository
 from repositories.interfaces.room_repo import IRoomRepository
@@ -11,7 +10,7 @@ from repositories.interfaces.room_repo import IRoomRepository
 class RoomRepository(IRoomRepository):
     table = "challenge_rooms"
 
-    def __init__(self, player_repo: PlayerRepository=None):
+    def __init__(self, player_repo: PlayerRepository = None):
         self.player_repo = player_repo
 
     def get_all(self) -> List[Room]:
@@ -34,19 +33,37 @@ class RoomRepository(IRoomRepository):
         try:
             data = {
                 "id": room.id,
-                "status": room.status.value if hasattr(room.status, "value") else str(room.status),
+                "status": (
+                    room.status.value
+                    if hasattr(room.status, "value")
+                    else str(room.status)
+                ),
                 "time_per_question": getattr(room, "time_per_question", 20),
                 "total_questions": getattr(room, "total_questions", 10),
                 "countdown_duration": getattr(room, "countdown_duration", 10),
                 "entry_fee": getattr(room, "entry_fee", 0),
                 "prize": getattr(room, "prize", 0),
-                "created_at": room.created_at.isoformat() if hasattr(room, "created_at") else None,
-                "start_time": room.start_time.isoformat() if getattr(room, "start_time", None) else None,
-                "started_at": room.started_at.isoformat() if getattr(room, "started_at", None) else None,
-                "ended_at": room.ended_at.isoformat() if getattr(room, "ended_at", None) else None,
+                "created_at": (
+                    room.created_at.isoformat() if hasattr(room, "created_at") else None
+                ),
+                "start_time": (
+                    room.start_time.isoformat()
+                    if getattr(room, "start_time", None)
+                    else None
+                ),
+                "started_at": (
+                    room.started_at.isoformat()
+                    if getattr(room, "started_at", None)
+                    else None
+                ),
+                "ended_at": (
+                    room.ended_at.isoformat()
+                    if getattr(room, "ended_at", None)
+                    else None
+                ),
                 "winner_wallet_id": getattr(room, "winner_wallet_id", None),
-                # Bỏ qua room_id vì không dùng nữa
             }
+
             supabase.table(RoomRepository.table).upsert(data).execute()
             return True
         except Exception as e:
@@ -61,10 +78,16 @@ class RoomRepository(IRoomRepository):
                 .eq("id", room_id)
                 .execute()
             )
-            return res.data[0] if res.data else None
+
+            if res.data:
+                return Room(**res.data[0])
+            return None
         except Exception as e:
             print(f"Error fetching room {room_id} from Supabase: {str(e)}")
             return None
+
+    def delete_room(self, room_id: str) -> None:
+        supabase.table(RoomRepository.table).delete().eq("id", room_id).execute()
 
     def delete_old_rooms(self, hours_old=24) -> None:
         try:

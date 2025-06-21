@@ -29,7 +29,7 @@ class GameService:
         await asyncio.sleep(180)
 
         if len(room.players) >= 2:
-            await self.start_game(room)
+            self.start_game(room)
         else:
             room.status = GAME_STATUS.WAITING
             self.room_service.save_room(room)
@@ -54,9 +54,9 @@ class GameService:
                         {"question_id": question["id"], "answer": None, "score": 0}
                     )
 
-        await self.end_game(room)
+        self.end_game(room)
 
-    async def end_game(self, room: Room):
+    def end_game(self, room: Room):
         room.status = GAME_STATUS.FINISHED
         winner = max(room.players, key=lambda p: p.score)
         room.winner_wallet_id = winner.id
@@ -82,7 +82,9 @@ class GameService:
         }
         return hashlib.sha256(json.dumps(data).encode()).hexdigest()
 
-    def calculate_score(is_correct: bool, time_taken: float, question: Question) -> float:
+    def calculate_score(
+        is_correct: bool, time_taken: float, question: Question
+    ) -> float:
         if not is_correct:
             return 0
 
@@ -92,7 +94,7 @@ class GameService:
 
         base_score = config["score"]
         time_limit = config["time"]
-     
+
         bonus = 0
         if config.get("speed_bonus_enabled", False):
             bonus = max(config["max_speed_bonus"] * (1 - time_taken / time_limit), 0)

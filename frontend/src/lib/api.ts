@@ -15,6 +15,16 @@ export async function fetchRooms() {
   return fetchData("/rooms");
 }
 
+// Lấy data phòng
+export async function fetchRoomById(roomId: string) {
+  return fetchData(`/rooms/${roomId}`);
+}
+
+// Tham gia phòng đang chơi hiện tại
+export async function fetchCurrentRoom(walletId: string) {
+  return fetchData(`/current-room?wallet_id=${walletId}`);
+}
+
 // Tạo phòng mới
 export async function createRoom(data: any) {
   return fetchData("/rooms", {
@@ -35,12 +45,22 @@ export async function joinRoom(data: any) {
 
 // Lấy trạng thái phòng
 export async function fetchRoomStatus(roomId: string) {
-  return fetchData(`/rooms/${roomId}`);
+  return fetchData(`/rooms/${roomId}/status`);
 }
 
 // Lấy danh sách người chơi trong phòng
 export async function fetchPlayers(roomId: string) {
   return fetchData(`/room/${roomId}/players`);
+}
+
+export async function leaveRoom(data: any) {
+  return fetchData(`/leave-room`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
 
 // Lấy câu hỏi ngẫu nhiên
@@ -67,25 +87,25 @@ export async function submitZkProof(data: any) {
 }
 
 // Đăng nhập hoặc tạo user bằng ví
-export async function loginUser(wallet_address: string, username?: string) {
+export async function loginUser(wallet_id: string, username?: string) {
   return fetchData("/users/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wallet_address, username }),
+    body: JSON.stringify({ wallet_id, username }),
   });
 }
 
 // Lấy thông tin user theo wallet address
-export async function fetchUserByWallet(wallet_address: string) {
-  return fetchData(`/users/by-wallet/${wallet_address}`);
+export async function fetchUserByWallet(wallet_id: string) {
+  return fetchData(`/users/by-wallet/${wallet_id}`);
 }
 
 // Cập nhật username cho user
-export async function updateUser(walletAddress: string, username: string) {
+export async function updateUser(walletId: string, username: string) {
   return fetchData("/users/update", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wallet_address: walletAddress, username }),
+    body: JSON.stringify({ wallet_id: walletId, username }),
   });
 }
 

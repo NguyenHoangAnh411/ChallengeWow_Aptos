@@ -17,9 +17,8 @@ export interface Room {
 }
 
 export interface User {
-  id: string;
+  walletId: string;
   username?: string | null;
-  walletAddress: string;
   totalScore: number;
   gamesWon: number;
   rank: number;
@@ -27,13 +26,21 @@ export interface User {
 }
 
 export interface Player {
-  id: string;
   walletId: string;
+  status: "online" | "offline";
   username: string;
   score: number;
   joinedAt: string; // ISO 8601 string for datetime
   isWinner: boolean;
   answers: Answer[];
+
+  gamesWon: number;
+  rank: number;
+  responseTime: number;
+  isReady: boolean;
+  isHost: boolean;
+  character: string;
+  level: number;
 }
 
 export interface Question {

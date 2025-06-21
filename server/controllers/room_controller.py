@@ -1,62 +1,112 @@
-from datetime import datetime, timezone
-from fastapi import HTTPException, WebSocket, WebSocketDisconnect
+from typing import List
+from fastapi import HTTPException, Response, WebSocket, WebSocketDisconnect
+from enums.player_status import PLAYER_STATUS
 from models.create_room_request import CreateRoomRequest
+from models.join_request import JoinRoomRequest
 from models.player import Player
-#TODO: TEST ONLY
-from models.question import Question
 from models.room import Room
 from enums.game_status import GAME_STATUS
+from services.player_service import PlayerService
 from services.room_service import RoomService
 from services.game_service import GameService
 import asyncio
 
+from services.websocket_manager import WebSocketManager
 
 class RoomController:
-    def __init__(self, room_service: RoomService, game_service: GameService):
+    def __init__(
+        self,
+        room_service: RoomService,
+        game_service: GameService,
+        player_service: PlayerService,
+        websocket_manager = WebSocketManager()
+    ):
         self.room_service = room_service
         self.game_service = game_service
-        self.manager: dict[str, list[WebSocket]] = {}
+        self.player_service = player_service
+        self.websocket_manager = websocket_manager
 
     def get_rooms(self):
         return self.room_service.get_rooms()
-        
+    
+    def get_room_by_id(self, room_id: str) -> Room:
+        return self.room_service.get_room(room_id)
+
     def create_room(self, request: CreateRoomRequest):
-        player = Player(
-            wallet_id=request.wallet_id,
-            username=request.username,
-            room_id=''
-        )
-        
-        room = Room(
-            players=[player],
-            total_questions=request.total_questions,
-            countdown_duration=request.countdown_duration,
-        )
-        
-        player.room_id = room.id
+        try:
+            existing = self.player_service.get_player_by_wallet_id(request.wallet_id)
+            if existing and existing.player_status != PLAYER_STATUS.QUIT and not existing.quit_at:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Player is already in an active room"
+                )
+            
+            player = Player(
+                wallet_id=request.wallet_id,
+                username=request.username,
+                room_id="",
+                player_status=PLAYER_STATUS.ACTIVE,
+                is_host=True,
+            )
 
-        self.room_service.save_room(room)
+            room = Room(
+                players=[player],
+                total_questions=request.total_questions,
+                countdown_duration=request.countdown_duration
+            )
 
-        return room
+            player.room_id = room.id
+            self.room_service.save_room(room)
+            return room
+        except Exception as e:
+            print("Error in create_room:", e)
+            raise HTTPException(status_code=500, detail="Internal server error")
 
-
-    def join_room(self, request):
+    async def join_room(self, request: JoinRoomRequest):
         room = self.room_service.get_room(request.room_id)
         if not room:
             raise HTTPException(status_code=404, detail="Room not found")
         if len(room.players) >= 4:
             raise HTTPException(status_code=400, detail="Room is full")
         if room.status != GAME_STATUS.WAITING:
-            raise HTTPException(status_code=400, detail="Game already in progress")
+            raise HTTPException(status_code=400, detail="Game is not available")
 
-        player = Player(wallet_id=request.wallet_id, username=request.username, room_id=room.id)
+        player = Player(
+            wallet_id=request.wallet_id,
+            username=request.username,
+            room_id=room.id,
+        )
+        
         room.players.append(player)
         self.room_service.save_room(room)
 
+        await self.websocket_manager.broadcast_to_room(room.id, {
+            "type": "player_joined",
+            "player": player.model_dump()
+        })
+        
         if len(room.players) >= 2:
             asyncio.create_task(self.game_service.start_countdown(room))
 
-        return {"roomId": room.id, "playerWalletId": player.wallet_id}
+        return {"roomId": room.id, "walletId": player.wallet_id}
+
+    async def leave_room(self, wallet_id, room_id):
+        self.player_service.leave_room(wallet_id, room_id)
+        await self.websocket_manager.broadcast_to_lobby({
+            "type": "room_update",
+            "action": "leave",
+            "roomId": room_id
+        })
+
+    def get_current_room(self, wallet_id):
+        player: Player = self.player_service.get_player_by_wallet_id(wallet_id)
+        if not player or player.player_status == PLAYER_STATUS.QUIT:
+            return Response(status_code=404, content="Not found")
+        
+        return {
+            "roomId": player.room_id,
+            "walletId": player.wallet_id,
+        }
 
     def get_room_status(self, room_id: str):
         room = self.room_service.get_room(room_id)
@@ -65,7 +115,7 @@ class RoomController:
         return {
             "status": room.status,
             "players": [
-                {"id": p.id, "username": p.username, "score": p.score}
+                {"walletId": p.wallet_id, "username": p.username, "score": p.score}
                 for p in room.players
             ],
             "currentQuestion": (
@@ -74,17 +124,3 @@ class RoomController:
                 else None
             ),
         }
-
-    async def handle_websocket(self, websocket: WebSocket, room_id: str):
-        if room_id not in self.manager:
-            self.manager[room_id] = []
-        await websocket.accept()
-        self.manager[room_id].append(websocket)
-
-        try:
-            while True:
-                data = await websocket.receive_text()
-                for conn in self.manager[room_id]:
-                    await conn.send_text(data)
-        except WebSocketDisconnect:
-            self.manager[room_id].remove(websocket)

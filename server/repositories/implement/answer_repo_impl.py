@@ -11,48 +11,53 @@ class AnswerRepository(IAnswerRepository):
     def save(
         self,
         room_id: str,
-        user_id: str,
+        wallet_id: str,
         question_id: str,
         selected_index: int,
         is_correct: bool,
         time_taken: float,
         timestamp: datetime,
     ) -> None:
-        supabase.table(AnswerRepository.table).insert({
-            "id": str(uuid.uuid4()),
-            "room_id": room_id,
-            "user_id": user_id,
-            "question_id": question_id,
-            "selected_index": selected_index,
-            "is_correct": is_correct,
-            "time_taken": time_taken,
-            "created_at": timestamp,
-        }).execute()
+        supabase.table(AnswerRepository.table).insert(
+            {
+                "id": str(uuid.uuid4()),
+                "room_id": room_id,
+                "wallet_id": wallet_id,
+                "question_id": question_id,
+                "selected_index": selected_index,
+                "is_correct": is_correct,
+                "time_taken": time_taken,
+                "created_at": timestamp,
+            }
+        ).execute()
 
     def get_answers_by_room(self, room_id: str) -> List[Dict]:
-        response = supabase \
-            .table(AnswerRepository.table) \
-            .select("*") \
-            .eq("room_id", room_id) \
+        response = (
+            supabase.table(AnswerRepository.table)
+            .select("*")
+            .eq("room_id", room_id)
             .execute()
+        )
         return response.data or []
 
-    def get_answers_by_user(self, room_id: str, user_id: str) -> List[Dict]:
-        response = supabase \
-            .table(AnswerRepository.table) \
-            .select("*") \
-            .eq("room_id", room_id) \
-            .eq("user_id", user_id) \
+    def get_answers_by_user(self, room_id: str, wallet_id: str) -> List[Dict]:
+        response = (
+            supabase.table(AnswerRepository.table)
+            .select("*")
+            .eq("room_id", room_id)
+            .eq("wallet_id", wallet_id)
             .execute()
+        )
         return response.data or []
 
-    def get_score_by_user(self, room_id: str, user_id: str) -> float:
-        response = supabase \
-            .table(AnswerRepository.table) \
-            .select("is_correct, time_taken") \
-            .eq("room_id", room_id) \
-            .eq("user_id", user_id) \
+    def get_score_by_user(self, room_id: str, wallet_id: str) -> float:
+        response = (
+            supabase.table(AnswerRepository.table)
+            .select("is_correct, time_taken")
+            .eq("room_id", room_id)
+            .eq("wallet_id", wallet_id)
             .execute()
+        )
         answers = response.data or []
         # Ví dụ: 1 điểm nếu đúng + 1 điểm bonus nếu trả lời nhanh
         total_score = 0.0

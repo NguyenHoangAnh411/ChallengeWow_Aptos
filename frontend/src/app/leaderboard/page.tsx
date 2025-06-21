@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -26,73 +26,75 @@ export default function Leaderboard() {
     {
       id: 2,
       username: "CyberNinja",
-      walletAddress: "0xABCD...1234",
+      walletId: "0xABCD...1234",
       totalScore: 18920,
       gamesWon: 67,
       rank: 1,
-      createdAt: new Date()
+      createdAt: new Date(),
     },
     {
       id: 3,
       username: "QuizKing",
-      walletAddress: "0x2468...9753",
+      walletId: "0x2468...9753",
       totalScore: 15847,
       gamesWon: 42,
       rank: 2,
-      createdAt: new Date()
+      createdAt: new Date(),
     },
     {
       id: 4,
       username: "BrainGamer",
-      walletAddress: "0x1357...8642",
+      walletId: "0x1357...8642",
       totalScore: 14235,
       gamesWon: 38,
       rank: 3,
-      createdAt: new Date()
+      createdAt: new Date(),
     },
     {
       id: 5,
       username: "TechMaster",
-      walletAddress: "0x2468...9753",
+      walletId: "0x2468...9753",
       totalScore: 12890,
       gamesWon: 29,
       rank: 4,
-      createdAt: new Date()
+      createdAt: new Date(),
     },
     {
       id: 6,
       username: "SmartWiz",
-      walletAddress: "0x1357...8642",
+      walletId: "0x1357...8642",
       totalScore: 11750,
       gamesWon: 25,
       rank: 5,
-      createdAt: new Date()
+      createdAt: new Date(),
     },
     {
       id: 7,
       username: "KnowledgeQueen",
-      walletAddress: "0x9876...1234",
+      walletId: "0x9876...1234",
       totalScore: 10920,
       gamesWon: 22,
       rank: 6,
-      createdAt: new Date()
-    }
+      createdAt: new Date(),
+    },
   ];
 
   // Add current user to mock data if available
-  if (currentUser && !mockLeaderboard.find(p => p.id === currentUser.id)) {
+  if (currentUser && !mockLeaderboard.find((p) => p.id === currentUser.id)) {
     mockLeaderboard.push({
       ...currentUser,
-      isCurrentUser: true
+      isCurrentUser: true,
     });
   }
 
-  const displayPlayers = showMore ? mockLeaderboard : mockLeaderboard.slice(0, 6);
+  const displayPlayers = showMore
+    ? mockLeaderboard
+    : mockLeaderboard.slice(0, 6);
   const top3 = mockLeaderboard.slice(0, 3);
 
   const handleFindMyRank = () => {
     if (currentUser) {
-      const userRank = mockLeaderboard.find(p => p.id === currentUser.id);
+      const userRank = mockLeaderboard.find((p) => p.id === currentUser.id);
       if (userRank) {
         // Scroll to user's position or show in highlighted section
         setShowMore(true);
@@ -114,7 +116,9 @@ export default function Leaderboard() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-orbitron font-bold text-neon-blue">Global Leaderboard</h1>
+            <h1 className="text-2xl font-orbitron font-bold text-neon-blue">
+              Global Leaderboard
+            </h1>
           </div>
           <div className="flex items-center space-x-4">
             {/* Filter Buttons */}
@@ -122,8 +126,8 @@ export default function Leaderboard() {
               size="sm"
               onClick={() => setSelectedPeriod("week")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedPeriod === "week" 
-                  ? "bg-neon-blue text-white" 
+                selectedPeriod === "week"
+                  ? "bg-neon-blue text-white"
                   : "text-gray-400 hover:text-white"
               }`}
             >
@@ -134,8 +138,8 @@ export default function Leaderboard() {
               variant="ghost"
               onClick={() => setSelectedPeriod("month")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedPeriod === "month" 
-                  ? "bg-neon-blue text-white" 
+                selectedPeriod === "month"
+                  ? "bg-neon-blue text-white"
                   : "text-gray-400 hover:text-white"
               }`}
             >
@@ -146,8 +150,8 @@ export default function Leaderboard() {
               variant="ghost"
               onClick={() => setSelectedPeriod("all")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedPeriod === "all" 
-                  ? "bg-neon-blue text-white" 
+                selectedPeriod === "all"
+                  ? "bg-neon-blue text-white"
                   : "text-gray-400 hover:text-white"
               }`}
             >
@@ -159,7 +163,7 @@ export default function Leaderboard() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Top 3 Podium */}
-        <motion.div 
+        <motion.div
           className="max-w-4xl mx-auto mb-12"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -167,7 +171,7 @@ export default function Leaderboard() {
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             {/* 2nd Place */}
-            <motion.div 
+            <motion.div
               className="order-1 md:order-1 text-center"
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -181,17 +185,21 @@ export default function Leaderboard() {
                       {top3[1]?.username.substring(0, 2)}
                     </span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{top3[1]?.username}</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    {top3[1]?.username}
+                  </h3>
                   <div className="text-2xl font-orbitron font-bold text-neon-blue mb-2">
                     {top3[1]?.totalScore.toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-400">{top3[1]?.gamesWon} wins</div>
+                  <div className="text-sm text-gray-400">
+                    {top3[1]?.gamesWon} wins
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
 
             {/* 1st Place */}
-            <motion.div 
+            <motion.div
               className="order-2 md:order-2 text-center"
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -205,17 +213,21 @@ export default function Leaderboard() {
                       {top3[0]?.username.substring(0, 2)}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-semibold mb-2">{top3[0]?.username}</h3>
+                  <h3 className="text-2xl font-semibold mb-2">
+                    {top3[0]?.username}
+                  </h3>
                   <div className="text-3xl font-orbitron font-bold text-yellow-400 mb-2">
                     {top3[0]?.totalScore.toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-400">{top3[0]?.gamesWon} wins</div>
+                  <div className="text-sm text-gray-400">
+                    {top3[0]?.gamesWon} wins
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
 
             {/* 3rd Place */}
-            <motion.div 
+            <motion.div
               className="order-3 md:order-3 text-center"
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -229,11 +241,15 @@ export default function Leaderboard() {
                       {top3[2]?.username.substring(0, 2)}
                     </span>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{top3[2]?.username}</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    {top3[2]?.username}
+                  </h3>
                   <div className="text-2xl font-orbitron font-bold text-neon-blue mb-2">
                     {top3[2]?.totalScore.toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-400">{top3[2]?.gamesWon} wins</div>
+                  <div className="text-sm text-gray-400">
+                    {top3[2]?.gamesWon} wins
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -253,7 +269,7 @@ export default function Leaderboard() {
             </Button>
           </div>
 
-          <motion.div 
+          <motion.div
             className="space-y-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -266,10 +282,7 @@ export default function Leaderboard() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
               >
-                <PlayerCard
-                  player={player}
-                  rank={player.rank || (index + 4)}
-                />
+                <PlayerCard player={player} rank={player.rank || index + 4} />
               </motion.div>
             ))}
 
@@ -283,7 +296,7 @@ export default function Leaderboard() {
                 <PlayerCard
                   player={{
                     ...currentUser,
-                    isCurrentUser: true
+                    isCurrentUser: true,
                   }}
                   rank={currentUser.rank}
                 />

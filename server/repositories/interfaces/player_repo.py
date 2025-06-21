@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from models.player import Player
 
 
@@ -10,4 +10,16 @@ class IPlayerRepository(ABC):
 
     @abstractmethod
     def get_by_room(self, room_id: str) -> List[Player]:
+        pass
+
+    @abstractmethod
+    def get_by_wallet_id(self, wallet_id: str) -> Optional[Player]:
+        pass
+
+    @abstractmethod
+    def delete_by_player_and_room(self, player_id, room_id) -> None:
+        pass
+
+    @abstractmethod
+    def update_player(self, player_id: str, updates: dict) -> None:
         pass

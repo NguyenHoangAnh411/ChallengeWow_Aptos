@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 interface UseWebSocketOptions {
+  url?: string;
+  baseUrl?: string;
   onMessage?: (data: any) => void;
   onOpen?: () => void;
   onClose?: () => void;
@@ -8,25 +10,37 @@ interface UseWebSocketOptions {
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
-  const [isConnected, setIsConnected] = useState(false);
+  const [isWsConnected, setIsWsConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
-  const { onMessage, onOpen, onClose, onError } = options;
+  const {
+    url = "",
+    baseUrl = process.env.NEXT_PUBLIC_WS_BASE,
+    onMessage,
+    onOpen,
+    onClose,
+    onError,
+  } = options;
+
+  const fullPath = url ? (url.startsWith("/") ? url : `/${url}`) : "";
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = baseUrl || window.location.host;
+  const wsUrl = `${protocol}//${host}/ws${fullPath}`;
 
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
     socket.onopen = () => {
-      setIsConnected(true);
+      console.log("[WS] Connected!");
+      setIsWsConnected(true);
       onOpen?.();
     };
 
     socket.onmessage = (event) => {
+      console.log("[WS RAW]", event.data); // ➜ phải thấy JSON string ở đây
       try {
         const data = JSON.parse(event.data);
+        console.log("[WS MESSAGE PARSED]", data);
         onMessage?.(data);
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
@@ -34,7 +48,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
 
     socket.onclose = () => {
-      setIsConnected(false);
+      setIsWsConnected(false);
       onClose?.();
     };
 
@@ -43,9 +57,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
 
     return () => {
+      console.log("[WS] useEffect cleanup");
       socket.close();
     };
-  }, [onMessage, onOpen, onClose, onError]);
+  }, [wsUrl]);
 
   const sendMessage = (message: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -54,7 +69,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   };
 
   return {
-    isConnected,
+    isWsConnected,
     sendMessage,
   };
 }

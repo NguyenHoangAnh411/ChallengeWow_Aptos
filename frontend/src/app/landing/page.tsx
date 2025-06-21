@@ -20,8 +20,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { ethers } from "ethers";
-import '@rainbow-me/rainbowkit/styles.css';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import "@rainbow-me/rainbowkit/styles.css";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global {
@@ -34,7 +34,7 @@ export default function Landing() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletId, setwalletId] = useState<string | null>(null);
 
   const handleConnectWallet = async () => {
     setIsConnecting(true);
@@ -43,7 +43,7 @@ export default function Landing() {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send("eth_requestAccounts", []);
         const address = accounts[0];
-        setWalletAddress(address);
+        setwalletId(address);
         setIsConnected(true);
       } else {
         alert("Please install Metamask or a compatible wallet extension.");

@@ -1,4 +1,4 @@
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
@@ -8,6 +8,7 @@ from models.player import Player
 from models.question import Question
 from models.zkproof import ZKProof
 from enums.game_status import GAME_STATUS
+
 
 # 🏠 Phòng chơi
 class Room(CamelModel):
@@ -25,5 +26,5 @@ class Room(CamelModel):
     start_time: Optional[datetime] = None
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
-    
+
     model_config = ConfigDict(ser_enum_as_value=True)

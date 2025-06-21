@@ -3,17 +3,22 @@ from typing import List
 
 from models.room import Room
 
+
 class IRoomRepository(ABC):
     @abstractmethod
     def get_all(self) -> List[Room]:
         pass
-    
+
     @abstractmethod
     def get(self, room_id: str) -> Room | None:
         pass
 
     @abstractmethod
     def save(self, room: Room) -> None:
+        pass
+
+    @abstractmethod
+    def delete_room(self, room_id: str) -> None:
         pass
 
     @abstractmethod

@@ -18,5 +18,5 @@ QUESTION_CONFIG = {
         "score": 150,
         "speed_bonus_enabled": True,
         "max_speed_bonus": 50,
-    }
+    },
 }

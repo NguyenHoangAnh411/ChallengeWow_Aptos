@@ -2,17 +2,20 @@ import os
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from controllers.websocket_controller import WebSocketController
 from repositories.implement.room_repo_impl import RoomRepository
 from repositories.implement.player_repo_impl import PlayerRepository
 from repositories.implement.question_repo_impl import QuestionRepository
 from repositories.implement.answer_repo_impl import AnswerRepository
 from repositories.implement.zkproof_repo_impl import ZkProofRepository
 
+from routers.websocket_router import create_ws_router
 from services.game_service import GameService
 from services.room_service import RoomService
 from services.player_service import PlayerService
 from services.question_service import QuestionService
 from services.answer_service import AnswerService
+from services.websocket_manager import WebSocketManager
 from services.zkproof_service import ZkProofService
 
 from controllers.room_controller import RoomController
@@ -48,19 +51,21 @@ zkproof_repo = ZkProofRepository()
 
 # Services
 room_service = RoomService(room_repo, player_repo)
-player_service = PlayerService(player_repo)
+player_service = PlayerService(player_repo, room_repo)
 question_service = QuestionService(question_repo)
 answer_service = AnswerService(answer_repo)
 zkproof_service = ZkProofService(zkproof_repo)
 game_service = GameService(room_service, question_service, zkproof_service)
+websocket_manager = WebSocketManager()
 
 # Controllers
-room_controller = RoomController(room_service, game_service)
+room_controller = RoomController(room_service, game_service, player_service)
 player_controller = PlayerController(player_service)
 question_controller = QuestionController(question_service)
 answer_controller = AnswerController(answer_service, room_service)
 zkproof_controller = ZkProofController(zkproof_service)
 user_controller = UserController()
+websocket_controller = WebSocketController(websocket_manager)
 
 # Router
 api_router = APIRouter(prefix="/api")
@@ -72,8 +77,10 @@ api_router.include_router(create_question_router(question_controller))
 api_router.include_router(create_answer_router(answer_controller))
 api_router.include_router(create_zkproof_router(zkproof_controller))
 api_router.include_router(create_user_router(user_controller))
+ws_router = create_ws_router(websocket_controller)
 
 app.include_router(api_router)
+app.include_router(ws_router, prefix="/ws")
 
 PORT = int(os.getenv("PORT")) or 9000
 HOST = "0.0.0.0"

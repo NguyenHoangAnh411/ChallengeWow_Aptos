@@ -1,4 +1,5 @@
 from config.database import supabase
+from models.question import Question
 from repositories.interfaces.question_repo import IQuestionRepository
 import random
 
@@ -6,7 +7,7 @@ import random
 class QuestionRepository(IQuestionRepository):
     table = "quiz_questions"
 
-    def get_random(self) -> dict | None:
+    def get_random(self) -> Question | None:
         count_res = (
             supabase.table(QuestionRepository.table)
             .select("id", count="exact")
@@ -22,4 +23,5 @@ class QuestionRepository(IQuestionRepository):
             .range(offset, offset)
             .execute()
         )
-        return res.data[0] if res.data else None
+
+        return Question(**res.data[0]) if res.data else None

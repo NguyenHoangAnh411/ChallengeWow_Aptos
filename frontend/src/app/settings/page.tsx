@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -6,7 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Wallet, Palette, Gamepad2, Info, AlertTriangle, Trash, UserMinus, Book, Github, MessageCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Wallet,
+  Palette,
+  Gamepad2,
+  Info,
+  AlertTriangle,
+  Trash,
+  UserMinus,
+  Book,
+  Github,
+  MessageCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useGameState } from "@/lib/game-state";
@@ -15,16 +27,18 @@ export default function Settings() {
   const router = useRouter();
   const { toast } = useToast();
   const { currentUser } = useGameState();
-  
+
   // Wallet state
-  const [isWalletConnected, setIsWalletConnected] = useState(!!currentUser?.walletAddress);
+  const [isWalletConnected, setIsWalletConnected] = useState(
+    !!currentUser?.walletId
+  );
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  
+
   // Interface settings
   const [theme, setTheme] = useState("dark");
   const [soundEffects, setSoundEffects] = useState(true);
   const [animations, setAnimations] = useState(true);
-  
+
   // Game settings
   const [autoJoinRooms, setAutoJoinRooms] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -32,12 +46,12 @@ export default function Settings() {
     technology: true,
     science: false,
     general: true,
-    sports: false
+    sports: false,
   });
 
   const handleDisconnectWallet = async () => {
     setIsDisconnecting(true);
-    
+
     // Simulate wallet disconnection
     setTimeout(() => {
       setIsWalletConnected(false);
@@ -66,9 +80,9 @@ export default function Settings() {
   };
 
   const handleCategoryChange = (category: string, checked: boolean) => {
-    setQuestionCategories(prev => ({
+    setQuestionCategories((prev) => ({
       ...prev,
-      [category]: checked
+      [category]: checked,
     }));
   };
 
@@ -86,7 +100,9 @@ export default function Settings() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-orbitron font-bold text-neon-blue">Settings</h1>
+            <h1 className="text-2xl font-orbitron font-bold text-neon-blue">
+              Settings
+            </h1>
           </div>
         </div>
       </header>
@@ -112,12 +128,14 @@ export default function Settings() {
                         <div>
                           <div className="font-medium">MetaMask</div>
                           <div className="text-sm text-gray-400">
-                            {currentUser?.walletAddress || "0x1234...5678"}
+                            {currentUser?.walletId || "0x1234...5678"}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                          <span className="text-sm text-green-400">Connected</span>
+                          <span className="text-sm text-green-400">
+                            Connected
+                          </span>
                         </div>
                       </div>
                       <Button
@@ -171,14 +189,18 @@ export default function Settings() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">Theme</div>
-                      <div className="text-sm text-gray-400">Choose your preferred theme</div>
+                      <div className="text-sm text-gray-400">
+                        Choose your preferred theme
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button
                         size="sm"
                         onClick={() => setTheme("dark")}
                         className={`px-3 py-1 rounded text-sm ${
-                          theme === "dark" ? "bg-neon-blue text-white" : "text-gray-400 hover:text-white bg-transparent"
+                          theme === "dark"
+                            ? "bg-neon-blue text-white"
+                            : "text-gray-400 hover:text-white bg-transparent"
                         }`}
                       >
                         Dark
@@ -188,18 +210,22 @@ export default function Settings() {
                         variant="ghost"
                         onClick={() => setTheme("light")}
                         className={`px-3 py-1 rounded text-sm ${
-                          theme === "light" ? "bg-neon-blue text-white" : "text-gray-400 hover:text-white"
+                          theme === "light"
+                            ? "bg-neon-blue text-white"
+                            : "text-gray-400 hover:text-white"
                         }`}
                       >
                         Light
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">Sound Effects</div>
-                      <div className="text-sm text-gray-400">Enable game sound effects</div>
+                      <div className="text-sm text-gray-400">
+                        Enable game sound effects
+                      </div>
                     </div>
                     <Switch
                       checked={soundEffects}
@@ -211,7 +237,9 @@ export default function Settings() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">Animations</div>
-                      <div className="text-sm text-gray-400">Reduce motion for better performance</div>
+                      <div className="text-sm text-gray-400">
+                        Reduce motion for better performance
+                      </div>
                     </div>
                     <Switch
                       checked={animations}
@@ -240,7 +268,9 @@ export default function Settings() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">Auto-Join Rooms</div>
-                      <div className="text-sm text-gray-400">Automatically join available rooms</div>
+                      <div className="text-sm text-gray-400">
+                        Automatically join available rooms
+                      </div>
                     </div>
                     <Switch
                       checked={autoJoinRooms}
@@ -252,7 +282,9 @@ export default function Settings() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">Notifications</div>
-                      <div className="text-sm text-gray-400">Get notified about new challenges</div>
+                      <div className="text-sm text-gray-400">
+                        Get notified about new challenges
+                      </div>
                     </div>
                     <Switch
                       checked={notifications}
@@ -262,43 +294,61 @@ export default function Settings() {
                   </div>
 
                   <div>
-                    <div className="font-medium mb-2">Preferred Question Categories</div>
+                    <div className="font-medium mb-2">
+                      Preferred Question Categories
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="technology"
                           checked={questionCategories.technology}
-                          onCheckedChange={(checked) => handleCategoryChange("technology", !!checked)}
+                          onCheckedChange={(checked) =>
+                            handleCategoryChange("technology", !!checked)
+                          }
                           className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
                         />
-                        <label htmlFor="technology" className="text-sm">Technology</label>
+                        <label htmlFor="technology" className="text-sm">
+                          Technology
+                        </label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="science"
                           checked={questionCategories.science}
-                          onCheckedChange={(checked) => handleCategoryChange("science", !!checked)}
+                          onCheckedChange={(checked) =>
+                            handleCategoryChange("science", !!checked)
+                          }
                           className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
                         />
-                        <label htmlFor="science" className="text-sm">Science</label>
+                        <label htmlFor="science" className="text-sm">
+                          Science
+                        </label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="general"
                           checked={questionCategories.general}
-                          onCheckedChange={(checked) => handleCategoryChange("general", !!checked)}
+                          onCheckedChange={(checked) =>
+                            handleCategoryChange("general", !!checked)
+                          }
                           className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
                         />
-                        <label htmlFor="general" className="text-sm">General Knowledge</label>
+                        <label htmlFor="general" className="text-sm">
+                          General Knowledge
+                        </label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="sports"
                           checked={questionCategories.sports}
-                          onCheckedChange={(checked) => handleCategoryChange("sports", !!checked)}
+                          onCheckedChange={(checked) =>
+                            handleCategoryChange("sports", !!checked)
+                          }
                           className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
                         />
-                        <label htmlFor="sports" className="text-sm">Sports</label>
+                        <label htmlFor="sports" className="text-sm">
+                          Sports
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -333,15 +383,24 @@ export default function Settings() {
                     <span className="font-mono">0xABC...123</span>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    <a href="#" className="text-neon-blue hover:text-blue-400 transition-colors flex items-center">
+                    <a
+                      href="#"
+                      className="text-neon-blue hover:text-blue-400 transition-colors flex items-center"
+                    >
                       <Book className="w-4 h-4 mr-1" />
                       Documentation
                     </a>
-                    <a href="#" className="text-neon-blue hover:text-blue-400 transition-colors flex items-center">
+                    <a
+                      href="#"
+                      className="text-neon-blue hover:text-blue-400 transition-colors flex items-center"
+                    >
                       <Github className="w-4 h-4 mr-1" />
                       GitHub
                     </a>
-                    <a href="#" className="text-neon-blue hover:text-blue-400 transition-colors flex items-center">
+                    <a
+                      href="#"
+                      className="text-neon-blue hover:text-blue-400 transition-colors flex items-center"
+                    >
                       <MessageCircle className="w-4 h-4 mr-1" />
                       Support
                     </a>

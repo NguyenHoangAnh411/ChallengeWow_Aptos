@@ -19,10 +19,12 @@ import {
   joinRoom,
   fetchUserByWallet,
   updateUser,
+  fetchCurrentRoom,
 } from "@/lib/api";
 
 import { useAccount } from "wagmi";
 import ConnectWalletModal from "@/components/connect-wallet-modal";
+import { RoomStatus } from "@/types/RoomStatus";
 
 export default function Lobby() {
   const router = useRouter();
@@ -34,13 +36,31 @@ export default function Lobby() {
   const { currentUser, setCurrentUser } = useGameState();
   const { isConnected, address } = useAccount();
   const [onlineStats, setOnlineStats] = useState({
-    activeRooms: 8,
-    playersOnline: 127,
-    avgResponseTime: "3.2s",
+    activeRooms: 0,
+    playersOnline: 0,
+    avgResponseTime: "0.0s",
   });
 
   const [usernameInput, setUsernameInput] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+
+  // Tham gia phòng hiện tại đang tham gia
+  useEffect(() => {
+    if (!currentUser) return;
+
+    fetchCurrentRoom(currentUser.walletId)
+      .then((data) => {
+        if (data?.roomId) {
+          router.push(`/room/${data.roomId}`);
+        }
+      })
+      .catch((err) => {
+        if (err.message.includes("404")) {
+          return;
+        }
+        console.error(err);
+      });
+  }, [currentUser]);
 
   // Connect Wallet Modal
   const requireWallet = (callback: () => void) => {
@@ -70,10 +90,14 @@ export default function Lobby() {
     }
   }, [currentUser, isConnected, address, setCurrentUser]);
 
-  const { data: rooms = [], isLoading } = useQuery<Room[]>({
+  const {
+    data: rooms = [],
+    isLoading,
+    refetch,
+  } = useQuery<Room[]>({
     queryKey: ["rooms"],
     queryFn: fetchRooms,
-    refetchInterval: 5000,
+    // refetchInterval: 5000,
   });
 
   useEffect(() => {
@@ -99,21 +123,21 @@ export default function Lobby() {
     mutationFn: async () => {
       return createRoom({
         username: currentUser?.username,
-        walletId: currentUser?.walletAddress,
+        walletId: currentUser?.walletId,
       });
     },
     onSuccess: (room: Room) => {
-      console.log(room);
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({
         title: "Room Created",
-        description: `Room #${onlineStats.activeRooms} has been created!`,
+        description: `Room #${onlineStats.activeRooms + 1} has been created!`,
       });
 
-      // Wait 0.5s for redirect
-      setTimeout(() => {
+      if (room.status === RoomStatus.WAITING) {
+        router.push(`/room/${room.id}/waiting`);
+      } else {
         router.push(`/room/${room.id}`);
-      }, 500);
+      }
     },
     onError: () => {
       toast({
@@ -128,7 +152,8 @@ export default function Lobby() {
     mutationFn: async (roomId: string) => {
       return joinRoom({
         roomId,
-        playerId: currentUser?.id,
+        username: currentUser?.username,
+        walletId: currentUser?.walletId,
       });
     },
     onSuccess: (_, roomId) => {
@@ -138,10 +163,7 @@ export default function Lobby() {
         description: "Successfully joined the room!",
       });
 
-      // Wait 0.5s for redirect
-      setTimeout(() => {
-        router.push(`/room/${roomId}`);
-      }, 500);
+      router.push(`/room/${roomId}`);
     },
     onError: () => {
       toast({
@@ -152,11 +174,21 @@ export default function Lobby() {
     },
   });
 
-  const { sendMessage } = useWebSocket({
+  const { isWsConnected, sendMessage } = useWebSocket({
+    url: "/lobby",
     onMessage: (data) => {
       if (data.type === "room_update") {
         queryClient.invalidateQueries({ queryKey: ["rooms"] });
       }
+    },
+    onOpen: async () => {
+      setTimeout(() => {
+        sendMessage({ type: "ping" });
+      }, 0);
+      await refetch();
+    },
+    onClose: () => {
+      console.warn("❌ WebSocket closed.");
     },
   });
 
@@ -166,7 +198,7 @@ export default function Lobby() {
       return;
     }
 
-    if (!currentUser?.username || !currentUser?.walletAddress) {
+    if (!currentUser?.username || !currentUser?.walletId) {
       toast({
         title: "Missing info",
         description: "Please set your username before creating a room.",
@@ -185,14 +217,14 @@ export default function Lobby() {
   };
 
   const handleSaveUsername = async () => {
-    if (!currentUser?.walletAddress || !usernameInput.trim()) return;
+    if (!currentUser?.walletId || !usernameInput.trim()) return;
     if (usernameInput.length < 2) return;
     setIsSavingUsername(true);
     try {
-      const finalUsername = `${usernameInput.trim()}#${currentUser.walletAddress.slice(
+      const finalUsername = `${usernameInput.trim()}#${currentUser.walletId.slice(
         -4
       )}`;
-      await updateUser(currentUser.walletAddress, finalUsername);
+      await updateUser(currentUser.walletId, finalUsername);
       setCurrentUser({ ...currentUser, username: finalUsername });
       setUsernameInput("");
       toast({
@@ -300,8 +332,8 @@ export default function Lobby() {
                             {currentUser?.username
                               ?.substring(0, 2)
                               .toUpperCase() ||
-                              (currentUser?.walletAddress
-                                ? currentUser.walletAddress
+                              (currentUser?.walletId
+                                ? currentUser.walletId
                                     .substring(2, 4)
                                     .toUpperCase()
                                 : "--")}
@@ -312,20 +344,17 @@ export default function Lobby() {
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-white truncate">
                             {currentUser?.username ||
-                              (currentUser?.walletAddress
-                                ? currentUser.walletAddress.substring(0, 8) +
-                                  "..."
+                              (currentUser?.walletId
+                                ? currentUser.walletId.substring(0, 8) + "..."
                                 : "--")}
                           </div>
                           <div
                             className="text-xs text-gray-400 font-mono truncate"
                             title={
-                              currentUser?.walletAddress ||
-                              "No wallet connected"
+                              currentUser?.walletId || "No wallet connected"
                             }
                           >
-                            {currentUser?.walletAddress ||
-                              "No wallet connected"}
+                            {currentUser?.walletId || "No wallet connected"}
                           </div>
                         </div>
                       </div>
@@ -445,7 +474,7 @@ export default function Lobby() {
             </motion.div>
 
             {/* Hiển thị form nhập username nếu thiếu */}
-            {currentUser?.walletAddress && (
+            {currentUser?.walletId && (
               <div
                 className="mb-6 p-4 bg-cyber-accent/20 rounded-lg"
                 style={{ zIndex: 1000, position: "relative" }}
