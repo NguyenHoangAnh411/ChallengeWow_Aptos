@@ -87,6 +87,7 @@ class RoomRepository(IRoomRepository):
             return None
 
     def delete_room(self, room_id: str) -> None:
+        supabase.table("room_players").delete().eq("room_id", room_id).execute()
         supabase.table(RoomRepository.table).delete().eq("id", room_id).execute()
 
     def delete_old_rooms(self, hours_old=24) -> None:

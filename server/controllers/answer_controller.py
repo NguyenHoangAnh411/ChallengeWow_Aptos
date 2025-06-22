@@ -37,7 +37,7 @@ class AnswerController:
             selected_index = normalized_options.index(normalized_answer)
 
             time_taken = (timestamp - room.start_time).total_seconds()
-            is_correct = selected_index == question.correct_option_index
+            is_correct = normalized_answer == question.correct_answer
             score = self.room_service.calculate_score(is_correct, time_taken, room)
 
             self.answer_service.save_player_answer(

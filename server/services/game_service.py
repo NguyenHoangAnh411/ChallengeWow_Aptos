@@ -29,7 +29,7 @@ class GameService:
         await asyncio.sleep(180)
 
         if len(room.players) >= 2:
-            self.start_game(room)
+            await self.start_game(room)
         else:
             room.status = GAME_STATUS.WAITING
             self.room_service.save_room(room)

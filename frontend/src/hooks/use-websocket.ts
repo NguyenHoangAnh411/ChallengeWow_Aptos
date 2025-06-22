@@ -13,7 +13,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const [isWsConnected, setIsWsConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const {
-    url = "",
+    url = undefined,
     baseUrl = process.env.NEXT_PUBLIC_WS_BASE,
     onMessage,
     onOpen,
@@ -21,12 +21,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     onError,
   } = options;
 
+  const enabled = url !== undefined;
   const fullPath = url ? (url.startsWith("/") ? url : `/${url}`) : "";
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = baseUrl || window.location.host;
   const wsUrl = `${protocol}//${host}/ws${fullPath}`;
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
@@ -65,6 +70,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const sendMessage = (message: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(message));
+    } else {
+      console.log(
+        `[WS] Websocket is not ready ${socketRef.current?.readyState}`
+      );
     }
   };
 

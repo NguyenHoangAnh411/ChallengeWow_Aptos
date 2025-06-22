@@ -7,7 +7,6 @@ from models.room import Room
 from repositories.interfaces.player_repo import IPlayerRepository
 from models.player import Player
 
-
 class RoomService:
     def __init__(self, room_repo: IRoomRepository, player_repo: IPlayerRepository):
         self.room_repo = room_repo
@@ -36,3 +35,15 @@ class RoomService:
     def save_room(self, room: Room):
         self.room_repo.save(room)
         self.player_repo.save_all(room.id, room.players)
+    
+    def get_host_room_wallet(self, room_id: str) -> str | None:
+        room = self.room_repo.get(room_id)
+        if not room:
+            return None
+        players = room.players
+        for player in players:
+            if player.is_host:
+                return player.wallet_id
+        return None
+        
+        

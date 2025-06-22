@@ -70,4 +70,8 @@ class PlayerService:
             if new_host:
                 self.player_repo.update_player(new_host.wallet_id, {"is_host": True})
 
-        return {"success": True, "message": "Leave successfully"}
+        return {
+            "success": True,
+            "message": "Leave successfully",
+            "data": current_player
+        }

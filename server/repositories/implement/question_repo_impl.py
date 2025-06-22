@@ -5,7 +5,7 @@ import random
 
 
 class QuestionRepository(IQuestionRepository):
-    table = "quiz_questions"
+    table = "questions"
 
     def get_random(self) -> Question | None:
         count_res = (

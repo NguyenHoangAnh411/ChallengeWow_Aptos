@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Question, Room, User } from "@/types/schema";
 import { RoomStatus } from "@/types/RoomStatus";
 import { fetchRoomById, leaveRoom } from "@/lib/api";
+import { LEAVE_ROOM_TYPE } from "@/lib/constants";
 
 export default function ChallengeRoom({
   params,
@@ -131,7 +132,7 @@ export default function ChallengeRoom({
       });
 
       sendMessage({
-        type: "leave_room",
+        type: LEAVE_ROOM_TYPE,
         roomId: currentRoom?.id,
         playerId: currentUser?.walletId,
       });

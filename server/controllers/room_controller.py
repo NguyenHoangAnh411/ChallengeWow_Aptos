@@ -19,7 +19,7 @@ class RoomController:
         room_service: RoomService,
         game_service: GameService,
         player_service: PlayerService,
-        websocket_manager = WebSocketManager()
+        websocket_manager: WebSocketManager
     ):
         self.room_service = room_service
         self.game_service = game_service
@@ -82,7 +82,7 @@ class RoomController:
 
         await self.websocket_manager.broadcast_to_room(room.id, {
             "type": "player_joined",
-            "player": player.model_dump()
+            "player": player
         })
         
         if len(room.players) >= 2:
@@ -91,12 +91,27 @@ class RoomController:
         return {"roomId": room.id, "walletId": player.wallet_id}
 
     async def leave_room(self, wallet_id, room_id):
-        self.player_service.leave_room(wallet_id, room_id)
+        result = self.player_service.leave_room(wallet_id, room_id)
+        
+        player_data = result.get("data")
+        if not player_data:
+            return result 
+        
         await self.websocket_manager.broadcast_to_lobby({
             "type": "room_update",
             "action": "leave",
             "roomId": room_id
         })
+        await self.websocket_manager.broadcast_to_room(room_id, {
+            "type": "player_left",
+            "action": "leave",
+            "payload": {
+                "walletId": player_data.wallet_id,
+                "username": player_data.username
+            }
+        })
+        
+        return result
 
     def get_current_room(self, wallet_id):
         player: Player = self.player_service.get_player_by_wallet_id(wallet_id)

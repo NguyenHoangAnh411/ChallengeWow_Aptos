@@ -40,6 +40,12 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import type { Player, Room, User } from "@/types/schema";
 import { fetchRoomById, leaveRoom } from "@/lib/api";
+import {
+  KICK_PLAYER_TYPE,
+  LEAVE_ROOM_TYPE,
+  PLAYER_JOINED_TYPE,
+  PLAYER_LEFT_TYPE,
+} from "@/lib/constants";
 
 // interface GameSettings {
 //   map: string;
@@ -58,7 +64,7 @@ interface ChatMessage {
   isSystem?: boolean;
 }
 
-const TIME_COUNT_DONW = 300; // in seconds
+const TIME_COUNT_DONW = 30000; // in seconds
 export default function WaitingRoom({
   params,
 }: {
@@ -87,13 +93,12 @@ export default function WaitingRoom({
   const [isHost, setIsHost] = useState(false);
 
   const { sendMessage } = useWebSocket({
-    url: `/${roomId}`,
+    url: currentUser?.walletId
+      ? `/${roomId}?walletId=${currentUser?.walletId}`
+      : undefined,
     onMessage: (data) => {
-      setTimeout(() => {
-        sendMessage({ type: "ping" });
-      }, 0);
       switch (data.type) {
-        case "player_joined":
+        case PLAYER_JOINED_TYPE:
           setPlayers((prev) => [...prev, data.player]);
           setChatMessages((prev) => [
             ...prev,
@@ -107,21 +112,21 @@ export default function WaitingRoom({
             },
           ]);
           break;
-        case "player_left":
-          setPlayers((prev) =>
-            prev.filter((p) => p.walletId !== data.playerId)
-          );
+        case PLAYER_LEFT_TYPE:
+          const { walletId, username } = data.payload;
+          setPlayers((prev) => prev.filter((p) => p.walletId !== walletId));
           setChatMessages((prev) => [
             ...prev,
             {
               id: Date.now().toString(),
               playerId: "0",
               playerName: "System",
-              message: `${data.playerName} left the room`,
+              message: `${username} left the room`,
               timestamp: new Date(),
               isSystem: true,
             },
           ]);
+
           break;
         case "player_ready":
           setPlayers((prev) =>
@@ -150,7 +155,8 @@ export default function WaitingRoom({
     } else {
       // Auto-start game when countdown reaches 0
       if (isHost) {
-        handleStartGame();
+        // handleStartGame();
+        alert("COUNTIN DOWN TIME IS OVER");
       }
     }
   }, [countdown, isHost]);
@@ -235,11 +241,13 @@ export default function WaitingRoom({
     }
   };
 
-  const handleKickPlayer = (playerId: string) => {
+  const handleKickPlayer = (walletId: string) => {
     sendMessage({
-      type: "kick_player",
-      roomId: roomId,
-      playerId: playerId,
+      type: KICK_PLAYER_TYPE,
+      payload: {
+        roomId: roomId,
+        walletId: walletId,
+      },
     });
   };
 
@@ -272,7 +280,7 @@ export default function WaitingRoom({
       });
 
       sendMessage({
-        type: "leave_room",
+        type: LEAVE_ROOM_TYPE,
         roomId: currentRoom?.id,
         playerId: currentUser?.walletId,
       });
@@ -348,7 +356,7 @@ export default function WaitingRoom({
                 </div>
                 <div>
                   <h1 className="text-xl font-orbitron font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
-                    Room #{roomId}
+                    Room #{roomId.slice(-4)}
                   </h1>
                   <p className="text-sm text-gray-400">Waiting Room</p>
                 </div>
@@ -468,13 +476,13 @@ export default function WaitingRoom({
                             >
                               <LogOut className="w-4 h-4" />
                             </Button>
-                            <Button
+                            {/* <Button
                               variant="ghost"
                               size="sm"
                               className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/20"
                             >
                               <Ban className="w-4 h-4" />
-                            </Button>
+                            </Button> */}
                           </>
                         )}
                         {player.walletId === currentUser?.walletId &&
@@ -723,7 +731,9 @@ export default function WaitingRoom({
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Room Code:</span>
-                  <span className="text-neon-blue font-mono">#{roomId}</span>
+                  <span className="text-neon-blue font-mono">
+                    #{roomId.slice(-4)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Players:</span>

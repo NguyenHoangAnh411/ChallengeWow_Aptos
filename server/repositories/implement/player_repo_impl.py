@@ -1,6 +1,8 @@
 from datetime import datetime
+import json
 from typing import List, Optional
 from config.database import supabase
+from helpers.json_helper import json_safe
 from repositories.interfaces.player_repo import IPlayerRepository
 from models.player import Player
 
@@ -67,6 +69,10 @@ class PlayerRepository(IPlayerRepository):
         ).execute()
 
     def update_player(self, wallet_id, updates):
-        supabase.table(PlayerRepository.table).update(updates).eq(
-            "wallet_id", wallet_id
-        ).execute()
+        try:
+            safe_updates = json.loads(json.dumps(updates, default=json_safe))
+            supabase.table(PlayerRepository.table).update(safe_updates).eq(
+                "wallet_id", wallet_id
+            ).execute()
+        except Exception as e:
+            print("Failed to update: ", e)

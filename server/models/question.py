@@ -12,12 +12,8 @@ class Question(CamelModel):
     content: str
     difficulty: QUESTION_DIFFICULTY
     options: List[str]
-    correct_option_index: int
+    correct_answer: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = None
-
-    @property
-    def correct_text(self) -> str:
-        return self.options[self.correct_option_index].lower().strip()
 
     model_config = ConfigDict(ser_enum_as_value=True)

@@ -17,7 +17,7 @@ export default function ConnectWalletModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
-      <DialogContent className="bg-cyber-dark border-neon-blue flex flex-col items-center justify-center">
+      <DialogContent className="bg-cyber-dark border-neon-blue flex flex-col items-center justify-center z-[9999]">
         <DialogHeader>
           <DialogTitle className="text-neon-purple text-center">
             Wallet Not Connected

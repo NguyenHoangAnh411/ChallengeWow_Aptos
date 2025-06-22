@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, Query, WebSocket
 from controllers.websocket_controller import WebSocketController
 
 def create_ws_router(controller: WebSocketController):
@@ -13,7 +13,7 @@ def create_ws_router(controller: WebSocketController):
         await controller.handle_lobby_socket(websocket)
 
     @router.websocket("/{room_id}")
-    async def websocket_room(websocket: WebSocket, room_id: str):
-        await controller.handle_room_socket(websocket, room_id)
+    async def websocket_room(websocket: WebSocket, room_id: str, wallet_id: str = Query(None)):
+        await controller.handle_room_socket(websocket, room_id, wallet_id)
 
     return router
