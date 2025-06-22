@@ -91,11 +91,17 @@ export default function WaitingRoom({
   const [isVoiceChatEnabled, setIsVoiceChatEnabled] = useState(false);
   const [countdown, setCountdown] = useState(TIME_COUNT_DONW); // 5 minutes in seconds
   const [isHost, setIsHost] = useState(false);
+  const [kickConfirmation, setKickConfirmation] = useState<{
+    show: boolean;
+    playerId: string;
+    playerName: string;
+  }>({ show: false, playerId: "", playerName: "" });
 
-  const { sendMessage } = useWebSocket({
+  const { sendMessage, isWsConnected } = useWebSocket({
     url: currentUser?.walletId
-      ? `/${roomId}?walletId=${currentUser?.walletId}`
+      ? `/${roomId}?wallet_id=${currentUser?.walletId}`
       : undefined,
+    baseUrl: "localhost:9000",
     onMessage: (data) => {
       switch (data.type) {
         case PLAYER_JOINED_TYPE:
@@ -121,12 +127,28 @@ export default function WaitingRoom({
               id: Date.now().toString(),
               playerId: "0",
               playerName: "System",
-              message: `${username} left the room`,
+              message: data.action === "kick" 
+                ? `${username} was kicked from the room`
+                : `${username} left the room`,
               timestamp: new Date(),
               isSystem: true,
             },
           ]);
-
+          break;
+        case "kicked":
+          toast({
+            title: "You were kicked",
+            description: data.payload.reason,
+            variant: "destructive",
+          });
+          router.push("/lobby");
+          break;
+        case "error":
+          toast({
+            title: "Error",
+            description: data.message || data.payload?.message,
+            variant: "destructive",
+          });
           break;
         case "player_ready":
           setPlayers((prev) =>
@@ -138,8 +160,17 @@ export default function WaitingRoom({
         case "game_started":
           router.push(`/room/${roomId}`);
           break;
-        case "chat_message":
-          setChatMessages((prev) => [...prev, data.message]);
+        case "chat":
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              playerId: data.payload.sender,
+              playerName: data.payload.sender,
+              message: data.payload.message,
+              timestamp: new Date(),
+            },
+          ]);
           break;
       }
     },
@@ -241,13 +272,32 @@ export default function WaitingRoom({
     }
   };
 
-  const handleKickPlayer = (walletId: string) => {
-    sendMessage({
+  const handleKickPlayer = (walletId: string, playerName: string) => {
+    setKickConfirmation({
+      show: true,
+      playerId: walletId,
+      playerName: playerName,
+    });
+  };
+
+  const confirmKickPlayer = () => {
+    const kickMessage = {
       type: KICK_PLAYER_TYPE,
       payload: {
-        roomId: roomId,
-        walletId: walletId,
+        wallet_id: kickConfirmation.playerId,
+        room_id: roomId,
       },
+    };
+    console.log("[KICK] Sending kick message:", kickMessage);
+    sendMessage(kickMessage);
+    setKickConfirmation({ show: false, playerId: "", playerName: "" });
+  };
+
+  const testWebSocket = () => {
+    console.log("[TEST] Testing WebSocket connection...");
+    sendMessage({
+      type: "ping",
+      data: "test message"
     });
   };
 
@@ -266,9 +316,11 @@ export default function WaitingRoom({
     setNewMessage("");
 
     sendMessage({
-      type: "chat_message",
-      roomId: roomId,
-      message: newMessage,
+      type: "chat",
+      payload: {
+        sender: currentUser?.username || "Unknown",
+        message: newMessage,
+      },
     });
   };
 
@@ -384,6 +436,22 @@ export default function WaitingRoom({
                   {readyCount}/{players.length} Ready
                 </span>
               </div>
+
+              {/* WebSocket Status */}
+              <div className="flex items-center space-x-2 px-4 py-2 glass-morphism rounded-lg">
+                <div className={`w-3 h-3 rounded-full ${isWsConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                <span className="font-orbitron text-sm text-gray-300">
+                  {isWsConnected ? 'Connected' : 'Disconnected'}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={testWebSocket}
+                  className="text-xs text-gray-400 hover:text-neon-blue"
+                >
+                  Test
+                </Button>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -471,18 +539,12 @@ export default function WaitingRoom({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleKickPlayer(player.walletId)}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                              onClick={() => handleKickPlayer(player.walletId, player.username)}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-all duration-200 group"
+                              title="Kick player"
                             >
-                              <LogOut className="w-4 h-4" />
+                              <Ban className="w-4 h-4 group-hover:scale-110 transition-transform" />
                             </Button>
-                            {/* <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/20"
-                            >
-                              <Ban className="w-4 h-4" />
-                            </Button> */}
                           </>
                         )}
                         {player.walletId === currentUser?.walletId &&
@@ -756,6 +818,50 @@ export default function WaitingRoom({
           </div>
         </div>
       </div>
+
+      {/* Kick Confirmation Dialog */}
+      {kickConfirmation.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-cyber-darker border border-red-500/30 rounded-lg p-6 max-w-md w-full mx-4 shadow-neon-glow-md"
+          >
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                <Ban className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-red-400">Kick Player</h3>
+                <p className="text-sm text-gray-400">Are you sure you want to kick this player?</p>
+              </div>
+            </div>
+            
+            <div className="bg-cyber-dark/50 rounded-lg p-3 mb-4">
+              <p className="text-gray-300">
+                <span className="text-red-400 font-semibold">{kickConfirmation.playerName}</span> will be removed from the room.
+              </p>
+            </div>
+
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setKickConfirmation({ show: false, playerId: "", playerName: "" })}
+                className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmKickPlayer}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Ban className="w-4 h-4 mr-2" />
+                Kick Player
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

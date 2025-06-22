@@ -36,16 +36,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     socketRef.current = socket;
 
     socket.onopen = () => {
-      console.log("[WS] Connected!");
       setIsWsConnected(true);
       onOpen?.();
     };
 
     socket.onmessage = (event) => {
-      console.log("[WS RAW]", event.data); // ➜ phải thấy JSON string ở đây
       try {
         const data = JSON.parse(event.data);
-        console.log("[WS MESSAGE PARSED]", data);
         onMessage?.(data);
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
@@ -62,14 +59,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
 
     return () => {
-      console.log("[WS] useEffect cleanup");
       socket.close();
     };
   }, [wsUrl]);
 
   const sendMessage = (message: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(message));
+      const messageString = JSON.stringify(message);
+      socketRef.current.send(messageString);
     } else {
       console.log(
         `[WS] Websocket is not ready ${socketRef.current?.readyState}`

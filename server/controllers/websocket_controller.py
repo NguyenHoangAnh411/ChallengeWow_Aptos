@@ -30,10 +30,10 @@ class WebSocketController:
         try:
             payload = KickPayload(**data.get("payload", {}))
         except ValidationError as e:
-            print(f"⚠️ [ROOM {room_id}] Invalid kick_player payload: {e}")
             return
         
         host_wallet_id = self.room_service.get_host_room_wallet(room_id)
+        
         if not host_wallet_id or host_wallet_id != wallet_id:
             await send_json_safe(websocket, {
                 "type": "error",

@@ -30,7 +30,6 @@ class WebSocketManager:
 
     async def broadcast_to_room(self, room_id: str, message: dict):
         connections = self.room_connections.get(room_id, [])
-        print(f"[WS] Broadcasting to room {room_id}, connections: {len(connections)}")
         for conn in connections:
             try:
                 await send_json_safe(conn, message)
