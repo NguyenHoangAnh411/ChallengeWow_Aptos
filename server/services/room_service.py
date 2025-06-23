@@ -2,15 +2,17 @@ from datetime import datetime, timezone
 import uuid
 from typing import List
 
+from repositories.interfaces.answer_repo import IAnswerRepository
 from repositories.interfaces.room_repo import IRoomRepository
 from models.room import Room
 from repositories.interfaces.player_repo import IPlayerRepository
 from models.player import Player
 
 class RoomService:
-    def __init__(self, room_repo: IRoomRepository, player_repo: IPlayerRepository):
+    def __init__(self, room_repo: IRoomRepository, player_repo: IPlayerRepository, answer_repo: IAnswerRepository):
         self.room_repo = room_repo
         self.player_repo = player_repo
+        self.answer_repo = answer_repo
 
     def get_rooms(self) -> List[Room]:
         return self.room_repo.get_all()
@@ -29,6 +31,9 @@ class RoomService:
         room = self.room_repo.get(room_id)
         if room:
             room.players = self.player_repo.get_by_room(room_id)
+            for p in room.players:
+                answers = self.answer_repo.get_answers_by_wallet_id(room_id=room.id, wallet_id=p.wallet_id)
+                p.answers = answers
         return room
     
     def get_room_by_code(self, room_code: str) -> Room | None:

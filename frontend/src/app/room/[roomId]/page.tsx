@@ -51,7 +51,8 @@ export default function ChallengeRoom({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionEndAt, setQuestionEndAt] = useState<number | null>(null);
   const QUESTION_TIME = 15;
-  const [questionCountdown, setQuestionCountdown] = useState<number>(QUESTION_TIME);
+  const [questionCountdown, setQuestionCountdown] =
+    useState<number>(QUESTION_TIME);
   const nextQuestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -110,7 +111,10 @@ export default function ChallengeRoom({
 
   useEffect(() => {
     // Nếu zustand không có, lấy từ localStorage
-    if ((!questions || questions.length === 0) && typeof window !== "undefined") {
+    if (
+      (!questions || questions.length === 0) &&
+      typeof window !== "undefined"
+    ) {
       const q = localStorage.getItem("questions");
       if (q) setQuestions(JSON.parse(q));
     }
@@ -136,7 +140,9 @@ export default function ChallengeRoom({
   }, [currentQuestion]);
 
   const { sendMessage } = useWebSocket({
-    url: `/${roomId}?wallet_id=${currentUser?.walletId}`,
+    url: currentUser?.walletId
+      ? `/${roomId}?wallet_id=${currentUser?.walletId}`
+      : undefined,
     onMessage: (data) => {
       switch (data.type) {
         case "player_answered":
@@ -237,13 +243,15 @@ export default function ChallengeRoom({
     if (gameStatus === "finished") return;
     if (!currentQuestion) return;
     // Clear timeout cũ nếu có
-    if (nextQuestionTimeoutRef.current) clearTimeout(nextQuestionTimeoutRef.current);
+    if (nextQuestionTimeoutRef.current)
+      clearTimeout(nextQuestionTimeoutRef.current);
 
     // Đặt timeout fallback (ví dụ 16s)
     nextQuestionTimeoutRef.current = setTimeout(() => {
       toast({
         title: "Connection issue",
-        description: "No next question received. Please check your connection or try rejoining the room.",
+        description:
+          "No next question received. Please check your connection or try rejoining the room.",
         variant: "destructive",
       });
       window.location.reload();
@@ -251,7 +259,8 @@ export default function ChallengeRoom({
 
     // Cleanup khi unmount hoặc sang câu mới
     return () => {
-      if (nextQuestionTimeoutRef.current) clearTimeout(nextQuestionTimeoutRef.current);
+      if (nextQuestionTimeoutRef.current)
+        clearTimeout(nextQuestionTimeoutRef.current);
     };
   }, [currentQuestion, gameStatus]);
 
@@ -338,10 +347,16 @@ export default function ChallengeRoom({
                   className={`
                     w-full py-5 px-6 rounded-2xl border-2 font-orbitron text-lg md:text-xl transition-all duration-200
                     flex items-center gap-3 shadow-lg
-                    ${isSelected
-                      ? "bg-gradient-to-r from-neon-blue to-neon-purple border-neon-blue text-white scale-105 ring-2 ring-neon-purple"
-                      : "bg-gray-900 border-gray-700 text-white hover:bg-neon-purple/20 hover:border-neon-purple"}
-                    ${isDisabled && !isSelected ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+                    ${
+                      isSelected
+                        ? "bg-gradient-to-r from-neon-blue to-neon-purple border-neon-blue text-white scale-105 ring-2 ring-neon-purple"
+                        : "bg-gray-900 border-gray-700 text-white hover:bg-neon-purple/20 hover:border-neon-purple"
+                    }
+                    ${
+                      isDisabled && !isSelected
+                        ? "opacity-60 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }
                   `}
                   onClick={() => !isDisabled && handleAnswerSelect(opt)}
                   disabled={isDisabled}
@@ -351,7 +366,9 @@ export default function ChallengeRoom({
                   </span>
                   <span className="flex-1 text-left">{opt}</span>
                   {isSelected && (
-                    <span className="ml-2 text-neon-blue text-2xl animate-bounce">✔</span>
+                    <span className="ml-2 text-neon-blue text-2xl animate-bounce">
+                      ✔
+                    </span>
                   )}
                 </button>
               );
@@ -359,13 +376,20 @@ export default function ChallengeRoom({
           </div>
           {hasAnswered && (
             <div className="mt-8 text-neon-blue font-semibold text-lg animate-pulse text-center">
-              Answer submitted!<br />Waiting for next question...
+              Answer submitted!
+              <br />
+              Waiting for next question...
             </div>
           )}
         </div>
       );
     }
-    if (questions && questions.length > 0 && questionNumber > 0 && questionNumber <= questions.length) {
+    if (
+      questions &&
+      questions.length > 0 &&
+      questionNumber > 0 &&
+      questionNumber <= questions.length
+    ) {
       const q = questions[questionNumber - 1];
       if (q) {
         return (
@@ -374,7 +398,10 @@ export default function ChallengeRoom({
             <ul className="mb-4">
               {q.options && q.options.length > 0 ? (
                 q.options.map((opt: string, idx: number) => (
-                  <li key={idx} className="mb-2 p-2 border rounded bg-gray-800 text-white">
+                  <li
+                    key={idx}
+                    className="mb-2 p-2 border rounded bg-gray-800 text-white"
+                  >
                     {String.fromCharCode(65 + idx)}. {opt}
                   </li>
                 ))
@@ -386,7 +413,9 @@ export default function ChallengeRoom({
         );
       }
     }
-    return <div className="text-center text-lg mt-10">Waiting for questions...</div>;
+    return (
+      <div className="text-center text-lg mt-10">Waiting for questions...</div>
+    );
   };
 
   return (
@@ -480,10 +509,17 @@ export default function ChallengeRoom({
                       </thead>
                       <tbody>
                         {gameResults.map((player, idx) => (
-                          <tr key={idx} className="text-center border-b border-neon-blue/10">
-                            <td className="px-4 py-2 font-mono">{player.wallet}</td>
+                          <tr
+                            key={idx}
+                            className="text-center border-b border-neon-blue/10"
+                          >
+                            <td className="px-4 py-2 font-mono">
+                              {player.wallet}
+                            </td>
                             <td className="px-4 py-2">{player.oath}</td>
-                            <td className="px-4 py-2 font-bold text-neon-blue">{player.score}</td>
+                            <td className="px-4 py-2 font-bold text-neon-blue">
+                              {player.score}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -493,20 +529,26 @@ export default function ChallengeRoom({
                     </pre>
                   </>
                 ) : (
-                  <div className="text-lg text-neon-blue">Đang tổng kết kết quả...</div>
+                  <div className="text-lg text-neon-blue">
+                    Đang tổng kết kết quả...
+                  </div>
                 )}
-                <Button className="mt-6" onClick={() => router.push('/lobby')}>
+                <Button className="mt-6" onClick={() => router.push("/lobby")}>
                   Về lobby
                 </Button>
               </div>
             ) : countdown > 0 ? (
               <div className="flex flex-col items-center justify-center h-full">
-                <h2 className="text-3xl font-bold mb-4">Game starts in: {countdown}s</h2>
+                <h2 className="text-3xl font-bold mb-4">
+                  Game starts in: {countdown}s
+                </h2>
               </div>
             ) : currentQuestion ? (
               renderQuestion()
             ) : (
-              <div className="text-center text-lg mt-8">Waiting for questions...</div>
+              <div className="text-center text-lg mt-8">
+                Waiting for questions...
+              </div>
             )}
           </div>
 

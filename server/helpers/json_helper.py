@@ -33,12 +33,12 @@ def json_safe(obj: Any):
 
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
-async def send_json_safe(ws: WebSocket, data: dict):
-    try:
-        serialized = json.loads(json.dumps(data, default=json_safe))
-
-        camel_data = convert_keys_to_camel(serialized)
-
-        await ws.send_json(camel_data)
-    except Exception as e:
-        print(f"❌ Failed to send safe camelCase WS message: {e}")
+async def send_json_safe(websocket: WebSocket | None, data: dict):
+    from fastapi.encoders import jsonable_encoder
+    if websocket:
+        try:
+            await websocket.send_json(jsonable_encoder(data))
+        except Exception as e:
+            print(f"❌ Failed to send safe camelCase WS message: {e}")
+    else:
+        print("⚠️ No websocket to send message to.")

@@ -50,7 +50,7 @@ answer_repo = AnswerRepository()
 zkproof_repo = ZkProofRepository()
 
 # Services
-room_service = RoomService(room_repo, player_repo)
+room_service = RoomService(room_repo, player_repo, answer_repo)
 player_service = PlayerService(player_repo, room_repo)
 question_service = QuestionService(question_repo)
 answer_service = AnswerService(answer_repo)
@@ -65,7 +65,7 @@ question_controller = QuestionController(question_service)
 answer_controller = AnswerController(answer_service, room_service)
 zkproof_controller = ZkProofController(zkproof_service)
 user_controller = UserController()
-websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service)
+websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service, answer_service)
 
 # Router
 api_router = APIRouter(prefix="/api")

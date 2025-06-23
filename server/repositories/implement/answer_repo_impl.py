@@ -1,34 +1,22 @@
 from datetime import datetime
 from typing import Dict, List
 from config.database import supabase
+from models.answer import Answer
 from repositories.interfaces.answer_repo import IAnswerRepository
 import uuid
 
 
 class AnswerRepository(IAnswerRepository):
-    table = "player_answers"
+    table = "answers"
 
     def save(
         self,
-        room_id: str,
-        wallet_id: str,
-        question_id: str,
-        selected_index: int,
-        is_correct: bool,
-        time_taken: float,
-        timestamp: datetime,
+        answer: Answer,
     ) -> None:
+        data = answer.model_dump()
+        data["created_at"] = answer.created_at.isoformat()
         supabase.table(AnswerRepository.table).insert(
-            {
-                "id": str(uuid.uuid4()),
-                "room_id": room_id,
-                "wallet_id": wallet_id,
-                "question_id": question_id,
-                "selected_index": selected_index,
-                "is_correct": is_correct,
-                "time_taken": time_taken,
-                "created_at": timestamp,
-            }
+            data
         ).execute()
 
     def get_answers_by_room(self, room_id: str) -> List[Dict]:
@@ -40,7 +28,7 @@ class AnswerRepository(IAnswerRepository):
         )
         return response.data or []
 
-    def get_answers_by_user(self, room_id: str, wallet_id: str) -> List[Dict]:
+    def get_answers_by_wallet_id(self, room_id: str, wallet_id: str) -> List[Dict]:
         response = (
             supabase.table(AnswerRepository.table)
             .select("*")
