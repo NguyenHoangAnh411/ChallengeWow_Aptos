@@ -12,10 +12,16 @@ interface UseWebSocketOptions {
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const [isWsConnected, setIsWsConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
+  const onMessageRef = useRef(options.onMessage);
+
+  // Luôn cập nhật callback mới nhất
+  useEffect(() => {
+    onMessageRef.current = options.onMessage;
+  }, [options.onMessage]);
+
   const {
     url = undefined,
     baseUrl = process.env.NEXT_PUBLIC_WS_BASE,
-    onMessage,
     onOpen,
     onClose,
     onError,
@@ -25,7 +31,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const fullPath = url ? (url.startsWith("/") ? url : `/${url}`) : "";
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = baseUrl || window.location.host;
-  const wsUrl = `${protocol}//${host}/ws${fullPath}`;
+  let wsUrl = "";
+
+  if (host.startsWith("ws://") || host.startsWith("wss://")) {
+    wsUrl = `${host}/ws${fullPath}`;
+  } else {
+    wsUrl = `${protocol}//${host}/ws${fullPath}`;
+  }
 
   useEffect(() => {
     if (!enabled) {
@@ -41,9 +53,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
 
     socket.onmessage = (event) => {
+      console.log("WS raw message:", event.data);
       try {
         const data = JSON.parse(event.data);
-        onMessage?.(data);
+        onMessageRef.current?.(data); // Gọi callback mới nhất
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
       }
@@ -61,7 +74,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return () => {
       socket.close();
     };
-  }, [wsUrl]);
+  }, [wsUrl, enabled, onOpen, onClose, onError]);
 
   const sendMessage = (message: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {

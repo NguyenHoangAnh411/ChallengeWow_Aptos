@@ -14,6 +14,9 @@ def create_ws_router(controller: WebSocketController):
 
     @router.websocket("/{room_id}")
     async def websocket_room(websocket: WebSocket, room_id: str, wallet_id: str = Query(None)):
+        if not wallet_id:
+            await websocket.close(code=1008)
+            return
         await controller.handle_room_socket(websocket, room_id, wallet_id)
 
     return router

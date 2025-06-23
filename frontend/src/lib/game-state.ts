@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from "zustand";
 import type { User } from "@/types/schema";
 
@@ -8,6 +10,8 @@ interface GameState {
   timeRemaining: number;
   isGameActive: boolean;
   players: (any & { status?: string; responseTime?: number })[];
+  questions: any[];
+  startAt: number | null;
   
   // Actions
   setCurrentUser: (user: User | null) => void;
@@ -16,6 +20,8 @@ interface GameState {
   setTimeRemaining: (time: number) => void;
   setIsGameActive: (active: boolean) => void;
   setPlayers: (players: (any & { status?: string; responseTime?: number })[]) => void;
+  setQuestions: (questions: any[]) => void;
+  setStartAt: (startAt: number | null) => void;
   updatePlayerStatus: (playerId: number, status: string, responseTime?: number) => void;
 }
 
@@ -26,13 +32,20 @@ export const useGameState = create<GameState>((set, get) => ({
   timeRemaining: 15,
   isGameActive: false,
   players: [],
+  questions: [],
+  startAt: null,
 
   setCurrentUser: (user) => set({ currentUser: user }),
   setCurrentRoom: (room) => set({ currentRoom: room }),
-  setCurrentQuestion: (question) => set({ currentQuestion: question }),
+  setCurrentQuestion: (question) => {
+    console.log("[ZUSTAND] setCurrentQuestion called", question);
+    set({ currentQuestion: question });
+  },
   setTimeRemaining: (time) => set({ timeRemaining: time }),
   setIsGameActive: (active) => set({ isGameActive: active }),
   setPlayers: (players) => set({ players }),
+  setQuestions: (questions) => set({ questions }),
+  setStartAt: (startAt) => set({ startAt }),
   
   updatePlayerStatus: (playerId, status, responseTime) => {
     const { players } = get();

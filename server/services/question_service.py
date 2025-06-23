@@ -7,3 +7,6 @@ class QuestionService:
 
     def get_random_question(self):
         return self.question_repo.get_random()
+    
+    def get_random_questions_by_difficulty(self, difficulty: str, limit: int):
+        return self.question_repo.get_random_by_difficulty(difficulty, limit)

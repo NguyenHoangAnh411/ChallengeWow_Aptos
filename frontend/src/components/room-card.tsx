@@ -11,7 +11,7 @@ import { RoomStatus } from "@/types/RoomStatus";
 interface RoomCardProps {
   index: number;
   room: Room;
-  onJoin: (roomCode: string) => void;
+  onJoin: (roomId: string) => void;
 }
 
 export default function RoomCard({ index, room, onJoin }: RoomCardProps) {
@@ -104,7 +104,7 @@ export default function RoomCard({ index, room, onJoin }: RoomCardProps) {
 
             <div className="mt-4 md:mt-0 md:ml-4 cursor-pointer">
               <ClientMotion
-                onClick={() => onJoin(room.roomCode)}
+                onClick={() => onJoin(room.id)}
                 disabled={!canJoin}
                 className={`relative overflow-hidden px-8 py-3 rounded-lg font-bold transition-all duration-300 ${
                   canJoin

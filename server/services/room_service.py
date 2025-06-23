@@ -48,9 +48,7 @@ class RoomService:
         if not room:
             return None
         players = self.player_repo.get_by_room(room_id)
-        print(f"⚠️ [ROOM {room_id}] Players: {players}")
         for player in players:
-            print(f"🔍 [ROOM {room_id}] Player: {player.wallet_id}, is_host: {player.is_host}")
             if player.is_host:
                 return player.wallet_id
         return None

@@ -25,3 +25,15 @@ class QuestionRepository(IQuestionRepository):
         )
 
         return Question(**res.data[0]) if res.data else None
+
+    def get_random_by_difficulty(self, difficulty: str, limit: int):
+        res = (
+            supabase.table(QuestionRepository.table)
+            .select("*")
+            .eq("difficulty", difficulty)
+            .execute()
+        )
+        questions = res.data
+        if not questions or len(questions) <= limit:
+            return [Question(**q) for q in questions]  # trả về tất cả nếu không đủ
+        return [Question(**q) for q in random.sample(questions, limit)]

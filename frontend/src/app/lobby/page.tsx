@@ -41,6 +41,7 @@ export default function Lobby() {
     avgResponseTime: "0.0s",
   });
 
+  const [inviteCode, setInviteCode] = useState("");
   const [usernameInput, setUsernameInput] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
@@ -149,21 +150,21 @@ export default function Lobby() {
   });
 
   const joinRoomMutation = useMutation({
-    mutationFn: async (roomCode: string) => {
+    mutationFn: async (variables: { roomId: string; roomCode?: string }) => {
       return joinRoom({
-        roomCode,
+        ...variables,
         username: currentUser?.username,
         walletId: currentUser?.walletId,
       });
     },
-    onSuccess: (_, roomId) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({
         title: "Room Joined",
         description: "Successfully joined the room!",
       });
 
-      router.push(`/room/${roomId}`);
+      router.push(`/room/${variables.roomId}/waiting`);
     },
     onError: () => {
       toast({
@@ -171,7 +172,8 @@ export default function Lobby() {
         description: "Failed to join room. It might be full or unavailable.",
         variant: "destructive",
       });
-    },
+      return;
+    }
   });
 
   const { isWsConnected, sendMessage } = useWebSocket({
@@ -210,9 +212,42 @@ export default function Lobby() {
     createRoomMutation.mutate();
   };
 
-  const handleJoinRoom = (roomId: string) => {
+  const handleJoinRoom = (idOrCode: string) => {
+    const code = idOrCode.trim();
+    if (!code) {
+      toast({
+        title: "Room ID or Code is required",
+        description: "Please select a room or enter an invite code to join.",
+        variant: "destructive",
+      });
+      return;
+    }
     requireWallet(() => {
-      joinRoomMutation.mutate(roomId);
+      if (!currentUser?.username || !currentUser?.walletId) {
+        toast({
+          title: "Missing info",
+          description: "Please set your username before joining a room.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // We assume the code is a roomId. If it's a roomCode, the backend should handle it.
+      // Or we find the room in the list to get the ID.
+      const room = rooms.find((r) => r.id === code || r.roomCode === code);
+      if (!room) {
+        // As a fallback, we can try to join with the code, assuming it's a roomCode.
+        // This depends on the backend implementation. For now, we'll try with what we have.
+        // A better approach would be to have a dedicated API endpoint for joining with a code.
+        // For now, we will assume the code is the roomID.
+        toast({
+          title: "Room not found",
+          description: "Could not find a room with that ID or code.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      joinRoomMutation.mutate({ roomId: room.id, roomCode: room.roomCode });
     });
   };
 
@@ -323,7 +358,7 @@ export default function Lobby() {
                       Player Info
                     </h3>
                   </div>
-                  {currentUser && (
+                  {currentUser ? (
                     <div className="space-y-4">
                       <div className="flex items-center space-x-3 p-3 bg-cyber-accent/30 rounded-lg">
                         {/* Avatar */}
@@ -343,10 +378,7 @@ export default function Lobby() {
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-white truncate">
-                            {currentUser?.username ||
-                              (currentUser?.walletId
-                                ? currentUser.walletId.substring(0, 8) + "..."
-                                : "--")}
+                            {currentUser?.username || "Username not set"}
                           </div>
                           <div
                             className="text-xs text-gray-400 font-mono truncate"
@@ -366,7 +398,7 @@ export default function Lobby() {
                             Total Score:
                           </span>
                           <span className="text-neon-blue font-bold text-lg">
-                            {currentUser?.totalScore}
+                            {currentUser?.totalScore ?? 0}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-2 bg-green-400/10 rounded">
@@ -374,7 +406,7 @@ export default function Lobby() {
                             Games Won:
                           </span>
                           <span className="text-green-400 font-bold">
-                            {currentUser?.gamesWon}
+                            {currentUser?.gamesWon ?? 0}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-2 bg-neon-purple/10 rounded">
@@ -382,11 +414,46 @@ export default function Lobby() {
                             Global Rank:
                           </span>
                           <span className="text-neon-purple font-bold">
-                            #{currentUser?.rank}
+                            #{currentUser?.rank ?? "N/A"}
                           </span>
                         </div>
                       </div>
+
+                      {/* Update Username Form */}
+                      <div className="pt-4 mt-4 border-t border-neon-blue/20">
+                        <h4 className="font-semibold text-neon-blue text-sm mb-2">
+                          {currentUser.username ? "Update" : "Set"} your
+                          username
+                        </h4>
+                        <div className="flex space-x-2">
+                          <input
+                            className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-full"
+                            placeholder={
+                              currentUser.username || "Enter username"
+                            }
+                            value={usernameInput}
+                            onChange={(e) => setUsernameInput(e.target.value)}
+                          />
+                          <Button
+                            onClick={handleSaveUsername}
+                            disabled={
+                              isSavingUsername || !usernameInput.trim()
+                            }
+                            className="bg-neon-blue hover:bg-blue-600 px-4 py-2 text-white"
+                          >
+                            {isSavingUsername ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                            ) : (
+                              "Save"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
+                  ) : (
+                    <p className="text-gray-400 text-center py-4">
+                      Connect your wallet to see player info.
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -473,37 +540,32 @@ export default function Lobby() {
               </Button>
             </motion.div>
 
-            {/* Hiển thị form nhập username nếu thiếu */}
-            {currentUser?.walletId && (
-              <div
-                className="mb-6 p-4 bg-cyber-accent/20 rounded-lg"
-                style={{ zIndex: 1000, position: "relative" }}
-              >
-                <h3 className="font-bold mb-2 text-neon-blue">
-                  Set your username
-                </h3>
-                <input
-                  className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-full mb-2"
-                  placeholder={currentUser.username ?? "Enter username"}
-                  value={usernameInput}
-                  onChange={(e) => setUsernameInput(e.target.value)}
-                  // disabled={isSavingUsername}
-                />
-                <Button
-                  onClick={handleSaveUsername}
-                  disabled={isSavingUsername || !usernameInput.trim()}
-                  className="w-full"
-                >
-                  {isSavingUsername ? "Saving..." : "Save Username"}
-                </Button>
-              </div>
-            )}
-
             {/* Room List */}
             <div className="space-y-4">
-              <h2 className="text-2xl font-orbitron font-bold mb-6">
-                Available Rooms
-              </h2>
+              <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                <h2 className="text-2xl font-orbitron font-bold">
+                  Available Rooms
+                </h2>
+                <div className="flex items-center space-x-2">
+                  <input
+                    className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-48 focus:ring-2 focus:ring-neon-purple focus:border-neon-purple transition-all"
+                    placeholder="Enter invite code..."
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                  />
+                  <Button
+                    onClick={() => handleJoinRoom(inviteCode)}
+                    disabled={joinRoomMutation.isPending || !inviteCode.trim()}
+                    className="bg-neon-purple hover:bg-purple-600 text-white font-bold transition-all duration-300 neon-glow-purple px-4 py-2"
+                  >
+                    {joinRoomMutation.isPending ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      "Join"
+                    )}
+                  </Button>
+                </div>
+              </div>
 
               {isLoading ? (
                 <div className="text-center py-12">
@@ -539,7 +601,7 @@ export default function Lobby() {
                 >
                   {rooms.map((room, index) => (
                     <motion.div
-                      key={room.roomCode}
+                      key={room.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}

@@ -26,6 +26,8 @@ class Room(CamelModel):
     start_time: Optional[datetime] = None
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
+    current_questions: Optional[List[Question]] = None
+    current_index: int = 0
 
     model_config = ConfigDict(ser_enum_as_value=True)
 

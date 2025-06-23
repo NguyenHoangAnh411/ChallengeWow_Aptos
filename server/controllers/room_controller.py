@@ -66,7 +66,6 @@ class RoomController:
             self.room_service.save_room(room)
             
             self.websocket_manager.set_room_state(room.id, room.status)
-            self.websocket_manager.start_room_timeout(room.id, GAME_TIMEOUT_IN_SECOND, self.make_timeout_callback(room.id))
             
             return room
         except Exception as e:
@@ -100,9 +99,11 @@ class RoomController:
             "type": "player_joined",
             "player": player
         })
-        
-        # if len(room.players) >= 2:
-        #     asyncio.create_task(self.game_service.start_countdown(room))
+
+        if len(room.players) < 2:
+            self.websocket_manager.start_room_timeout(room.id, GAME_TIMEOUT_IN_SECOND, self.make_timeout_callback(room.id))
+        else:
+            self.websocket_manager.clear_room_timeout(room.id)
 
         return {"roomId": room.id, "walletId": player.wallet_id}
 

@@ -74,7 +74,9 @@ export default function WaitingRoom({
   const router = useRouter();
   const { roomId } = params;
   const { toast } = useToast();
-  const { currentUser, currentRoom, setCurrentRoom } = useGameState();
+  const gameState = useGameState();
+  const { currentUser, currentRoom, setCurrentRoom } = gameState;
+  const { setQuestions, setStartAt } = gameState;
 
   const [players, setPlayers] = useState<Player[]>([]);
 
@@ -160,7 +162,13 @@ export default function WaitingRoom({
           );
           break;
         case "game_started":
-          router.push(`/room/${roomId}`);
+          setQuestions(data.questions);
+          setStartAt(data.startAt);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("questions", JSON.stringify(data.questions));
+            localStorage.setItem("startAt", data.startAt);
+          }
+          // KHÔNG router.push(`/room/${roomId}`) ở đây nữa, chờ next_question
           break;
         case "chat":
           setChatMessages((prev) => [
@@ -173,6 +181,11 @@ export default function WaitingRoom({
               timestamp: new Date(),
             },
           ]);
+          break;
+        case "next_question":
+          if (typeof window !== "undefined" && window.location.pathname !== `/room/${roomId}`) {
+            router.push(`/room/${roomId}`);
+          }
           break;
       }
     },
@@ -267,7 +280,7 @@ export default function WaitingRoom({
       });
       return;
     }
-
+    console.log("Sending start_game event", { roomId });
     sendMessage({
       type: "start_game",
       roomId: roomId,

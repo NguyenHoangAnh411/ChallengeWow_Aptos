@@ -65,7 +65,7 @@ question_controller = QuestionController(question_service)
 answer_controller = AnswerController(answer_service, room_service)
 zkproof_controller = ZkProofController(zkproof_service)
 user_controller = UserController()
-websocket_controller = WebSocketController(websocket_manager, player_service, room_service)
+websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service)
 
 # Router
 api_router = APIRouter(prefix="/api")

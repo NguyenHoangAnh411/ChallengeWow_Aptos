@@ -1,8 +1,10 @@
 from datetime import datetime, timezone, timedelta
 from typing import List
+import json
 
 from config.database import supabase
 from models.room import Room
+from models.question import Question
 from repositories.implement.player_repo_impl import PlayerRepository
 from repositories.interfaces.room_repo import IRoomRepository
 
@@ -28,6 +30,13 @@ class RoomRepository(IRoomRepository):
         except Exception as e:
             print(f"Error fetching rooms: {e}")
             return []
+
+    def question_to_dict_safe(self, q):
+        d = q.dict() if hasattr(q, 'dict') else dict(q)
+        for k, v in d.items():
+            if isinstance(v, datetime):
+                d[k] = v.isoformat()
+        return d
 
     def save(self, room: Room) -> bool:
         try:
@@ -63,6 +72,8 @@ class RoomRepository(IRoomRepository):
                     else None
                 ),
                 "winner_wallet_id": getattr(room, "winner_wallet_id", None),
+                "current_questions": [self.question_to_dict_safe(q) for q in getattr(room, "current_questions", [])] if getattr(room, "current_questions", None) else None,
+                "current_index": getattr(room, "current_index", 0),
             }
 
             supabase.table(RoomRepository.table).upsert(data).execute()
@@ -81,7 +92,18 @@ class RoomRepository(IRoomRepository):
             )
 
             if res.data:
-                return Room(**res.data[0])
+                data = res.data[0]
+                if data.get("current_questions"):
+                    try:
+                        if isinstance(data["current_questions"], str):
+                            import json
+                            data["current_questions"] = [Question(**q) for q in json.loads(data["current_questions"])]
+                        else:
+                            data["current_questions"] = [Question(**q) for q in data["current_questions"]]
+                    except Exception as e:
+                        print(f"Error parsing current_questions: {e}")
+                        data["current_questions"] = []
+                return Room(**data)
             return None
         except Exception as e:
             print(f"Error fetching room {room_id} from Supabase: {str(e)}")
@@ -97,7 +119,18 @@ class RoomRepository(IRoomRepository):
             )
 
             if res.data:
-                return Room(**res.data[0])
+                data = res.data[0]
+                if data.get("current_questions"):
+                    try:
+                        if isinstance(data["current_questions"], str):
+                            import json
+                            data["current_questions"] = [Question(**q) for q in json.loads(data["current_questions"])]
+                        else:
+                            data["current_questions"] = [Question(**q) for q in data["current_questions"]]
+                    except Exception as e:
+                        print(f"Error parsing current_questions: {e}")
+                        data["current_questions"] = []
+                return Room(**data)
             return None
         except Exception as e:
             print(f"Error fetching room {room_code} from Supabase: {str(e)}")
