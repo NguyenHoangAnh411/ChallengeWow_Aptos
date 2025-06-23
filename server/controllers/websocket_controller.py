@@ -308,9 +308,12 @@ class WebSocketController:
             while True:
                 try:
                     data = await websocket.receive_json()
+                except WebSocketDisconnect:
+                    print("❌ [LOBBY] WebSocket disconnected.")
+                    break
                 except Exception as e:
                     print(f"⚠️ [LOBBY] Failed to parse JSON: {e}")
-                    break
+                    continue
 
                 if not isinstance(data, dict):
                     print(f"⚠️ [LOBBY] Invalid message format (not dict): {data}")
@@ -325,8 +328,6 @@ class WebSocketController:
                 else:
                     print(f"⚠️ [LOBBY] Unknown message type: {msg_type}")
 
-        except WebSocketDisconnect:
-            print("❌ [LOBBY] WebSocket disconnected.")
         except Exception as e:
             print(f"🔥 [LOBBY] Unexpected error: {e}")
         finally:

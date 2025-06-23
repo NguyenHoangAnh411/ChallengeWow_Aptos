@@ -74,7 +74,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return () => {
       socket.close();
     };
-  }, [wsUrl, enabled, onOpen, onClose, onError]);
+  }, [wsUrl, enabled]);
 
   const sendMessage = (message: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
