@@ -39,7 +39,7 @@ import { useGameState } from "@/lib/game-state";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import type { Player, Room, User } from "@/types/schema";
-import { fetchRoomById, leaveRoom } from "@/lib/api";
+import { fetchRoomByCode, fetchRoomById, leaveRoom } from "@/lib/api";
 import {
   KICK_PLAYER_TYPE,
   LEAVE_ROOM_TYPE,
@@ -65,6 +65,7 @@ interface ChatMessage {
 }
 
 const TIME_COUNT_DONW = 30000; // in seconds
+const MIN_PLAYERS = 2;
 export default function WaitingRoom({
   params,
 }: {
@@ -89,7 +90,7 @@ export default function WaitingRoom({
 
   const [newMessage, setNewMessage] = useState("");
   const [isVoiceChatEnabled, setIsVoiceChatEnabled] = useState(false);
-  const [countdown, setCountdown] = useState(TIME_COUNT_DONW); // 5 minutes in seconds
+  const [countdown, setCountdown] = useState(TIME_COUNT_DONW);
   const [isHost, setIsHost] = useState(false);
   const [kickConfirmation, setKickConfirmation] = useState<{
     show: boolean;
@@ -127,9 +128,10 @@ export default function WaitingRoom({
               id: Date.now().toString(),
               playerId: "0",
               playerName: "System",
-              message: data.action === "kick" 
-                ? `${username} was kicked from the room`
-                : `${username} left the room`,
+              message:
+                data.action === "kick"
+                  ? `${username} was kicked from the room`
+                  : `${username} left the room`,
               timestamp: new Date(),
               isSystem: true,
             },
@@ -176,28 +178,45 @@ export default function WaitingRoom({
     },
   });
 
-  // Countdown timer
+  const readyCount = players.filter((p) => p.isReady).length;
+  const readyPercentage = (readyCount / players.length) * 100;
+  const [canStart, setCanStart] = useState(false);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  useEffect(
+    () =>
+      setCanStart(readyCount >= MIN_PLAYERS && readyCount === players.length),
+    [readyCount, players.length]
+  );
+
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
-      return () => clearInterval(timer);
-    } else {
-      // Auto-start game when countdown reaches 0
-      if (isHost) {
-        // handleStartGame();
-        alert("COUNTIN DOWN TIME IS OVER");
+    if (countdown <= 0) {
+      if (canStart) {
       }
+
+      return;
     }
-  }, [countdown, isHost]);
+
+    const timer = setTimeout(() => {
+      setCountdown(countdown - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   // Set players
   useEffect(() => {
     const fetchRoom = async () => {
       try {
         const data: Room = await fetchRoomById(roomId);
-        setPlayers(data.players || []);
+        setCurrentRoom(data);
+        // TODO: TEST FOR ALL READY
+        setPlayers(data.players.map((p) => ({ ...p, isReady: true })) || []);
         // setGameSettings(data.settings || defaultGameSettings);
 
         // set host check
@@ -240,7 +259,7 @@ export default function WaitingRoom({
 
   const handleStartGame = () => {
     const readyPlayers = players.filter((p) => p.isReady);
-    if (readyPlayers.length < 2) {
+    if (readyPlayers.length < MIN_PLAYERS) {
       toast({
         title: "Not enough players ready",
         description: "At least 2 players must be ready to start",
@@ -297,7 +316,7 @@ export default function WaitingRoom({
     console.log("[TEST] Testing WebSocket connection...");
     sendMessage({
       type: "ping",
-      data: "test message"
+      data: "test message",
     });
   };
 
@@ -348,15 +367,6 @@ export default function WaitingRoom({
     }
   };
 
-  const readyCount = players.filter((p) => p.isReady).length;
-  const readyPercentage = (readyCount / players.length) * 100;
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const getCharacterIcon = (character: string) => {
     switch (character) {
       case "ninja":
@@ -369,6 +379,8 @@ export default function WaitingRoom({
         return "👤";
     }
   };
+
+  if (!currentRoom) return <div>Loading...</div>;
 
   return (
     <div className="min-h-screen bg-cyber-dark cyber-grid-fast relative overflow-hidden">
@@ -408,7 +420,7 @@ export default function WaitingRoom({
                 </div>
                 <div>
                   <h1 className="text-xl font-orbitron font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
-                    Room #{roomId.slice(-4)}
+                    Room #{currentRoom.roomCode}
                   </h1>
                   <p className="text-sm text-gray-400">Waiting Room</p>
                 </div>
@@ -439,9 +451,13 @@ export default function WaitingRoom({
 
               {/* WebSocket Status */}
               <div className="flex items-center space-x-2 px-4 py-2 glass-morphism rounded-lg">
-                <div className={`w-3 h-3 rounded-full ${isWsConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    isWsConnected ? "bg-green-400" : "bg-red-400"
+                  }`}
+                ></div>
                 <span className="font-orbitron text-sm text-gray-300">
-                  {isWsConnected ? 'Connected' : 'Disconnected'}
+                  {isWsConnected ? "Connected" : "Disconnected"}
                 </span>
                 <Button
                   variant="ghost"
@@ -539,7 +555,12 @@ export default function WaitingRoom({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleKickPlayer(player.walletId, player.username)}
+                              onClick={() =>
+                                handleKickPlayer(
+                                  player.walletId,
+                                  player.username
+                                )
+                              }
                               className="text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-all duration-200 group"
                               title="Kick player"
                             >
@@ -768,7 +789,7 @@ export default function WaitingRoom({
                   <Button
                     onClick={handleStartGame}
                     className="w-full bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-blue/80 hover:to-neon-purple/80"
-                    disabled={readyCount < 2}
+                    disabled={!canStart}
                   >
                     <Play className="w-4 h-4 mr-2" />
                     Start Game
@@ -794,7 +815,7 @@ export default function WaitingRoom({
                 <div className="flex justify-between">
                   <span className="text-gray-400">Room Code:</span>
                   <span className="text-neon-blue font-mono">
-                    #{roomId.slice(-4)}
+                    #{currentRoom.roomCode}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -832,21 +853,34 @@ export default function WaitingRoom({
                 <Ban className="w-5 h-5 text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-red-400">Kick Player</h3>
-                <p className="text-sm text-gray-400">Are you sure you want to kick this player?</p>
+                <h3 className="text-lg font-semibold text-red-400">
+                  Kick Player
+                </h3>
+                <p className="text-sm text-gray-400">
+                  Are you sure you want to kick this player?
+                </p>
               </div>
             </div>
-            
+
             <div className="bg-cyber-dark/50 rounded-lg p-3 mb-4">
               <p className="text-gray-300">
-                <span className="text-red-400 font-semibold">{kickConfirmation.playerName}</span> will be removed from the room.
+                <span className="text-red-400 font-semibold">
+                  {kickConfirmation.playerName}
+                </span>{" "}
+                will be removed from the room.
               </p>
             </div>
 
             <div className="flex space-x-3">
               <Button
                 variant="outline"
-                onClick={() => setKickConfirmation({ show: false, playerId: "", playerName: "" })}
+                onClick={() =>
+                  setKickConfirmation({
+                    show: false,
+                    playerId: "",
+                    playerName: "",
+                  })
+                }
                 className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
               >
                 Cancel

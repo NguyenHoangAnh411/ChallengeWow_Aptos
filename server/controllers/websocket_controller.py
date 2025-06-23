@@ -42,7 +42,7 @@ class WebSocketController:
             return
 
         kicked_ws = await self.manager.get_player_socket_by_wallet(payload.wallet_id)
-        if wallet_id == payload.wallet_id and kicked_ws:
+        if wallet_id == payload.wallet_id:
             await send_json_safe(websocket, {
                 "type": "error",
                 "payload": {"message": "You cannot kick yourself"}

@@ -149,9 +149,9 @@ export default function Lobby() {
   });
 
   const joinRoomMutation = useMutation({
-    mutationFn: async (roomId: string) => {
+    mutationFn: async (roomCode: string) => {
       return joinRoom({
-        roomId,
+        roomCode,
         username: currentUser?.username,
         walletId: currentUser?.walletId,
       });
@@ -539,7 +539,7 @@ export default function Lobby() {
                 >
                   {rooms.map((room, index) => (
                     <motion.div
-                      key={room.id}
+                      key={room.roomCode}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}

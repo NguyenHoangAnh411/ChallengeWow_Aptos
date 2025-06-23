@@ -1,12 +1,17 @@
+import asyncio
 from typing import Dict, List
 from fastapi import WebSocket
+from enums.game_status import GAME_STATUS
 from helpers.json_helper import send_json_safe
+import asyncio
 
 class WebSocketManager:
     def __init__(self):
         self.room_connections: Dict[str, List[WebSocket]] = {}
         self.lobby_connections: List[WebSocket] = []
         self.player_connections: dict[str, WebSocket] = {}
+        self.room_states: dict[str, GAME_STATUS] = {}
+        self.room_timeouts: dict[str, asyncio.Task] = {}
 
     async def connect_room(self, websocket: WebSocket, room_id: str, wallet_id: str):
         await websocket.accept()
@@ -25,8 +30,32 @@ class WebSocketManager:
         if self.player_connections.get(wallet_id) == websocket:
             del self.player_connections[wallet_id]
 
+    def disconnect_room_by_room_id(self, room_id: str):
+        if room_id in self.room_connections:
+            for ws in self.room_connections[room_id]:
+                try:
+                    asyncio.create_task(ws.close())
+                except:
+                    pass  # đảm bảo không crash nếu socket đã disconnect
+
+            del self.room_connections[room_id]
+
+        # Xoá player_connections liên quan
+        to_delete = [wallet_id for wallet_id, ws in self.player_connections.items()
+                    if ws in self.room_connections.get(room_id, [])]
+        for wallet_id in to_delete:
+            del self.player_connections[wallet_id]
+        
+        self.clear_room_timeout(room_id)
+        self.room_states.pop(room_id, None)
+
+        print(f"❌ All connections closed for room {room_id}")
+
     async def get_player_socket_by_wallet(self, wallet_id: str) -> WebSocket | None:
         return self.player_connections.get(wallet_id)
+    
+    def get_players_in_room(self, room_id: str) -> List[WebSocket]:
+        return self.room_connections.get(room_id, [])
 
     async def broadcast_to_room(self, room_id: str, message: dict):
         connections = self.room_connections.get(room_id, [])
@@ -47,3 +76,28 @@ class WebSocketManager:
     async def broadcast_to_lobby(self, message: dict):
         for ws in self.lobby_connections:
             await send_json_safe(ws, message)
+
+    # Timeout
+    def start_room_timeout(self, room_id: str, timeout_seconds: int, on_timeout: callable):
+        if room_id in self.room_timeouts:
+            return  # timeout đã tồn tại
+
+        async def timeout_task():
+            await asyncio.sleep(timeout_seconds)
+            if self.room_states.get(room_id) == GAME_STATUS.WAITING:
+                await on_timeout()
+
+        task = asyncio.create_task(timeout_task())
+        self.room_timeouts[room_id] = task
+
+    def clear_room_timeout(self, room_id: str):
+        task = self.room_timeouts.get(room_id)
+        if task:
+            task.cancel()
+            del self.room_timeouts[room_id]
+
+    def set_room_state(self, room_id: str, state: GAME_STATUS):
+        self.room_states[room_id] = state
+
+    def get_room_state(self, room_id: str) -> str:
+        return self.room_states.get(room_id, GAME_STATUS.WAITING)

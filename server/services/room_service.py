@@ -16,8 +16,7 @@ class RoomService:
         return self.room_repo.get_all()
 
     def create_room(self, player: Player) -> Room:
-        room = Room(
-            id=str(uuid.uuid4()),
+        room = Room.create(
             players=[player],
             created_at=datetime.now(timezone.utc),
         )
@@ -30,6 +29,14 @@ class RoomService:
         room = self.room_repo.get(room_id)
         if room:
             room.players = self.player_repo.get_by_room(room_id)
+        return room
+    
+    def get_room_by_code(self, room_code: str) -> Room | None:
+        room: Room = self.room_repo.get_by_code(room_code)
+        if not room:
+            return None
+        
+        room.players = self.player_repo.get_by_room(room.id)
         return room
 
     def save_room(self, room: Room):

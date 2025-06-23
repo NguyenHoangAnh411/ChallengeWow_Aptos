@@ -21,7 +21,13 @@ def create_room_router(room_controller: RoomController):
     @router.get("/rooms/{room_id}", response_model=Room)
     def get_room(room_id: str):
         return room_controller.get_room_by_id(room_id)
-        
+    
+    @router.get("/rooms/by-code/{room_code}", response_model=Room)
+    def get_room_by_code(room_code: str):
+        data = room_controller.get_room_by_code(room_code)
+        print(f"HERE {room_code} {data}")
+        return data
+
     @router.post("/join-room")
     async def join_room(request: JoinRoomRequest):
         return await room_controller.join_room(request)

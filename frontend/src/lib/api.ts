@@ -20,6 +20,12 @@ export async function fetchRoomById(roomId: string) {
   return fetchData(`/rooms/${roomId}`);
 }
 
+// Lấy data bằng room code
+export async function fetchRoomByCode(roomCode: string) {
+  alert("room : " + roomCode);
+  return fetchData(`/rooms/by-code/${roomCode}`);
+}
+
 // Tham gia phòng đang chơi hiện tại
 export async function fetchCurrentRoom(walletId: string) {
   return fetchData(`/current-room?wallet_id=${walletId}`);

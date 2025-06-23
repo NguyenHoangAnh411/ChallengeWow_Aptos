@@ -2,6 +2,7 @@ import { RoomStatus } from "./RoomStatus";
 
 export interface Room {
   id: string;
+  roomCode: string;
   players: Player[];
   status: RoomStatus;
   totalQuestions: number;

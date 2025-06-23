@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import HTTPException, Response, WebSocket, WebSocketDisconnect
+from config.constants import GAME_TIMEOUT_IN_SECOND
 from enums.player_status import PLAYER_STATUS
 from models.create_room_request import CreateRoomRequest
 from models.join_request import JoinRoomRequest
@@ -29,8 +30,14 @@ class RoomController:
     def get_rooms(self):
         return self.room_service.get_rooms()
     
-    def get_room_by_id(self, room_id: str) -> Room:
+    def get_room_by_id(self, room_id: str) -> Room | None:
         return self.room_service.get_room(room_id)
+    
+    def get_room_by_code(self, room_code: str) -> Room | None:
+        data = self.room_service.get_room_by_code(room_code)
+        if not data:
+            raise HTTPException(status_code=404, detail="Room not found")
+        return data
 
     def create_room(self, request: CreateRoomRequest):
         try:
@@ -49,21 +56,30 @@ class RoomController:
                 is_host=True,
             )
 
-            room = Room(
+            room = Room.create(
                 players=[player],
                 total_questions=request.total_questions,
                 countdown_duration=request.countdown_duration
             )
-
+            
             player.room_id = room.id
             self.room_service.save_room(room)
+            
+            self.websocket_manager.set_room_state(room.id, room.status)
+            self.websocket_manager.start_room_timeout(room.id, GAME_TIMEOUT_IN_SECOND, self.make_timeout_callback(room.id))
+            
             return room
         except Exception as e:
             print("Error in create_room:", e)
             raise HTTPException(status_code=500, detail="Internal server error")
 
     async def join_room(self, request: JoinRoomRequest):
-        room = self.room_service.get_room(request.room_id)
+        room = None
+        if request.room_code:
+            room = self.room_service.get_room_by_code(request.room_code)
+        elif request.room_id:
+            room = self.room_service.get_room(request.room_id)
+       
         if not room:
             raise HTTPException(status_code=404, detail="Room not found")
         if len(room.players) >= 4:
@@ -85,15 +101,20 @@ class RoomController:
             "player": player
         })
         
-        if len(room.players) >= 2:
-            asyncio.create_task(self.game_service.start_countdown(room))
+        # if len(room.players) >= 2:
+        #     asyncio.create_task(self.game_service.start_countdown(room))
 
         return {"roomId": room.id, "walletId": player.wallet_id}
 
     async def leave_room(self, wallet_id, room_id):
         result = self.player_service.leave_room(wallet_id, room_id)
         
+        is_closed = result.get("closed", False)
         player_data = result.get("data")
+        
+        if is_closed:
+           self.websocket_manager.disconnect_room_by_room_id(room_id)
+     
         if not player_data:
             return result 
         
@@ -102,6 +123,7 @@ class RoomController:
             "action": "leave",
             "roomId": room_id
         })
+        
         await self.websocket_manager.broadcast_to_room(room_id, {
             "type": "player_left",
             "action": "leave",
@@ -139,3 +161,14 @@ class RoomController:
                 else None
             ),
         }
+        
+    def make_timeout_callback(self, room_id: str):
+        async def on_timeout():
+            if self.websocket_manager.get_room_state(room_id) == GAME_STATUS.WAITING:
+                await self.websocket_manager.broadcast_to_room(room_id, {
+                    "type": "room_closed",
+                    "reason": "timeout"
+                })
+                self.websocket_manager.disconnect_room_by_room_id(room_id)
+                print(f"[ROOM_TIMEOUT] Room {room_id} closed due to inactivity.")
+        return on_timeout

@@ -33,6 +33,7 @@ class RoomRepository(IRoomRepository):
         try:
             data = {
                 "id": room.id,
+                "room_code": room.room_code,
                 "status": (
                     room.status.value
                     if hasattr(room.status, "value")
@@ -85,7 +86,23 @@ class RoomRepository(IRoomRepository):
         except Exception as e:
             print(f"Error fetching room {room_id} from Supabase: {str(e)}")
             return None
+        
+    def get_by_code(self, room_code: str) -> Room | None:
+        try:
+            res = (
+                supabase.table(RoomRepository.table)
+                .select("*")
+                .eq("room_code", room_code)
+                .execute()
+            )
 
+            if res.data:
+                return Room(**res.data[0])
+            return None
+        except Exception as e:
+            print(f"Error fetching room {room_code} from Supabase: {str(e)}")
+            return None
+        
     def delete_room(self, room_id: str) -> None:
         supabase.table("room_players").delete().eq("room_id", room_id).execute()
         supabase.table(RoomRepository.table).delete().eq("id", room_id).execute()

@@ -63,7 +63,7 @@ class PlayerService:
 
         if not updated_players:
             self.room_repo.delete_room(room_id)
-            return {"success": True, "message": "Room deleted because no players left"}
+            return {"success": True, "message": "Room deleted because no players left", "closed" : True}
 
         if current_player.is_host:
             new_host = next((p for p in updated_players if p.wallet_id != wallet_id), None)
