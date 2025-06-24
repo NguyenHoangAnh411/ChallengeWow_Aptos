@@ -16,4 +16,4 @@ class AnswerService:
         )
         
     def get_answers_by_wallet_id(self, wallet_id: str, room_id: str):
-        self.answer_repo.get_answers_by_wallet_id(room_id, wallet_id)
+        return self.answer_repo.get_answers_by_wallet_id(room_id, wallet_id)

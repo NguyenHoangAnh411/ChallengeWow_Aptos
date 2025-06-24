@@ -82,8 +82,9 @@ class GameService:
         }
         return hashlib.sha256(json.dumps(data).encode()).hexdigest()
 
+    @staticmethod
     def calculate_score(
-        is_correct: bool, time_taken: float, question: Question
+        is_correct: bool, response_time: float, question: Question
     ) -> float:
         if not is_correct:
             return 0
@@ -97,6 +98,6 @@ class GameService:
 
         bonus = 0
         if config.get("speed_bonus_enabled", False):
-            bonus = max(config["max_speed_bonus"] * (1 - time_taken / time_limit), 0)
+            bonus = max(config["max_speed_bonus"] * (1 - response_time / time_limit), 0)
 
         return base_score + int(bonus)

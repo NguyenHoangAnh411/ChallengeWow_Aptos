@@ -14,6 +14,7 @@ import random
 from enums.game_status import GAME_STATUS
 import asyncio
 import pprint
+from repositories.implement.user_repo_impl import UserRepository
 
 
 class WebSocketController:
@@ -23,6 +24,7 @@ class WebSocketController:
         self.room_service = room_service
         self.question_service = question_service
         self.answer_service = answer_service
+        self.user_repo = UserRepository()
 
     # ---------- LOBBY HANDLERS ----------
 
@@ -272,7 +274,7 @@ class WebSocketController:
 
             if room.current_index < len(room.current_questions):
                 next_q = room.current_questions[room.current_index]
-                question_duration = 15
+                question_duration = 5
                 question_end_at = int(time.time() * 1000) + question_duration * 1000
                 print(f"[NEXT_QUESTION] Sent question {next_q.id} to room {room_id} with end at {question_end_at}")
                 await self.manager.broadcast_to_room(room_id, {
@@ -302,18 +304,41 @@ class WebSocketController:
                 results = []
                 for p in room.players:
                     answers = self.answer_service.get_answers_by_wallet_id(p.wallet_id, room_id)
-                    score = sum(a.score for a in answers)
+                    if answers is None:
+                        answers = []
+                    
+                    # Validate answers data
+                    valid_answers = []
+                    for a in answers:
+                        if isinstance(a, dict) and "score" in a:
+                            valid_answers.append(a)
+                    
+                    score = sum(a["score"] for a in valid_answers)
                     results.append({
                         "wallet": p.wallet_id,
                         "oath": p.username,
                         "score": score
                     })
+                # Xác định winner
+                winner = max(results, key=lambda x: x['score']) if results else None
+                winner_wallet = winner['wallet'] if winner else None
+                # Cập nhật is_winner trực tiếp trên object Player trong RAM
+                for p in room.players:
+                    p.is_winner = (p.wallet_id == winner_wallet)
+                # Cập nhật bảng users
+                for result in results:
+                    self.user_repo.update_user_stats(
+                        wallet_id=result["wallet"],
+                        score=result["score"],
+                        is_winner=(result["wallet"] == winner_wallet)
+                    )
                 room.status = GAME_STATUS.FINISHED
                 self.room_service.save_room(room)
                 print(f"[GAME_ENDED] Room {room_id} finished. Results: {results}")
                 await self.manager.broadcast_to_room(room_id, {
                     "type": "game_ended",
-                    "results": results
+                    "results": results,
+                    "winner_wallet": winner_wallet
                 })
                 await self.manager.broadcast_to_room(room_id, {
                     "type": "clear_local_storage"
@@ -374,7 +399,7 @@ class WebSocketController:
             if 0 <= current_index < len(room.current_questions):
                 import time
                 question = room.current_questions[current_index]
-                question_duration = 15
+                question_duration = 5
                 # Ưu tiên lấy questionEndAt từ localStorage phía client nếu có, nếu không thì gửi thời gian mới
                 question_end_at = int(time.time() * 1000) + question_duration * 1000
                 await send_json_safe(websocket, {

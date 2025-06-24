@@ -75,3 +75,6 @@ class PlayerService:
             "message": "Leave successfully",
             "data": current_player
         }
+
+    def update_is_winner(self, room_id: str, wallet_id: str, is_winner: bool) -> None:
+        self.player_repo.update_player(wallet_id, {"is_winner": is_winner}, room_id=room_id)

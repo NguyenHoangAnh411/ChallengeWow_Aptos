@@ -21,7 +21,8 @@ class PlayerRepository(IPlayerRepository):
                     "username": p.username,
                     "score": p.score,
                     "joined_at": p.joined_at.isoformat(),
-                    "is_host": p.is_host
+                    "is_host": p.is_host,
+                    "is_winner": p.is_winner,
                 }
             )
         if data:
@@ -68,11 +69,12 @@ class PlayerRepository(IPlayerRepository):
             "room_id", room_id
         ).execute()
 
-    def update_player(self, wallet_id, updates):
+    def update_player(self, wallet_id, updates, room_id=None):
         try:
             safe_updates = json.loads(json.dumps(updates, default=json_safe))
-            supabase.table(PlayerRepository.table).update(safe_updates).eq(
-                "wallet_id", wallet_id
-            ).execute()
+            query = supabase.table(PlayerRepository.table).update(safe_updates).eq("wallet_id", wallet_id)
+            if room_id:
+                query = query.eq("room_id", room_id)
+            query.execute()
         except Exception as e:
             print("Failed to update: ", e)

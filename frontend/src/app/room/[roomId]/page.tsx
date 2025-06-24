@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, HelpCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Clock, HelpCircle, ExternalLink, CheckCircle, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import TimerCircle from "@/components/timer-circle";
 import PlayerCard from "@/components/player-card";
@@ -54,6 +54,8 @@ export default function ChallengeRoom({
   const [questionCountdown, setQuestionCountdown] =
     useState<number>(QUESTION_TIME);
   const nextQuestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [winnerWallet, setWinnerWallet] = useState<string | null>(null);
+  const [showJson, setShowJson] = useState(false);
 
   useEffect(() => {
     async function loadRoomData() {
@@ -180,6 +182,7 @@ export default function ChallengeRoom({
         case "game_ended":
           setGameResults(data.results);
           setGameStatus("finished");
+          setWinnerWallet(data.winner_wallet || null);
           // Lưu trạng thái đã kết thúc game vào localStorage
           if (typeof window !== "undefined") {
             localStorage.setItem("gameEnded", "1");
@@ -496,46 +499,66 @@ export default function ChallengeRoom({
           <div className="lg:col-span-3">
             {gameStatus === "finished" ? (
               <div className="flex flex-col items-center justify-center h-full">
-                <h2 className="text-3xl font-bold mb-4">Game Results</h2>
-                {gameResults.length > 0 ? (
-                  <>
-                    <table className="min-w-[300px] border border-neon-blue/40 rounded-lg overflow-hidden mb-4">
-                      <thead>
-                        <tr className="bg-neon-blue/10">
-                          <th className="px-4 py-2">Wallet</th>
-                          <th className="px-4 py-2">OATH</th>
-                          <th className="px-4 py-2">Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gameResults.map((player, idx) => (
-                          <tr
-                            key={idx}
-                            className="text-center border-b border-neon-blue/10"
-                          >
-                            <td className="px-4 py-2 font-mono">
-                              {player.wallet}
-                            </td>
-                            <td className="px-4 py-2">{player.oath}</td>
-                            <td className="px-4 py-2 font-bold text-neon-blue">
-                              {player.score}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <pre className="bg-gray-900 text-white p-4 rounded-lg text-xs max-w-xl overflow-x-auto">
-                      {JSON.stringify(gameResults, null, 2)}
-                    </pre>
-                  </>
-                ) : (
-                  <div className="text-lg text-neon-blue">
-                    Đang tổng kết kết quả...
+                <h2 className="text-4xl font-orbitron font-bold mb-6 text-neon-blue drop-shadow-neon">
+                  Game Results
+                </h2>
+                {winnerWallet && (
+                  <div className="mb-6 px-8 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-bold text-2xl shadow-neon-glow flex items-center gap-3 animate-glow-pulse">
+                    <Trophy className="w-7 h-7 text-yellow-300 drop-shadow" />
+                    Winner: <span className="text-yellow-300">{gameResults.find(p => p.wallet === winnerWallet)?.oath || winnerWallet}</span>
                   </div>
                 )}
-                <Button className="mt-6" onClick={() => router.push("/lobby")}>
-                  Về lobby
-                </Button>
+                <div className="overflow-x-auto w-full flex justify-center">
+                  <table className="min-w-[700px] max-w-3xl w-full border-separate border-spacing-y-2">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-neon-blue/30 to-neon-purple/30 text-white">
+                        <th className="px-6 py-3 rounded-tl-xl">Wallet</th>
+                        <th className="px-6 py-3">OATH</th>
+                        <th className="px-6 py-3">Score</th>
+                        <th className="px-6 py-3 rounded-tr-xl">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gameResults.map((player, idx) => (
+                        <tr
+                          key={idx}
+                          className={`transition-all duration-200 text-center bg-cyber-darker/80 hover:bg-neon-blue/10 ${
+                            winnerWallet === player.wallet
+                              ? "border-2 border-yellow-400 shadow-neon-glow font-bold scale-105"
+                              : "border border-neon-blue/20"
+                          }`}
+                        >
+                          <td className="px-6 py-3 font-mono text-neon-blue">{player.wallet}</td>
+                          <td className="px-6 py-3 text-neon-purple">{player.oath}</td>
+                          <td className="px-6 py-3 text-xl text-green-400 font-orbitron">{player.score}</td>
+                          <td className="px-6 py-3">
+                            {winnerWallet === player.wallet ? (
+                              <span className="flex items-center gap-1 text-yellow-300">
+                                <CheckCircle className="w-5 h-5" /> Winner
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">Player</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <button
+                  className="mt-6 px-4 py-2 rounded-lg bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold shadow hover:scale-105 transition-all"
+                  onClick={() => setShowJson((v) => !v)}
+                >
+                  {showJson ? "Hide Raw JSON" : "Show Raw JSON"}
+                </button>
+                {showJson && (
+                  <div className="mt-4 w-full max-w-2xl bg-cyber-darker/80 rounded-lg p-4 text-xs text-green-300 overflow-x-auto shadow-inner border border-neon-blue/30">
+                    <pre>
+                      {JSON.stringify(gameResults, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                <button className="mt-8 px-6 py-3 rounded-lg bg-neon-blue text-white font-bold shadow-neon-glow hover:bg-neon-purple transition-all" onClick={() => router.push("/lobby")}>Back to Lobby</button>
               </div>
             ) : countdown > 0 ? (
               <div className="flex flex-col items-center justify-center h-full">

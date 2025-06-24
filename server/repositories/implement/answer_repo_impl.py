@@ -41,7 +41,7 @@ class AnswerRepository(IAnswerRepository):
     def get_score_by_user(self, room_id: str, wallet_id: str) -> float:
         response = (
             supabase.table(AnswerRepository.table)
-            .select("is_correct, time_taken")
+            .select("is_correct, response_time")
             .eq("room_id", room_id)
             .eq("wallet_id", wallet_id)
             .execute()
@@ -51,6 +51,6 @@ class AnswerRepository(IAnswerRepository):
         total_score = 0.0
         for a in answers:
             if a["is_correct"]:
-                bonus = max(0, 5 - a["time_taken"])  # max bonus 5s
+                bonus = max(0, 5 - a["response_time"])  # max bonus 5s
                 total_score += 1 + bonus
         return total_score

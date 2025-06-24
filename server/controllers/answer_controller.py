@@ -1,16 +1,19 @@
 from fastapi import HTTPException
 from enums.game_status import GAME_STATUS
 from models.room import Room
+from models.answer import Answer
 from services.answer_service import AnswerService
+from services.game_service import GameService
 from datetime import datetime
 
 from services.room_service import RoomService
 
 
 class AnswerController:
-    def __init__(self, answer_service: AnswerService, room_service: RoomService):
+    def __init__(self, answer_service: AnswerService, room_service: RoomService, game_service: GameService):
         self.answer_service = answer_service
         self.room_service = room_service
+        self.game_service = game_service
 
     def submit_answer(
         self,
@@ -36,20 +39,21 @@ class AnswerController:
             normalized_options = [opt.strip().lower() for opt in question.options]
             selected_index = normalized_options.index(normalized_answer)
 
-            time_taken = (timestamp - room.start_time).total_seconds()
+            response_time = (timestamp - room.start_time).total_seconds()
             is_correct = normalized_answer == question.correct_answer
-            score = self.room_service.calculate_score(is_correct, time_taken, room)
+            score = self.game_service.calculate_score(is_correct, response_time, question)
 
-            self.answer_service.save_player_answer(
+            player_answer = Answer(
                 room_id=room_id,
                 wallet_id=wallet_id,
                 question_id=question_id,
-                selected_index=selected_index,
+                answer=answer,
                 is_correct=is_correct,
-                time_taken=time_taken,
-                timestamp=timestamp,
                 score=score,
+                response_time=response_time
             )
+            
+            self.answer_service.save_player_answer(player_answer)
             return {"success": True, "score": score}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
