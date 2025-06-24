@@ -60,7 +60,7 @@ websocket_manager = WebSocketManager()
 
 # Controllers
 room_controller = RoomController(room_service, game_service, player_service, websocket_manager)
-player_controller = PlayerController(player_service)
+player_controller = PlayerController(player_service, websocket_manager)
 question_controller = QuestionController(question_service)
 answer_controller = AnswerController(answer_service, room_service, game_service)
 zkproof_controller = ZkProofController(zkproof_service)
@@ -83,7 +83,7 @@ app.include_router(api_router)
 app.include_router(ws_router, prefix="/ws")
 
 PORT = int(os.getenv("PORT")) or 9000
-HOST = "0.0.0.0"
+HOST = "127.0.0.1"
 
 if __name__ == "__main__":
     import uvicorn

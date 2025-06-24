@@ -59,6 +59,16 @@ export async function fetchPlayers(roomId: string) {
   return fetchData(`/room/${roomId}/players`);
 }
 
+export async function changePlayerStatus(walletId: string, status: string) {
+  return fetchData(`/player/${walletId}/status`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function leaveRoom(data: any) {
   return fetchData(`/leave-room`, {
     method: "DELETE",

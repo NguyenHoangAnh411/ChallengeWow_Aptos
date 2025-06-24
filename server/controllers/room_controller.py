@@ -54,6 +54,7 @@ class RoomController:
                 room_id="",
                 player_status=PLAYER_STATUS.ACTIVE,
                 is_host=True,
+                is_ready=True
             )
 
             room = Room.create(

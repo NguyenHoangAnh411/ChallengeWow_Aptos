@@ -17,9 +17,10 @@ class Player(CamelModel):
     joined_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     quit_at: Optional[datetime] = None 
     is_winner: bool = False
+    is_ready: bool = False
     is_host: bool = False
     player_status: PLAYER_STATUS = PLAYER_STATUS.ACTIVE
-    answers: List["Answer"] = []
+    answers: List["Answer"] = Field(default_factory=list)
 
     @field_validator('answers', mode='before')
     def validate_answers(cls, v):

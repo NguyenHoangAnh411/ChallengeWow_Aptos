@@ -39,7 +39,12 @@ import { useGameState } from "@/lib/game-state";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import type { Player, Room, User } from "@/types/schema";
-import { fetchRoomByCode, fetchRoomById, leaveRoom } from "@/lib/api";
+import {
+  changePlayerStatus,
+  fetchRoomByCode,
+  fetchRoomById,
+  leaveRoom,
+} from "@/lib/api";
 import {
   KICK_PLAYER_TYPE,
   LEAVE_ROOM_TYPE,
@@ -108,7 +113,31 @@ export default function WaitingRoom({
     onMessage: (data) => {
       switch (data.type) {
         case PLAYER_JOINED_TYPE:
-          setPlayers((prev) => [...prev, data.player]);
+          console.log("[JOIN] Player joined with data:", data.player);
+
+          setPlayers((prev) => {
+            const existingPlayerIndex = prev.findIndex(
+              (p) => p.walletId === data.player.walletId
+            );
+
+            // Fallback playerStatus & map isReady
+            const playerWithDerivedIsReady = {
+              ...data.player,
+              playerStatus: data.player.playerStatus || "active",
+              isReady: data.player.isReady,
+            };
+
+            if (existingPlayerIndex >= 0) {
+              const newPlayers = [...prev];
+              newPlayers[existingPlayerIndex] = {
+                ...newPlayers[existingPlayerIndex],
+                ...playerWithDerivedIsReady,
+              };
+              return newPlayers;
+            } else {
+              return [...prev, playerWithDerivedIsReady];
+            }
+          });
           setChatMessages((prev) => [
             ...prev,
             {
@@ -155,9 +184,14 @@ export default function WaitingRoom({
           });
           break;
         case "player_ready":
+          const { player } = data;
+          if (!player?.wallet_id) return;
+
           setPlayers((prev) =>
             prev.map((p) =>
-              p.walletId === data.playerId ? { ...p, isReady: data.isReady } : p
+              p.walletId === player.wallet_id
+                ? { ...p, isReady: player.isReady }
+                : p
             )
           );
           break;
@@ -183,7 +217,10 @@ export default function WaitingRoom({
           ]);
           break;
         case "next_question":
-          if (typeof window !== "undefined" && window.location.pathname !== `/room/${roomId}`) {
+          if (
+            typeof window !== "undefined" &&
+            window.location.pathname !== `/room/${roomId}`
+          ) {
             router.push(`/room/${roomId}`);
           }
           break;
@@ -208,12 +245,12 @@ export default function WaitingRoom({
   );
 
   useEffect(() => {
-    if (countdown <= 0) {
-      if (canStart) {
-      }
+    // if (countdown <= 0) {
+    //   if (canStart) {
+    //   }
 
-      return;
-    }
+    //   return;
+    // }
 
     const timer = setTimeout(() => {
       setCountdown(countdown - 1);
@@ -227,9 +264,9 @@ export default function WaitingRoom({
     const fetchRoom = async () => {
       try {
         const data: Room = await fetchRoomById(roomId);
+        console.log(data);
         setCurrentRoom(data);
-        // TODO: TEST FOR ALL READY
-        setPlayers(data.players.map((p) => ({ ...p, isReady: true })) || []);
+        setPlayers(data.players || []);
         // setGameSettings(data.settings || defaultGameSettings);
 
         // set host check
@@ -257,17 +294,14 @@ export default function WaitingRoom({
   }, [roomId, currentUser]);
 
   const handleReadyToggle = () => {
-    const updatedPlayers = players.map((p) =>
-      p.walletId === currentUser?.walletId ? { ...p, isReady: !p.isReady } : p
-    );
-    setPlayers(updatedPlayers);
-    sendMessage({
-      type: "toggle_ready",
-      roomId: roomId,
-      playerId: currentUser?.walletId,
-      isReady: !players.find((p) => p.walletId === currentUser?.walletId)
-        ?.isReady,
-    });
+    if (currentUser?.walletId) {
+      alert("STATUS CHANGED: " + currentUser.walletId);
+      const updatedPlayers = players.map((p) =>
+        p.walletId === currentUser?.walletId ? { ...p, isReady: !p.isReady } : p
+      );
+      setPlayers(updatedPlayers);
+      changePlayerStatus(currentUser?.walletId, "ready");
+    }
   };
 
   const handleStartGame = () => {

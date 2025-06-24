@@ -23,6 +23,8 @@ class PlayerRepository(IPlayerRepository):
                     "joined_at": p.joined_at.isoformat(),
                     "is_host": p.is_host,
                     "is_winner": p.is_winner,
+                    "player_status": p.player_status,
+                    "is_ready": p.is_ready
                 }
             )
         if data:
@@ -44,6 +46,8 @@ class PlayerRepository(IPlayerRepository):
                 username=p["username"],
                 score=p["score"],
                 is_host=p["is_host"],
+                player_status=p['player_status'],
+                is_ready=p["is_ready"],
                 joined_at=datetime.fromisoformat(p["joined_at"].replace("Z", "+00:00")),
             )
             players.append(player)

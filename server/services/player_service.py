@@ -32,7 +32,7 @@ class PlayerService:
         if not player:
             return Response(content="Not found player", status_code=404)
 
-        self.player_repo.update_player(wallet_id, {"player_status": status})
+        self.player_repo.update_player(wallet_id, {"player_status": status, "is_ready": status == PLAYER_STATUS.READY})
         return {
             "success": True,
             "walletId": player.wallet_id,

@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Body, WebSocket
+from fastapi import APIRouter, Body, HTTPException, WebSocket
 
 from models.create_room_request import CreateRoomRequest
 from models.join_request import JoinRoomRequest
@@ -15,12 +15,15 @@ def create_room_router(room_controller: RoomController):
         return room_controller.get_rooms()
 
     @router.post("/rooms", response_model=Room)
-    async def create_room(request: CreateRoomRequest):
+    def create_room(request: CreateRoomRequest):
         return room_controller.create_room(request)
     
     @router.get("/rooms/{room_id}", response_model=Room)
     def get_room(room_id: str):
-        return room_controller.get_room_by_id(room_id)
+        room = room_controller.get_room_by_id(room_id)
+        if room is None:
+            raise HTTPException(status_code=404, detail="Room not found")
+        return room
     
     @router.get("/rooms/by-code/{room_code}", response_model=Room)
     def get_room_by_code(room_code: str):
