@@ -14,7 +14,7 @@ import random
 from enums.game_status import GAME_STATUS
 import asyncio
 import pprint
-from repositories.implement.user_repo_impl import UserRepository
+from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
 
 
 class WebSocketController:
@@ -25,6 +25,7 @@ class WebSocketController:
         self.question_service = question_service
         self.answer_service = answer_service
         self.user_repo = UserRepository()
+        self.user_stats_repo = UserStatsRepository()
 
     # ---------- LOBBY HANDLERS ----------
 
@@ -251,7 +252,7 @@ class WebSocketController:
                     wallet_id=wallet_id,
                     is_correct=is_correct,
                     question_id=question.id,
-                    answer=answer,
+                    answer=answer if answer is not None else "",
                     score=score,
                     response_time=response_time
                 )
@@ -327,7 +328,7 @@ class WebSocketController:
                     p.is_winner = (p.wallet_id == winner_wallet)
                 # Cập nhật bảng users
                 for result in results:
-                    self.user_repo.update_user_stats(
+                    self.user_stats_repo.update_user_stats(
                         wallet_id=result["wallet"],
                         score=result["score"],
                         is_winner=(result["wallet"] == winner_wallet)

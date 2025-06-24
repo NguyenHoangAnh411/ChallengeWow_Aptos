@@ -55,3 +55,34 @@ class UserRepository:
             }).execute()
         else:
             print(f"[ERROR] Multiple users found with wallet_id={wallet_id}, cannot update stats.")
+
+class UserStatsRepository:
+    table = "user_stats"
+
+    def update_user_stats(self, wallet_id: str, score: int, is_winner: bool):
+        res = supabase.table(self.table).select("*").eq("wallet_id", wallet_id).execute()
+        stats = res.data if hasattr(res, 'data') else res["data"] if res and "data" in res else []
+        if stats and len(stats) == 1:
+            stat = stats[0]
+            new_score = stat["total_score"] + score
+            new_wins = stat["games_won"] + 1 if is_winner else stat["games_won"]
+            supabase.table(self.table).update({
+                "total_score": new_score,
+                "games_won": new_wins
+            }).eq("wallet_id", wallet_id).execute()
+        elif not stats:
+            supabase.table(self.table).insert({
+                "wallet_id": wallet_id,
+                "total_score": score,
+                "games_won": 1 if is_winner else 0,
+                "rank": "Unrank"
+            }).execute()
+        else:
+            print(f"[ERROR] Multiple user_stats found with wallet_id={wallet_id}, cannot update stats.")
+
+    def get_leaderboard(self, limit=10):
+        res = supabase.table(self.table).select("wallet_id, total_score, games_won, rank, users(username)").order("total_score", desc=True).limit(limit).execute()
+        data = res.data if hasattr(res, 'data') else res["data"] if res and "data" in res else []
+        for row in data:
+            row["username"] = row.get("users", {}).get("username", "") if row.get("users") else ""
+        return data

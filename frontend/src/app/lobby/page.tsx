@@ -282,7 +282,7 @@ export default function Lobby() {
       <div className="absolute inset-0 neural-network opacity-10"></div>
       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-l from-neon-blue/5 to-transparent rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-r from-neon-purple/5 to-transparent rounded-full blur-3xl"></div>
-
+  
       {/* Enhanced Header */}
       <header className="relative z-10 bg-cyber-darker/80 backdrop-blur-xl border-b border-neon-blue/30 px-4 py-4">
         <div className="container mx-auto">
@@ -310,7 +310,7 @@ export default function Lobby() {
                 </h1>
               </div>
             </motion.div>
-
+  
             <motion.div
               className="flex items-center space-x-4"
               initial={{ opacity: 0, x: 20 }}
@@ -337,8 +337,8 @@ export default function Lobby() {
           </div>
         </div>
       </header>
-
-      <div className="container mx-auto px-4 py-8">
+  
+      <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Enhanced Sidebar */}
           <div className="lg:col-span-1 space-y-6">
@@ -374,7 +374,7 @@ export default function Lobby() {
                                 : "--")}
                           </span>
                         </div>
-
+  
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-white truncate">
@@ -390,7 +390,7 @@ export default function Lobby() {
                           </div>
                         </div>
                       </div>
-
+  
                       {/* Stats */}
                       <div className="grid grid-cols-1 gap-3">
                         <div className="flex justify-between items-center p-2 bg-neon-blue/10 rounded">
@@ -418,7 +418,7 @@ export default function Lobby() {
                           </span>
                         </div>
                       </div>
-
+  
                       {/* Update Username Form */}
                       <div className="pt-4 mt-4 border-t border-neon-blue/20">
                         <h4 className="font-semibold text-neon-blue text-sm mb-2">
@@ -458,7 +458,7 @@ export default function Lobby() {
                 </CardContent>
               </Card>
             </motion.div>
-
+  
             {/* Enhanced Quick Stats */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -508,7 +508,7 @@ export default function Lobby() {
               </Card>
             </motion.div>
           </div>
-
+  
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* Enhanced Create Room Button */}
@@ -539,16 +539,16 @@ export default function Lobby() {
                 </div>
               </Button>
             </motion.div>
-
+  
             {/* Room List */}
             <div className="space-y-4">
-              <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+              <div className="flex justify-between items-center mb-6 flex-wrap gap-4 relative z-30">
                 <h2 className="text-2xl font-orbitron font-bold">
                   Available Rooms
                 </h2>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 relative z-50">
                   <input
-                    className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-48 focus:ring-2 focus:ring-neon-purple focus:border-neon-purple transition-all"
+                    className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-48 focus:ring-2 focus:ring-neon-purple focus:border-neon-purple transition-all relative z-50"
                     placeholder="Enter invite code..."
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value)}
@@ -556,7 +556,7 @@ export default function Lobby() {
                   <Button
                     onClick={() => handleJoinRoom(inviteCode)}
                     disabled={joinRoomMutation.isPending || !inviteCode.trim()}
-                    className="bg-neon-purple hover:bg-purple-600 text-white font-bold transition-all duration-300 neon-glow-purple px-4 py-2"
+                    className="bg-neon-purple hover:bg-purple-600 text-white font-bold transition-all duration-300 neon-glow-purple px-4 py-2 relative z-50"
                   >
                     {joinRoomMutation.isPending ? (
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -566,7 +566,7 @@ export default function Lobby() {
                   </Button>
                 </div>
               </div>
-
+  
               {isLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-blue mx-auto"></div>
@@ -619,7 +619,7 @@ export default function Lobby() {
           </div>
         </div>
       </div>
-
+  
       {/* If user has not connected wallet yet */}
       <ConnectWalletModal
         open={showConnectModal}

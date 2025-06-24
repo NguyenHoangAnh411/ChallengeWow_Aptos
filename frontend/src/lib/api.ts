@@ -125,6 +125,13 @@ export async function updateUser(walletId: string, username: string) {
   });
 }
 
+export async function fetchLeaderboard(limit: number) {
+  return fetchData(`/leaderboard?limit=${limit}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 // Usage example (in your component or store):
 // const rooms = await fetchRooms();
 // const roomStatus = await fetchRoomStatus('room-id');

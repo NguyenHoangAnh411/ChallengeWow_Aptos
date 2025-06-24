@@ -23,6 +23,8 @@ class PlayerController:
         self.player_service.update_player_status(wallet_id, status)
         
         player = self.player_service.get_player_by_wallet_id(wallet_id)
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
         room_id = player.room_id
 
         # Broadcast WebSocket

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Body
 from controllers.user_controller import UserController
+from models.leaderboard_entry import LeaderboardEntry
 
 
 def create_user_router(controller: UserController):
@@ -16,5 +17,9 @@ def create_user_router(controller: UserController):
     @router.post("/users/update")
     def update_user(wallet_id: str = Body(...), username: str = Body(...)):
         return controller.update_username(wallet_id, username)
+
+    @router.get("/leaderboard", response_model=list[LeaderboardEntry])
+    def leaderboard(limit: int = 10):
+        return controller.get_leaderboard(limit)
 
     return router

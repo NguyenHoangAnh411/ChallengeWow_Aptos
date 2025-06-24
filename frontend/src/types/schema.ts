@@ -72,3 +72,11 @@ export interface ZKProof {
   onchainTxHash: string;
   timestamp: Date;
 }
+
+export interface LeaderboardEntry {
+  walletId: string;
+  username: string;
+  totalScore: number;
+  gamesWon: number;
+  rank: string;
+}
