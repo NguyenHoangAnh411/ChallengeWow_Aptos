@@ -1,3 +1,5 @@
+from datetime import datetime, timezone, timedelta
+from enums.leaderboard_period import LEADERBOARD_PERIOD
 from models.user import User
 from config.database import supabase
 
@@ -80,8 +82,21 @@ class UserStatsRepository:
         else:
             print(f"[ERROR] Multiple user_stats found with wallet_id={wallet_id}, cannot update stats.")
 
-    def get_leaderboard(self, limit=10):
-        res = supabase.table(self.table).select("wallet_id, total_score, games_won, rank, users(username)").order("total_score", desc=True).limit(limit).execute()
+    def get_leaderboard(self, limit=10, period = LEADERBOARD_PERIOD.ALL_TIME):
+        now = datetime.now(timezone.utc)
+
+        if period == LEADERBOARD_PERIOD.THIS_WEEK:
+            since = now - timedelta(days=7)
+        elif period == LEADERBOARD_PERIOD.THIS_MONTH:
+            since = now - timedelta(days=30)
+        else:
+            since = None  # ALL_TIME
+        
+        query = supabase.table(self.table).select("wallet_id, total_score, games_won, rank, games_played, tier, users(username)").order("total_score", desc=True).limit(limit)
+        if since:
+            query = query.gte("updated_at", since.isoformat())
+
+        res = query.execute()
         data = res.data if hasattr(res, 'data') else res["data"] if res and "data" in res else []
         for row in data:
             row["username"] = row.get("users", {}).get("username", "") if row.get("users") else ""

@@ -125,8 +125,8 @@ export async function updateUser(walletId: string, username: string) {
   });
 }
 
-export async function fetchLeaderboard(limit: number) {
-  return fetchData(`/leaderboard?limit=${limit}`, {
+export async function fetchLeaderboard(limit: number, period: string = "all") {
+  return fetchData(`/leaderboard?limit=${limit}&period=${period}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });

@@ -1,3 +1,4 @@
+from enums.leaderboard_period import LEADERBOARD_PERIOD
 from helpers.name_helper import generate_funny_username
 from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
 from models.leaderboard_entry import LeaderboardEntry
@@ -25,8 +26,8 @@ class UserController:
     def update_username(self, wallet_id: str, username: str):
         return self.user_repo.update_username(wallet_id, username)
 
-    def get_leaderboard(self, limit: int = 10):
-        data = self.user_stats_repo.get_leaderboard(limit)
+    def get_leaderboard(self, limit: int = 10, period=LEADERBOARD_PERIOD.ALL_TIME):
+        data = self.user_stats_repo.get_leaderboard(limit, period)
         return [LeaderboardEntry(**item) for item in data]
 
 

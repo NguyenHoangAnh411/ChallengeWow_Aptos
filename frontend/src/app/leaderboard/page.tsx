@@ -5,7 +5,27 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Search, ChevronDown, Trophy, Medal, Award, Star, Zap, Crown, Target, TrendingUp, Filter, RefreshCw, Copy, Check, Users, BarChart3, Timer, Flame } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  ChevronDown,
+  Trophy,
+  Medal,
+  Award,
+  Star,
+  Zap,
+  Crown,
+  Target,
+  TrendingUp,
+  Filter,
+  RefreshCw,
+  Copy,
+  Check,
+  Users,
+  BarChart3,
+  Timer,
+  Flame,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PlayerCard from "@/components/player-card";
 import { useGameState } from "@/lib/game-state";
@@ -28,9 +48,17 @@ export default function EnhancedLeaderboard() {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const pageSize = 20;
 
-  const { data: leaderboard = [], isLoading, isError, refetch } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard", { limit: showMore ? 100 : 50, period: selectedPeriod }],
-    queryFn: () => fetchLeaderboard(showMore ? 100 : 50),
+  const {
+    data: leaderboard = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<LeaderboardEntry[]>({
+    queryKey: [
+      "/api/leaderboard",
+      { limit: showMore ? 100 : 50, period: selectedPeriod },
+    ],
+    queryFn: () => fetchLeaderboard(showMore ? 100 : 50, selectedPeriod),
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
@@ -65,11 +93,15 @@ export default function EnhancedLeaderboard() {
 
   const handleFindMyRank = () => {
     if (currentUser) {
-      const userRank = leaderboard.find((p) => p.walletId === currentUser.walletId);
+      const userRank = leaderboard.find(
+        (p) => p.walletId === currentUser.walletId
+      );
       if (userRank) {
         setShowMore(true);
         // Scroll to user's position
-        const userIndex = leaderboard.findIndex((p) => p.walletId === currentUser.walletId);
+        const userIndex = leaderboard.findIndex(
+          (p) => p.walletId === currentUser.walletId
+        );
         const targetPage = Math.ceil((userIndex + 1) / pageSize);
         setPage(targetPage);
       }
@@ -80,8 +112,8 @@ export default function EnhancedLeaderboard() {
     player?.username && player.username.trim() !== ""
       ? player.username
       : player?.walletId
-        ? player.walletId.slice(0, 6) + "..." + player.walletId.slice(-4)
-        : "";
+      ? player.walletId.slice(0, 6) + "..." + player.walletId.slice(-4)
+      : "";
 
   const getRankNumber = (rank: string, idx: number) => {
     const n = parseInt(rank);
@@ -97,7 +129,10 @@ export default function EnhancedLeaderboard() {
   };
 
   const getWinRate = (player: LeaderboardEntry) => {
-    const winRate = player.gamesWon > 0 ? (player.gamesWon / (player.gamesWon + 10)) * 100 : 0; // Assuming some games played
+    const winRate =
+      player.gamesWon > 0
+        ? (player.gamesWon / (player.gamesWon + 10)) * 100
+        : 0; // Assuming some games played
     return winRate.toFixed(1);
   };
 
@@ -106,7 +141,9 @@ export default function EnhancedLeaderboard() {
       <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-cyan-400 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-xl text-cyan-400 font-bold">Loading Leaderboard...</p>
+          <p className="text-xl text-cyan-400 font-bold">
+            Loading Leaderboard...
+          </p>
         </div>
       </div>
     );
@@ -117,8 +154,13 @@ export default function EnhancedLeaderboard() {
       <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4">⚠️</div>
-          <p className="text-xl text-red-400 font-bold mb-4">Failed to load leaderboard</p>
-          <Button onClick={handleRefresh} className="bg-cyan-600 hover:bg-cyan-700">
+          <p className="text-xl text-red-400 font-bold mb-4">
+            Failed to load leaderboard
+          </p>
+          <Button
+            onClick={handleRefresh}
+            className="bg-cyan-600 hover:bg-cyan-700"
+          >
             <RefreshCw className="w-4 h-4 mr-2" />
             Retry
           </Button>
@@ -156,7 +198,7 @@ export default function EnhancedLeaderboard() {
               </h1>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-6">
             {/* Period Selector */}
             <div className="flex bg-gray-800/50 backdrop-blur-sm rounded-lg p-1 border border-cyan-500/30 space-x-2">
@@ -171,7 +213,11 @@ export default function EnhancedLeaderboard() {
                       : "text-cyan-200 hover:text-white hover:bg-gray-700/50"
                   }`}
                 >
-                  {period === "week" ? "This Week" : period === "month" ? "This Month" : "All Time"}
+                  {period === "week"
+                    ? "This Week"
+                    : period === "month"
+                    ? "This Month"
+                    : "All Time"}
                 </Button>
               ))}
             </div>
@@ -209,7 +255,9 @@ export default function EnhancedLeaderboard() {
               disabled={isRefreshing}
               className="bg-gray-800/50 backdrop-blur-sm border border-cyan-500/30 text-cyan-400 hover:bg-cyan-600 hover:text-white transition-all duration-300"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
             </Button>
           </div>
         </div>
@@ -227,28 +275,36 @@ export default function EnhancedLeaderboard() {
             <Card className="bg-black/30 backdrop-blur-xl border border-cyan-500/30 shadow-2xl">
               <CardContent className="p-4 text-center">
                 <Users className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{leaderboard.length}</div>
+                <div className="text-2xl font-bold text-white">
+                  {leaderboard.length}
+                </div>
                 <div className="text-sm text-gray-400">Total Players</div>
               </CardContent>
             </Card>
             <Card className="bg-black/30 backdrop-blur-xl border border-purple-500/30 shadow-2xl">
               <CardContent className="p-4 text-center">
                 <Trophy className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{top3[0]?.totalScore.toLocaleString() || 0}</div>
+                <div className="text-2xl font-bold text-white">
+                  {top3[0]?.totalScore.toLocaleString() || 0}
+                </div>
                 <div className="text-sm text-gray-400">Top Score</div>
               </CardContent>
             </Card>
             <Card className="bg-black/30 backdrop-blur-xl border border-green-500/30 shadow-2xl">
               <CardContent className="p-4 text-center">
                 <Flame className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{top3[0]?.gamesWon || 0}</div>
+                <div className="text-2xl font-bold text-white">
+                  {top3[0]?.gamesWon || 0}
+                </div>
                 <div className="text-sm text-gray-400">Most Wins</div>
               </CardContent>
             </Card>
             <Card className="bg-black/30 backdrop-blur-xl border border-blue-500/30 shadow-2xl">
               <CardContent className="p-4 text-center">
                 <Timer className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{selectedPeriod}</div>
+                <div className="text-2xl font-bold text-white">
+                  {selectedPeriod.toUpperCase()}
+                </div>
                 <div className="text-sm text-gray-400">Time Period</div>
               </CardContent>
             </Card>
@@ -378,7 +434,7 @@ export default function EnhancedLeaderboard() {
                 </Button>
               )}
             </div>
-            
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -399,81 +455,117 @@ export default function EnhancedLeaderboard() {
                   <table className="w-full">
                     <thead className="bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border-b border-cyan-500/30">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-cyan-300 uppercase tracking-wider">Rank</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-cyan-200 uppercase tracking-wider">Player</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-cyan-200 uppercase tracking-wider">Wallet</th>
-                        <th className="px-6 py-4 text-center text-sm font-bold text-cyan-200 uppercase tracking-wider">Score</th>
-                        <th className="px-6 py-4 text-center text-sm font-bold text-green-300 uppercase tracking-wider">Wins</th>
-                        <th className="px-6 py-4 text-center text-sm font-bold text-purple-300 uppercase tracking-wider">Win Rate</th>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-cyan-300 uppercase tracking-wider">
+                          Rank
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-cyan-200 uppercase tracking-wider">
+                          Player
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-cyan-200 uppercase tracking-wider">
+                          Wallet
+                        </th>
+                        <th className="px-6 py-4 text-center text-sm font-bold text-cyan-200 uppercase tracking-wider">
+                          Score
+                        </th>
+                        <th className="px-6 py-4 text-center text-sm font-bold text-green-300 uppercase tracking-wider">
+                          Wins
+                        </th>
+                        <th className="px-6 py-4 text-center text-sm font-bold text-purple-300 uppercase tracking-wider">
+                          Win Rate
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800/50">
                       <AnimatePresence>
-                        {filtered.slice((page - 1) * pageSize, page * pageSize).map((player, idx) => {
-                          const rankNum = getRankNumber(player.rank, (page - 1) * pageSize + idx);
-                          const isCurrentUser = currentUser?.walletId === player.walletId;
-                          
-                          return (
-                            <motion.tr
-                              key={player.walletId}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.3, delay: idx * 0.05 }}
-                              className={`transition-all duration-300 hover:bg-cyan-900/20 ${
-                                isCurrentUser ? "bg-gradient-to-r from-cyan-900/40 to-purple-900/40 border-l-4 border-cyan-400" : ""
-                              }`}
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap font-bold text-cyan-300 text-shadow-cyber">{player.rank}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center">
-                                    <span className="text-sm font-bold text-white text-shadow-cyber">
-                                      {getDisplayName(player).substring(0, 2).toUpperCase()}
+                        {filtered
+                          .slice((page - 1) * pageSize, page * pageSize)
+                          .map((player, idx) => {
+                            const rankNum = getRankNumber(
+                              player.rank,
+                              (page - 1) * pageSize + idx
+                            );
+                            const isCurrentUser =
+                              currentUser?.walletId === player.walletId;
+
+                            return (
+                              <motion.tr
+                                key={player.walletId}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{
+                                  duration: 0.3,
+                                  delay: idx * 0.05,
+                                }}
+                                className={`transition-all duration-300 hover:bg-cyan-900/20 ${
+                                  isCurrentUser
+                                    ? "bg-gradient-to-r from-cyan-900/40 to-purple-900/40 border-l-4 border-cyan-400"
+                                    : ""
+                                }`}
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap font-bold text-cyan-300 text-shadow-cyber">
+                                  {player.rank}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center">
+                                      <span className="text-sm font-bold text-white text-shadow-cyber">
+                                        {getDisplayName(player)
+                                          .substring(0, 2)
+                                          .toUpperCase()}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <div className="text-white font-semibold text-shadow-cyber">
+                                        {getDisplayName(player)}
+                                      </div>
+                                      {isCurrentUser && (
+                                        <div className="text-xs text-cyan-400">
+                                          You
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-cyan-200 font-mono text-sm">
+                                      {player.walletId.slice(0, 6)}...
+                                      {player.walletId.slice(-4)}
                                     </span>
+                                    <button
+                                      onClick={() =>
+                                        handleCopyWallet(player.walletId)
+                                      }
+                                      className="text-cyan-400 hover:text-cyan-200 transition-colors duration-200"
+                                      title="Copy wallet address"
+                                    >
+                                      {copiedWallet === player.walletId ? (
+                                        <Check className="w-4 h-4 text-green-400" />
+                                      ) : (
+                                        <Copy className="w-4 h-4" />
+                                      )}
+                                    </button>
                                   </div>
-                                  <div>
-                                    <div className="text-white font-semibold text-shadow-cyber">{getDisplayName(player)}</div>
-                                    {isCurrentUser && <div className="text-xs text-cyan-400">You</div>}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <div className="text-xl font-bold text-cyan-200 text-shadow-cyber">
+                                    {player.totalScore.toLocaleString()}
                                   </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-cyan-200 font-mono text-sm">
-                                    {player.walletId.slice(0, 6)}...{player.walletId.slice(-4)}
-                                  </span>
-                                  <button
-                                    onClick={() => handleCopyWallet(player.walletId)}
-                                    className="text-cyan-400 hover:text-cyan-200 transition-colors duration-200"
-                                    title="Copy wallet address"
-                                  >
-                                    {copiedWallet === player.walletId ? (
-                                      <Check className="w-4 h-4 text-green-400" />
-                                    ) : (
-                                      <Copy className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <div className="text-xl font-bold text-cyan-200 text-shadow-cyber">
-                                  {player.totalScore.toLocaleString()}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <div className="text-lg font-semibold text-green-300 text-shadow-cyber">
-                                  {player.gamesWon}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-center">
-                                <div className="text-sm font-medium text-purple-300 text-shadow-cyber">
-                                  {getWinRate(player)}%
-                                </div>
-                              </td>
-                            </motion.tr>
-                          );
-                        })}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <div className="text-lg font-semibold text-green-300 text-shadow-cyber">
+                                    {player.gamesWon}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <div className="text-sm font-medium text-purple-300 text-shadow-cyber">
+                                    {getWinRate(player)}%
+                                  </div>
+                                </td>
+                              </motion.tr>
+                            );
+                          })}
                       </AnimatePresence>
                     </tbody>
                   </table>
@@ -491,28 +583,35 @@ export default function EnhancedLeaderboard() {
             >
               Previous
             </Button>
-            
+
             <div className="flex items-center space-x-2">
-              {Array.from({ length: Math.min(5, Math.ceil(filtered.length / pageSize)) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <Button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={`w-10 h-10 rounded-lg transition-all duration-300 ${
-                      page === pageNum
-                        ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/25"
-                        : "bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white"
-                    }`}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
+              {Array.from(
+                { length: Math.min(5, Math.ceil(filtered.length / pageSize)) },
+                (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <Button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`w-10 h-10 rounded-lg transition-all duration-300 ${
+                        page === pageNum
+                          ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/25"
+                          : "bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white"
+                      }`}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                }
+              )}
             </div>
 
             <Button
-              onClick={() => setPage(Math.min(Math.ceil(filtered.length / pageSize), page + 1))}
+              onClick={() =>
+                setPage(
+                  Math.min(Math.ceil(filtered.length / pageSize), page + 1)
+                )
+              }
               disabled={page * pageSize >= filtered.length}
               className="bg-gray-800/50 backdrop-blur-sm border border-cyan-500/30 text-cyan-400 hover:bg-cyan-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >

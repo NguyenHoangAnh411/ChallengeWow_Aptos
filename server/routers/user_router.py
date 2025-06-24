@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Body
 from controllers.user_controller import UserController
+from enums.leaderboard_period import LEADERBOARD_PERIOD
 from models.leaderboard_entry import LeaderboardEntry
 
 
@@ -19,7 +20,7 @@ def create_user_router(controller: UserController):
         return controller.update_username(wallet_id, username)
 
     @router.get("/leaderboard", response_model=list[LeaderboardEntry])
-    def leaderboard(limit: int = 10):
-        return controller.get_leaderboard(limit)
+    def leaderboard(limit: int = 10, period = LEADERBOARD_PERIOD.ALL_TIME):
+        return controller.get_leaderboard(limit, period)
 
     return router
