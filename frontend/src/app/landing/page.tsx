@@ -18,6 +18,7 @@ import {
   MessageCircle,
   FileText,
   Wallet,
+  XIcon,
 } from "lucide-react";
 import { ethers } from "ethers";
 import "@rainbow-me/rainbowkit/styles.css";
@@ -377,6 +378,15 @@ export default function Landing() {
           >
             <MessageCircle className="w-4 h-4 mr-2" />
             Discord
+          </a>
+          <a
+            href="https://x.com/ChallengeAndWow"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-neon-blue transition-colors flex items-center"
+          >
+            <XIcon className="w-4 h-4 mr-2" />
+            X (Twitter)
           </a>
         </div>
         <p>&copy; 2024 Challenge Wave. Built with blockchain transparency.</p>
