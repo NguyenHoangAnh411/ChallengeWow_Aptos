@@ -1,6 +1,6 @@
-# 🌊 Challenge Wave - GameFi for Competitive Proofs
+# 🌊 Challenge And Wow - GameFi for Competitive Proofs
 
-**Challenge Wave** is a fast-paced GameFi DApp where players prove their skill and speed by answering random quiz challenges in real-time. Powered by the OLYM3 Testnet and zk-SNARK technology, every match is more than just a game—it's a cryptographic proof of challenge.
+**Challenge And Wow** is a fast-paced GameFi DApp where players prove their skill and speed by answering random quiz challenges in real-time. Powered by the OLYM3 Testnet and zk-SNARK technology, every match is more than just a game—it's a cryptographic proof of challenge.
 
 ## ⚙️ Core Gameplay
 
@@ -71,15 +71,15 @@ Each completed challenge is cryptographically sealed using **zk-SNARK**:
 ## 🤝 Join the Wave
 
 Challenge your brain, race the clock, and write your name into the chain.  
-This isn't just a quiz game — it's a **Challenge Wave**.
+This isn't just a quiz game — it's a **Challenge And Wow**.
 
 > 🏁 **Play Fast. Think Smart. Prove It Onchain.**
 
 ---
 
-# Challenge Wave GameFi Backend
+# Challenge And Wow GameFi Backend
 
-A FastAPI-based backend for the Challenge Wave GameFi application that allows players to create and join challenge rooms, answer questions, and compete for rewards.
+A FastAPI-based backend for the Challenge And Wow GameFi application that allows players to create and join challenge rooms, answer questions, and compete for rewards.
 
 ## Features
 
