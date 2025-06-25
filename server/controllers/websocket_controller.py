@@ -1,6 +1,9 @@
 import time
 
 from fastapi import WebSocket, WebSocketDisconnect
+from config.question_config import QUESTION_CONFIG
+from enums.player_status import PLAYER_STATUS
+from enums.question_difficulty import QUESTION_DIFFICULTY
 from helpers.json_helper import send_json_safe
 from models.answer import Answer
 from models.chat_payload import ChatPayload
@@ -112,11 +115,20 @@ class WebSocketController:
         if wallet_id != host_wallet_id:
             await send_json_safe(websocket, {"type": "error", "message": "Only host can start the game."})
             return
+        
+        settings = data.get("settings", {})
+        
+        time_per_question = settings.get("timePerQuestion") or QUESTION_CONFIG[QUESTION_DIFFICULTY.EASY]["time_per_question"]
+        questions_data = settings.get("questions", {})
+
+        easy_questions = questions_data.get("easy", QUESTION_CONFIG[QUESTION_DIFFICULTY.EASY]["quantity"])
+        medium_questions = questions_data.get("medium", QUESTION_CONFIG[QUESTION_DIFFICULTY.MEDIUM]["quantity"])
+        hard_questions = questions_data.get("hard", QUESTION_CONFIG[QUESTION_DIFFICULTY.HARD]["quantity"])
 
         # Lấy câu hỏi (TODO: Chỉnh số lượng nếu cần)
-        easy = self.question_service.get_random_questions_by_difficulty('easy', 1)
-        medium = self.question_service.get_random_questions_by_difficulty('medium', 1)
-        hard = self.question_service.get_random_questions_by_difficulty('hard', 1)
+        easy = self.question_service.get_random_questions_by_difficulty('easy', easy_questions)
+        medium = self.question_service.get_random_questions_by_difficulty('medium', medium_questions)
+        hard = self.question_service.get_random_questions_by_difficulty('hard', hard_questions)
         questions = [*easy, *medium, *hard]
         random.shuffle(questions)
 
@@ -124,18 +136,32 @@ class WebSocketController:
         for q in questions:
             pprint.pprint(q.dict() if hasattr(q, 'dict') else dict(q))
 
+        question_duration = time_per_question
+
         # Cập nhật trạng thái room
         room = self.room_service.get_room(room_id)
+        if not room:
+            print(f"Room {room_id} not found")
+            return
+
+        room.players = [
+            player.model_copy(update={"status": PLAYER_STATUS.ACTIVE})
+            for player in room.players
+        ]
+        room.total_questions = len(questions)
         room.current_questions = questions
         room.status = GAME_STATUS.IN_PROGRESS
         room.current_index = 0
+        room.countdown_duration = question_duration
+        room.time_per_question = question_duration
+        
         self.room_service.save_room(room)
 
         # Clear timeout nếu có
         self.manager.clear_room_timeout(room_id)
 
         # Gửi sự kiện bắt đầu game
-        start_at = int(time.time() * 1000) + 2000  # delay 2s
+        start_at = int(time.time() * 1000) + 2000
         await self.manager.broadcast_to_room(room_id, {
             "type": "game_started",
             "questions": [q.dict(exclude={'correct_answer'}) for q in questions],
@@ -145,10 +171,9 @@ class WebSocketController:
         # Gửi câu hỏi đầu tiên
         async def send_first_question():
             await asyncio.sleep(2)
-            question_duration = 5  # Giây
             question_end_at = int(time.time() * 1000) + question_duration * 1000
-
-            print(f"[NEXT_QUESTION] Sent question {questions[0].id} to room {room_id} with end at {question_end_at}")
+            
+            print(f"[NEXT_QUESTION] Sent question {questions[0].id} to room {room_id} with end at {question_end_at} within {question_duration}")
             await self.manager.broadcast_to_room(room_id, {
                 "type": "next_question",
                 "question": questions[0].dict(exclude={'correct_answer'}),
@@ -432,7 +457,9 @@ class WebSocketController:
                 if handler:
                     await handler(websocket, room_id, wallet_id, data)
                 else:
-                    print(f"⚠️ [ROOM {room_id}] Unknown message type: {msg_type}")
+                    if msg_type == "ping":
+                        await send_json_safe(websocket, {"type": "pong"})
+                    else: print(f"⚠️ [ROOM {room_id}] Unknown message type: {msg_type}")
 
         except WebSocketDisconnect:
             print(f"❌ [ROOM {room_id}] WebSocket disconnected.")

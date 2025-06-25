@@ -6,7 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, HelpCircle, ExternalLink, CheckCircle, Trophy } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  HelpCircle,
+  ExternalLink,
+  CheckCircle,
+  Trophy,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import TimerCircle from "@/components/timer-circle";
 import PlayerCard from "@/components/player-card";
@@ -15,7 +22,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import type { Question, Room, User } from "@/types/schema";
 import { RoomStatus } from "@/types/RoomStatus";
-import { fetchRoomById, leaveRoom } from "@/lib/api";
+import { fetchRoomById, fetchGameData, leaveRoom } from "@/lib/api";
 import { LEAVE_ROOM_TYPE } from "@/lib/constants";
 
 export default function ChallengeRoom({
@@ -46,7 +53,7 @@ export default function ChallengeRoom({
   const [questionNumber, setQuestionNumber] = useState(1);
   const [roomTimeRemaining, setRoomTimeRemaining] = useState("2:45");
   const [gameResults, setGameResults] = useState<any[]>([]);
-  const [gameStatus, setGameStatus] = useState("waiting"); // waiting, active, completed
+  const [gameStatus, setGameStatus] = useState("waiting");
   const [countdown, setCountdown] = useState<number>(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionEndAt, setQuestionEndAt] = useState<number | null>(null);
@@ -58,16 +65,26 @@ export default function ChallengeRoom({
   const [showJson, setShowJson] = useState(false);
 
   useEffect(() => {
+    const onPopState = async () => {
+      console.log("[Back] Triggered popstate");
+      await handleLeaveRoom();
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
     async function loadRoomData() {
       try {
         const room: Room = await fetchRoomById(roomId);
         setCurrentRoom(room);
+        setGameStatus(room.status);
 
         if (room.status === RoomStatus.WAITING) {
           router.replace(`/room/${roomId}/waiting`);
           return;
         }
-
         setPlayers(room.players);
       } catch (error) {
         console.error("❌ Failed to load room data:", error);
@@ -83,6 +100,27 @@ export default function ChallengeRoom({
       loadRoomData();
     }
   }, [roomId]);
+
+  useEffect(() => {
+    if (gameStatus === "finished" && roomId && gameResults.length === 0) {
+      fetchGameResult();
+    }
+  }, [gameStatus, roomId]);
+
+  const fetchGameResult = async () => {
+    try {
+      const res = await fetchGameData(roomId);
+      setGameResults(res.data.results);
+      setWinnerWallet(res.data.winner_wallet);
+    } catch (err: any) {
+      console.error("Failed to fetch game result", err);
+      toast({
+        title: "Error",
+        description: err.message || "Could not fetch game result",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     if (!startAt) return;
@@ -268,7 +306,6 @@ export default function ChallengeRoom({
   }, [currentQuestion, gameStatus]);
 
   const handleAnswerSelect = (answer: string) => {
-    console.log("Click answer:", answer, hasAnswered);
     if (hasAnswered) return;
     setSelectedAnswer(answer);
     setHasAnswered(true);
@@ -485,7 +522,7 @@ export default function ChallengeRoom({
               <div className="flex items-center space-x-2 px-4 py-2 glass-morphism rounded-lg">
                 <HelpCircle className="w-5 h-5 text-neon-blue" />
                 <span className="font-orbitron font-bold text-neon-blue">
-                  {questionNumber}/10
+                  {questionNumber}/{questions.length}
                 </span>
               </div>
             </motion.div>
@@ -505,7 +542,11 @@ export default function ChallengeRoom({
                 {winnerWallet && (
                   <div className="mb-6 px-8 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-bold text-2xl shadow-neon-glow flex items-center gap-3 animate-glow-pulse">
                     <Trophy className="w-7 h-7 text-yellow-300 drop-shadow" />
-                    Winner: <span className="text-yellow-300">{gameResults.find(p => p.wallet === winnerWallet)?.oath || winnerWallet}</span>
+                    Winner:
+                    <span className="text-yellow-300">
+                      {gameResults.find((p) => p.wallet === winnerWallet)
+                        ?.oath || winnerWallet}
+                    </span>
                   </div>
                 )}
                 <div className="overflow-x-auto w-full flex justify-center">
@@ -528,9 +569,15 @@ export default function ChallengeRoom({
                               : "border border-neon-blue/20"
                           }`}
                         >
-                          <td className="px-6 py-3 font-mono text-neon-blue">{player.wallet}</td>
-                          <td className="px-6 py-3 text-neon-purple">{player.oath}</td>
-                          <td className="px-6 py-3 text-xl text-green-400 font-orbitron">{player.score}</td>
+                          <td className="px-6 py-3 font-mono text-neon-blue">
+                            {player.wallet}
+                          </td>
+                          <td className="px-6 py-3 text-neon-purple">
+                            {player.oath}
+                          </td>
+                          <td className="px-6 py-3 text-xl text-green-400 font-orbitron">
+                            {player.score}
+                          </td>
                           <td className="px-6 py-3">
                             {winnerWallet === player.wallet ? (
                               <span className="flex items-center gap-1 text-yellow-300">
@@ -553,12 +600,15 @@ export default function ChallengeRoom({
                 </button>
                 {showJson && (
                   <div className="mt-4 w-full max-w-2xl bg-cyber-darker/80 rounded-lg p-4 text-xs text-green-300 overflow-x-auto shadow-inner border border-neon-blue/30">
-                    <pre>
-                      {JSON.stringify(gameResults, null, 2)}
-                    </pre>
+                    <pre>{JSON.stringify(gameResults, null, 2)}</pre>
                   </div>
                 )}
-                <button className="mt-8 px-6 py-3 rounded-lg bg-neon-blue text-white font-bold shadow-neon-glow hover:bg-neon-purple transition-all" onClick={() => router.push("/lobby")}>Back to Lobby</button>
+                <button
+                  className="mt-8 px-6 py-3 rounded-lg bg-neon-blue text-white font-bold shadow-neon-glow hover:bg-neon-purple transition-all"
+                  onClick={handleLeaveRoom}
+                >
+                  Back to Lobby
+                </button>
               </div>
             ) : countdown > 0 ? (
               <div className="flex flex-col items-center justify-center h-full">

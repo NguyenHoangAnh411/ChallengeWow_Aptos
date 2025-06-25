@@ -15,8 +15,8 @@ def create_room_router(room_controller: RoomController):
         return room_controller.get_rooms()
 
     @router.post("/rooms", response_model=Room)
-    def create_room(request: CreateRoomRequest):
-        return room_controller.create_room(request)
+    async def create_room(request: CreateRoomRequest):
+        return await room_controller.create_room(request)
     
     @router.get("/rooms/{room_id}", response_model=Room)
     def get_room(room_id: str):

@@ -39,15 +39,17 @@ class RoomController:
             raise HTTPException(status_code=404, detail="Room not found")
         return data
 
-    def create_room(self, request: CreateRoomRequest):
+    async def create_room(self, request: CreateRoomRequest):
         try:
-            existing = self.player_service.get_player_by_wallet_id(request.wallet_id)
-            if existing and existing.player_status != PLAYER_STATUS.QUIT and not existing.quit_at:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Player is already in an active room"
-                )
-            
+            existing_players = self.player_service.get_player_by_wallet_id(request.wallet_id)
+            if existing_players:
+                for p in existing_players:
+                    if p.player_status != PLAYER_STATUS.QUIT and not p.quit_at:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Player is already in an active room"
+                        )
+
             player = Player(
                 wallet_id=request.wallet_id,
                 username=request.username,
@@ -62,12 +64,13 @@ class RoomController:
                 total_questions=request.total_questions,
                 countdown_duration=request.countdown_duration
             )
-            
+
             player.room_id = room.id
             self.room_service.save_room(room)
-            
+
             self.websocket_manager.set_room_state(room.id, room.status)
-            
+            await self.websocket_manager.broadcast_to_lobby({ "type": "room_update" })
+
             return room
         except Exception as e:
             print("Error in create_room:", e)
@@ -87,11 +90,28 @@ class RoomController:
         if room.status != GAME_STATUS.WAITING:
             raise HTTPException(status_code=400, detail="Game is not available")
 
-        player = Player(
-            wallet_id=request.wallet_id,
-            username=request.username,
-            room_id=room.id,
+        existing_player = next(
+            (p for p in room.players if p.wallet_id == request.wallet_id), None
         )
+
+        if existing_player:
+            print(f"[JOIN_ROOM] Player {request.wallet_id} already in room {room.id}")
+            player = existing_player
+        else:
+            # 3. Tạo mới player
+            player = Player(
+                wallet_id=request.wallet_id,
+                username=request.username,
+                room_id=room.id,
+            )
+            room.players.append(player)
+            self.room_service.save_room(room)
+
+            # 4. Broadcast chỉ khi có player mới thực sự join
+            await self.websocket_manager.broadcast_to_room(room.id, {
+                "type": "player_joined",
+                "player": player
+            })
         
         room.players.append(player)
         self.room_service.save_room(room)
@@ -120,6 +140,10 @@ class RoomController:
         if not player_data:
             return result 
         
+        ws = await self.websocket_manager.get_player_socket_by_wallet(wallet_id)
+        if ws:
+            self.websocket_manager.disconnect_room(ws, room_id, wallet_id)
+        
         await self.websocket_manager.broadcast_to_lobby({
             "type": "room_update",
             "action": "leave",
@@ -138,14 +162,28 @@ class RoomController:
         return result
 
     def get_current_room(self, wallet_id):
-        player: Player = self.player_service.get_player_by_wallet_id(wallet_id)
-        if not player or player.player_status == PLAYER_STATUS.QUIT:
+        players: List[Player] = self.player_service.get_player_by_wallet_id(wallet_id)
+
+        if not players or all(p.player_status == PLAYER_STATUS.QUIT for p in players):
             return Response(status_code=404, content="Not found")
+
+        # Lấy player còn active
+        active_player = next((p for p in players if p.player_status != PLAYER_STATUS.QUIT), None)
+
+        if not active_player:
+            return Response(status_code=404, content="No active room found")
         
+        room_id = active_player.room_id
+        room: Room = self.room_service.get_room(room_id)
+        
+        if not room or room.status == GAME_STATUS.FINISHED:
+            return Response(status_code=404, content="No active room found")
+
         return {
-            "roomId": player.room_id,
-            "walletId": player.wallet_id,
+            "roomId": active_player.room_id,
+            "walletId": active_player.wallet_id,
         }
+
 
     def get_room_status(self, room_id: str):
         room = self.room_service.get_room(room_id)

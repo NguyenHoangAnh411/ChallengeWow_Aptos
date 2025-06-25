@@ -87,8 +87,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   };
 
+  const closeConnection = () => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.close();
+    }
+  };
+
   return {
     isWsConnected,
     sendMessage,
+    closeConnection,
   };
 }

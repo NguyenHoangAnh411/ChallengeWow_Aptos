@@ -37,6 +37,7 @@ async def send_json_safe(websocket: WebSocket | None, data: dict):
     from fastapi.encoders import jsonable_encoder
     if websocket:
         try:
+            print(f"[SEND_JSON]: {data}")
             await websocket.send_json(jsonable_encoder(data))
         except Exception as e:
             print(f"❌ Failed to send safe camelCase WS message: {e}")

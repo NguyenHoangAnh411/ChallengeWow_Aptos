@@ -19,7 +19,7 @@ class Player(CamelModel):
     is_winner: bool = False
     is_ready: bool = False
     is_host: bool = False
-    player_status: PLAYER_STATUS = PLAYER_STATUS.ACTIVE
+    player_status: PLAYER_STATUS = PLAYER_STATUS.WAITING
     answers: List["Answer"] = Field(default_factory=list)
 
     @field_validator('answers', mode='before')

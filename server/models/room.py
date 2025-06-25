@@ -20,6 +20,7 @@ class Room(CamelModel):
     proof: Optional["ZKProof"] = None
     total_questions: int = 10
     countdown_duration: int = 10
+    time_per_question: int = 0
     entry_fee: float = 0
     prize: float = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

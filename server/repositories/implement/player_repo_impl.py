@@ -11,24 +11,29 @@ class PlayerRepository(IPlayerRepository):
 
     def save_all(self, room_id: str, players: List[Player]) -> None:
         supabase.table(PlayerRepository.table).delete().eq("room_id", room_id).execute()
-
         data = []
         for p in players:
-            data.append(
-                {
-                    "room_id": room_id,
-                    "wallet_id": p.wallet_id,
-                    "username": p.username,
-                    "score": p.score,
-                    "joined_at": p.joined_at.isoformat(),
-                    "is_host": p.is_host,
-                    "is_winner": p.is_winner,
-                    "player_status": p.player_status,
-                    "is_ready": p.is_ready
-                }
-            )
+            data.append({
+                "room_id": room_id,
+                "wallet_id": p.wallet_id,
+                "username": p.username,
+                "score": p.score,
+                "joined_at": p.joined_at.isoformat() if p.joined_at else None,
+                "is_host": p.is_host,
+                "is_winner": p.is_winner,
+                "player_status": p.player_status,
+                "is_ready": p.is_ready
+            })
+
         if data:
-            supabase.table(PlayerRepository.table).insert(data).execute()
+            unique_data = list({
+                (d["room_id"], d["wallet_id"]): d
+                for d in data
+            }.values())
+
+            supabase.table(PlayerRepository.table) \
+                .insert(unique_data) \
+                .execute()
 
     def get_by_room(self, room_id: str) -> List[Player]:
         res = (
@@ -52,21 +57,36 @@ class PlayerRepository(IPlayerRepository):
             )
             players.append(player)
         return players
-
-    def get_by_wallet_id(self, wallet_id) -> Optional[Player]:
+    
+    def get_player_by_wallet_and_room_id(self, room_id, wallet_id) -> Optional[Player]:
         try:
             res = (
                 supabase.table(PlayerRepository.table)
                 .select("*")
                 .eq("wallet_id", wallet_id)
+                .eq("room_id", room_id)
                 .single()
                 .execute()
             )
             
             return Player(**res.data)
         except Exception as e:
-            print("Fetch player failed: ", e)
+            print(f"{room_id} - Fetch player {wallet_id} failed: ", e)
             return None
+
+    def get_by_wallet_id(self, wallet_id) -> List[Player]:
+        try:
+            res = (
+                supabase.table(PlayerRepository.table)
+                .select("*")
+                .eq("wallet_id", wallet_id)
+                .execute()
+            )
+            
+            return [Player(**item) for item in res.data]
+        except Exception as e:
+            print("Fetch player failed: ", e)
+            return []
 
     def delete_by_player_and_room(self, wallet_id, room_id):
         supabase.table(PlayerRepository.table).delete().eq("wallet_id", wallet_id).eq(

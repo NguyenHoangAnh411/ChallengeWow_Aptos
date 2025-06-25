@@ -13,7 +13,11 @@ class IPlayerRepository(ABC):
         pass
 
     @abstractmethod
-    def get_by_wallet_id(self, wallet_id: str) -> Optional[Player]:
+    def get_by_wallet_id(self, wallet_id: str) -> List[Player]:
+        pass
+    
+    @abstractmethod
+    def get_player_by_wallet_and_room_id(self, room_id: str, wallet_id: str) -> Optional[Player]:
         pass
 
     @abstractmethod

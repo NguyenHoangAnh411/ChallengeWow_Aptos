@@ -59,8 +59,12 @@ export async function fetchPlayers(roomId: string) {
   return fetchData(`/room/${roomId}/players`);
 }
 
-export async function changePlayerStatus(walletId: string, status: string) {
-  return fetchData(`/player/${walletId}/status`, {
+export async function changePlayerStatus(
+  roomId: string,
+  walletId: string,
+  status: string
+) {
+  return fetchData(`/${roomId}/player/${walletId}/status`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -91,6 +95,10 @@ export async function submitAnswer(data: any) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+}
+
+export async function fetchGameData(roomId: string) {
+  return fetchData(`/rooms/${roomId}/results`);
 }
 
 // Gửi zk-proof

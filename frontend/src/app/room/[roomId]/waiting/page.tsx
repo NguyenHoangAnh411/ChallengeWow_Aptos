@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import CyberLoadingScreen from "@/components/cyber-loading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,32 +34,23 @@ import {
   Shield,
   Target,
   LogOut,
+  Loader,
 } from "lucide-react";
+import EnhancedGameSettings from "@/components/room-game-settings";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameState } from "@/lib/game-state";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import type { Player, Room, User } from "@/types/schema";
-import {
-  changePlayerStatus,
-  fetchRoomByCode,
-  fetchRoomById,
-  leaveRoom,
-} from "@/lib/api";
+import { changePlayerStatus, fetchRoomById, leaveRoom } from "@/lib/api";
 import {
   KICK_PLAYER_TYPE,
   LEAVE_ROOM_TYPE,
   PLAYER_JOINED_TYPE,
   PLAYER_LEFT_TYPE,
+  RECONNECT_WS,
 } from "@/lib/constants";
-
-// interface GameSettings {
-//   map: string;
-//   mode: string;
-//   timeLimit: number;
-//   difficulty: string;
-//   maxPlayers: number;
-// }
+import { DEFAULT_GAME_SETTINGS, GameSettings } from "@/app/config/GameSettings";
 
 interface ChatMessage {
   id: string;
@@ -85,13 +77,9 @@ export default function WaitingRoom({
 
   const [players, setPlayers] = useState<Player[]>([]);
 
-  // const [gameSettings, setGameSettings] = useState<GameSettings>({
-  //   map: "cyberpunk_city",
-  //   mode: "classic",
-  //   timeLimit: 15,
-  //   difficulty: "medium",
-  //   maxPlayers: 4,
-  // });
+  const [gameSettings, setGameSettings] = useState<GameSettings>(
+    DEFAULT_GAME_SETTINGS
+  );
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
@@ -104,8 +92,49 @@ export default function WaitingRoom({
     playerId: string;
     playerName: string;
   }>({ show: false, playerId: "", playerName: "" });
+  const [isRefreshingPlayers, setIsRefreshingPlayers] = useState(false);
 
-  const { sendMessage, isWsConnected } = useWebSocket({
+  useEffect(() => {
+    const onPopState = async () => {
+      console.log("[Back] Triggered popstate");
+      await handleLeaveRoom();
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const fetchRoom = useCallback(async () => {
+    setIsRefreshingPlayers(true);
+    try {
+      const data: Room = await fetchRoomById(roomId);
+      console.log(data);
+      setCurrentRoom(data);
+      setPlayers(data.players || []);
+
+      if (currentUser) {
+        const me = data.players.find(
+          (p: Player) => p.walletId === currentUser.walletId
+        );
+        setIsHost(Boolean(me?.isHost));
+        if (me?.isHost && !me.isReady) {
+          me.isReady = true;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch room:", error);
+      toast({
+        title: "Failed to join room",
+        description: "Room not found or network error",
+        variant: "destructive",
+      });
+      router.replace("/lobby");
+    } finally {
+      setIsRefreshingPlayers(false);
+    }
+  }, [roomId, currentUser]);
+
+  const { sendMessage, isWsConnected, closeConnection } = useWebSocket({
     url: currentUser?.walletId
       ? `/${roomId}?wallet_id=${currentUser?.walletId}`
       : undefined,
@@ -152,7 +181,27 @@ export default function WaitingRoom({
           break;
         case PLAYER_LEFT_TYPE:
           const { walletId, username } = data.payload;
-          setPlayers((prev) => prev.filter((p) => p.walletId !== walletId));
+          setPlayers((prev) => {
+            const isHostLeft = prev.find(
+              (p) => p.walletId === walletId
+            )?.isHost;
+
+            const updated = prev.filter((p) => p.walletId !== walletId);
+
+            if (isHostLeft) {
+              fetchRoom().then(() => {
+                if (isHostLeft && isHost) {
+                  toast({
+                    title: "You are now the host",
+                    description: "The previous host has left the room",
+                    variant: "default",
+                  });
+                }
+              });
+            }
+
+            return updated;
+          });
           setChatMessages((prev) => [
             ...prev,
             {
@@ -174,7 +223,7 @@ export default function WaitingRoom({
             description: data.payload.reason,
             variant: "destructive",
           });
-          router.push("/lobby");
+          router.replace("/lobby");
           break;
         case "error":
           toast({
@@ -221,12 +270,23 @@ export default function WaitingRoom({
             typeof window !== "undefined" &&
             window.location.pathname !== `/room/${roomId}`
           ) {
-            router.push(`/room/${roomId}`);
+            router.replace(`/room/${roomId}`);
           }
           break;
       }
     },
   });
+
+  // Keep connection
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isWsConnected) {
+        sendMessage({ type: "ping" });
+      }
+    }, RECONNECT_WS);
+
+    return () => clearInterval(interval);
+  }, [isWsConnected]);
 
   const readyCount = players.filter((p) => p.isReady).length;
   const readyPercentage = (readyCount / players.length) * 100;
@@ -261,46 +321,25 @@ export default function WaitingRoom({
 
   // Set players
   useEffect(() => {
-    const fetchRoom = async () => {
-      try {
-        const data: Room = await fetchRoomById(roomId);
-        console.log(data);
-        setCurrentRoom(data);
-        setPlayers(data.players || []);
-        // setGameSettings(data.settings || defaultGameSettings);
-
-        // set host check
-        if (currentUser) {
-          const me = data.players.find(
-            (p: Player) => p.walletId === currentUser.walletId
-          );
-          setIsHost(Boolean(me?.isHost));
-          if (me?.isHost && !me.isReady) {
-            me.isReady = true;
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch room:", error);
-        toast({
-          title: "Failed to join room",
-          description: "Room not found or network error",
-          variant: "destructive",
-        });
-        router.push("/lobby");
-      }
-    };
-
     fetchRoom();
   }, [roomId, currentUser]);
 
   const handleReadyToggle = () => {
-    if (currentUser?.walletId) {
-      alert("STATUS CHANGED: " + currentUser.walletId);
+    if (currentUser?.walletId && currentRoom.id) {
       const updatedPlayers = players.map((p) =>
-        p.walletId === currentUser?.walletId ? { ...p, isReady: !p.isReady } : p
+        p.walletId === currentUser.walletId ? { ...p, isReady: !p.isReady } : p
       );
+
       setPlayers(updatedPlayers);
-      changePlayerStatus(currentUser?.walletId, "ready");
+      const newIsReady = !players.find(
+        (p) => p.walletId === currentUser.walletId
+      )?.isReady;
+
+      changePlayerStatus(
+        currentRoom.id,
+        currentUser.walletId,
+        newIsReady ? "ready" : "active"
+      );
     }
   };
 
@@ -318,6 +357,7 @@ export default function WaitingRoom({
     sendMessage({
       type: "start_game",
       roomId: roomId,
+      settings: gameSettings,
     });
   };
 
@@ -403,7 +443,8 @@ export default function WaitingRoom({
         playerId: currentUser?.walletId,
       });
 
-      router.push("/lobby");
+      closeConnection();
+      router.replace("/lobby");
     } catch (error) {
       console.error("Failed to leave room:", error);
       toast({
@@ -427,7 +468,7 @@ export default function WaitingRoom({
     }
   };
 
-  if (!currentRoom) return <div>Loading...</div>;
+  if (!currentRoom || !currentUser) return <CyberLoadingScreen />;
 
   return (
     <div className="min-h-screen bg-cyber-dark cyber-grid-fast relative overflow-hidden">
@@ -537,223 +578,120 @@ export default function WaitingRoom({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {players.map((player) => (
-                    <motion.div
-                      key={player.walletId}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center justify-between p-4 glass-morphism rounded-lg border border-gray-700/50"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="relative">
-                          <Avatar className="w-12 h-12 border-2 border-neon-blue/30">
-                            <AvatarImage
-                              src={`/avatars/${player.character}.png`}
-                            />
-                            <AvatarFallback className="bg-cyber-darker text-neon-blue">
-                              {getCharacterIcon(player.character || "default")}
-                            </AvatarFallback>
-                          </Avatar>
-                          {player.isHost && (
-                            <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                              <Crown className="w-3 h-3 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-gray-100">
-                              {player.username}
-                            </h3>
-                            <Badge
-                              variant="secondary"
-                              className="bg-neon-purple/20 text-neon-purple"
-                            >
-                              Lv.{player.level}
-                            </Badge>
-                            {player.isReady && (
-                              <Badge
-                                variant="secondary"
-                                className="bg-green-500/20 text-green-400"
-                              >
-                                Ready
-                              </Badge>
+                  {isRefreshingPlayers ? (
+                    <Loader className="w-5 h-5 text-neon-blue animate-spin" />
+                  ) : (
+                    players.map((player) => (
+                      <motion.div
+                        key={player.walletId}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center justify-between p-4 glass-morphism rounded-lg border border-gray-700/50"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className="relative">
+                            <Avatar className="w-12 h-12 border-2 border-neon-blue/30">
+                              <AvatarImage
+                                src={`/avatars/${player.character}.png`}
+                              />
+                              <AvatarFallback className="bg-cyber-darker text-neon-blue">
+                                {getCharacterIcon(
+                                  player.character || "default"
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            {player.isHost && (
+                              <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                                <Crown className="w-3 h-3 text-white" />
+                              </div>
                             )}
                           </div>
-                          <p className="text-sm text-gray-400">
-                            {player.walletId}
-                          </p>
-                          <div className="flex items-center space-x-4 mt-1">
-                            <span className="text-xs text-gray-500 flex items-center">
-                              <Trophy className="w-3 h-3 mr-1" />
-                              {player.score} pts
-                            </span>
-                            <span className="text-xs text-gray-500 flex items-center">
-                              <Target className="w-3 h-3 mr-1" />
-                              {player.gamesWon} wins
-                            </span>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <h3 className="font-semibold text-gray-100">
+                                {player.username}
+                              </h3>
+                              <Badge
+                                variant="secondary"
+                                className="bg-neon-purple/20 text-neon-purple"
+                              >
+                                Lv.{player.level}
+                              </Badge>
+                              {player.isReady && (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-green-500/20 text-green-400"
+                                >
+                                  Ready
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-400">
+                              {player.walletId}
+                            </p>
+                            <div className="flex items-center space-x-4 mt-1">
+                              <span className="text-xs text-gray-500 flex items-center">
+                                <Trophy className="w-3 h-3 mr-1" />
+                                {player.score} pts
+                              </span>
+                              <span className="text-xs text-gray-500 flex items-center">
+                                <Target className="w-3 h-3 mr-1" />
+                                {player.gamesWon} wins
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center space-x-2">
-                        {isHost && !player.isHost && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleKickPlayer(
-                                  player.walletId,
-                                  player.username
-                                )
-                              }
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-all duration-200 group"
-                              title="Kick player"
-                            >
-                              <Ban className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            </Button>
-                          </>
-                        )}
-                        {player.walletId === currentUser?.walletId &&
-                          !player.isHost && (
-                            <Button
-                              variant={player.isReady ? "default" : "outline"}
-                              size="sm"
-                              onClick={handleReadyToggle}
-                              className={
-                                player.isReady
-                                  ? "bg-green-600 hover:bg-green-700"
-                                  : ""
-                              }
-                            >
-                              {player.isReady ? "Unready" : "Ready"}
-                            </Button>
+                        <div className="flex items-center space-x-2">
+                          {isHost && !player.isHost && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleKickPlayer(
+                                    player.walletId,
+                                    player.username
+                                  )
+                                }
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-all duration-200 group"
+                                title="Kick player"
+                              >
+                                <Ban className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                              </Button>
+                            </>
                           )}
-                      </div>
-                    </motion.div>
-                  ))}
+                          {player.walletId === currentUser?.walletId &&
+                            !player.isHost && (
+                              <Button
+                                variant={player.isReady ? "default" : "outline"}
+                                size="sm"
+                                onClick={handleReadyToggle}
+                                className={
+                                  player.isReady
+                                    ? "bg-green-600 hover:bg-green-700"
+                                    : ""
+                                }
+                              >
+                                {player.isReady ? "Unready" : "Ready"}
+                              </Button>
+                            )}
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Game Settings (Host Only) */}
-            {/* {isHost && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mt-6"
-              >
-                <Card className="glass-morphism-deep border border-neon-purple/30 shadow-neon-glow-md">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-neon-purple">
-                      <Settings className="w-5 h-5" />
-                      <span>Game Settings</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <label className="text-sm text-gray-400 mb-2 block">
-                          Map
-                        </label>
-                        <Select
-                          value={gameSettings.map}
-                          onValueChange={(value) =>
-                            setGameSettings((prev) => ({ ...prev, map: value }))
-                          }
-                        >
-                          <SelectTrigger className="bg-cyber-darker border-gray-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="cyberpunk_city">
-                              Cyberpunk City
-                            </SelectItem>
-                            <SelectItem value="neon_forest">
-                              Neon Forest
-                            </SelectItem>
-                            <SelectItem value="digital_void">
-                              Digital Void
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400 mb-2 block">
-                          Mode
-                        </label>
-                        <Select
-                          value={gameSettings.mode}
-                          onValueChange={(value) =>
-                            setGameSettings((prev) => ({
-                              ...prev,
-                              mode: value,
-                            }))
-                          }
-                        >
-                          <SelectTrigger className="bg-cyber-darker border-gray-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="classic">Classic</SelectItem>
-                            <SelectItem value="speed">Speed Run</SelectItem>
-                            <SelectItem value="survival">Survival</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400 mb-2 block">
-                          Time Limit
-                        </label>
-                        <Select
-                          value={gameSettings.timeLimit.toString()}
-                          onValueChange={(value) =>
-                            setGameSettings((prev) => ({
-                              ...prev,
-                              timeLimit: parseInt(value),
-                            }))
-                          }
-                        >
-                          <SelectTrigger className="bg-cyber-darker border-gray-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="10">10 seconds</SelectItem>
-                            <SelectItem value="15">15 seconds</SelectItem>
-                            <SelectItem value="20">20 seconds</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-gray-400 mb-2 block">
-                          Difficulty
-                        </label>
-                        <Select
-                          value={gameSettings.difficulty}
-                          onValueChange={(value) =>
-                            setGameSettings((prev) => ({
-                              ...prev,
-                              difficulty: value,
-                            }))
-                          }
-                        >
-                          <SelectTrigger className="bg-cyber-darker border-gray-700">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="easy">Easy</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="hard">Hard</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )} */}
+            {isHost && (
+              <EnhancedGameSettings
+                isHost={isHost}
+                gameSettings={gameSettings}
+                setGameSettings={setGameSettings}
+              />
+            )}
           </div>
 
           {/* Chat and Controls */}

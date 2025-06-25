@@ -23,12 +23,15 @@ class PlayerService:
         """Retrieve all players belonging to a room."""
         return self.player_repo.get_by_room(room_id)
 
-    def get_player_by_wallet_id(self, wallet_id) -> Optional[Player]:
+    def get_players_by_wallet_and_room_id(self, room_id: str, wallet_id: str):
+        return self.player_repo.get_player_by_wallet_and_room_id(room_id, wallet_id)
+
+    def get_player_by_wallet_id(self, wallet_id) -> List[Player]:
         """Return player by wallet id"""
         return self.player_repo.get_by_wallet_id(wallet_id)
 
-    def update_player_status(self, wallet_id: str, status: PLAYER_STATUS) -> None:
-        player = self.player_repo.get_by_wallet_id(wallet_id)
+    def update_player_status(self, room_id: str, wallet_id: str, status: PLAYER_STATUS) -> None:
+        player = self.player_repo.get_player_by_wallet_and_room_id(room_id, wallet_id)
         if not player:
             return Response(content="Not found player", status_code=404)
 
