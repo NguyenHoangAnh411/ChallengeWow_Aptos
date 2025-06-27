@@ -82,24 +82,33 @@ export default function ChallengeRoom({
       try {
         const room: Room = await fetchRoomById(roomId);
         console.log("[DEBUG] Room data received:", room);
-        
+
         if (!room) {
           throw new Error("Room data is null or undefined");
         }
-        
-        if (typeof room.totalQuestions !== 'number') {
-          console.warn("[DEBUG] totalQuestions is not a number:", room.totalQuestions);
+
+        if (typeof room.totalQuestions !== "number") {
+          console.warn(
+            "[DEBUG] totalQuestions is not a number:",
+            room.totalQuestions
+          );
           // Try alternative field names
-          if (typeof (room as any).total_questions === 'number') {
+          if (typeof (room as any).total_questions === "number") {
             room.totalQuestions = (room as any).total_questions;
-            console.log("[DEBUG] Using total_questions field:", room.totalQuestions);
+            console.log(
+              "[DEBUG] Using total_questions field:",
+              room.totalQuestions
+            );
           } else {
             // Set a default value if totalQuestions is missing
             room.totalQuestions = 10;
-            console.log("[DEBUG] Using default totalQuestions:", room.totalQuestions);
+            console.log(
+              "[DEBUG] Using default totalQuestions:",
+              room.totalQuestions
+            );
           }
         }
-        
+
         setCurrentRoom(room);
         setTotalQuestions(room.totalQuestions); // Use room instead of currentRoom
         setGameStatus(room.status);
@@ -237,7 +246,10 @@ export default function ChallengeRoom({
           break;
 
         case "next_question": {
-          console.log("[DEBUG] Received next_question, current gameStatus:", gameStatus);
+          console.log(
+            "[DEBUG] Received next_question, current gameStatus:",
+            gameStatus
+          );
           // Clear timeout fallback when receiving new question
           if (nextQuestionTimeoutRef.current) {
             clearTimeout(nextQuestionTimeoutRef.current);
@@ -319,14 +331,14 @@ export default function ChallengeRoom({
               data.payload;
 
             console.log("Question result:", data.payload);
-            
+
             // ✅ FIXED: Show question result to user
             toast({
               title: "Question Result",
               description: `Correct answer: ${correctAnswer}`,
               variant: "default",
             });
-            
+
             // ✅ FIXED: Update leaderboard if provided
             if (leaderboard && Array.isArray(leaderboard)) {
               // Update player scores in game state
@@ -334,7 +346,7 @@ export default function ChallengeRoom({
                 updatePlayerStatus(player.walletId, "score", player.score);
               });
             }
-            
+
             // ✅ FIXED: Store result for current question
             if (currentQuestion && typeof window !== "undefined") {
               localStorage.setItem(
@@ -343,7 +355,7 @@ export default function ChallengeRoom({
                   correctAnswer,
                   explanation,
                   answerStats,
-                  leaderboard
+                  leaderboard,
                 })
               );
             }
@@ -421,7 +433,9 @@ export default function ChallengeRoom({
         roomId: currentRoom?.id,
         answer,
         responseTime: Math.abs(responseTime), // Ensure positive value
-        questionStartAt: questionEndAt ? questionEndAt - (currentRoom?.timePerQuestion || 20) * 1000 : Date.now(),
+        questionStartAt: questionEndAt
+          ? questionEndAt - (currentRoom?.timePerQuestion || 20) * 1000
+          : Date.now(),
       },
     };
 
@@ -448,8 +462,12 @@ export default function ChallengeRoom({
           // Wrap in data object
           roomId: currentRoom?.id,
           answer: "", // Empty answer when time is up
-          responseTime: questionEndAt ? Math.max(0, questionEndAt - Date.now()) : 0,
-          questionStartAt: questionEndAt ? questionEndAt - (currentRoom?.timePerQuestion || 20) * 1000 : Date.now(),
+          responseTime: questionEndAt
+            ? Math.max(0, questionEndAt - Date.now())
+            : 0,
+          questionStartAt: questionEndAt
+            ? questionEndAt - (currentRoom?.timePerQuestion || 20) * 1000
+            : Date.now(),
         },
       };
 
@@ -577,7 +595,10 @@ export default function ChallengeRoom({
                     console.log("[DEBUG] Button clicked with option:", opt);
                     console.log("[DEBUG] isDisabled:", isDisabled);
                     if (!isDisabled) {
-                      console.log("[DEBUG] Calling handleAnswerSelect with:", opt);
+                      console.log(
+                        "[DEBUG] Calling handleAnswerSelect with:",
+                        opt
+                      );
                       handleAnswerSelect(opt);
                     }
                   }}
@@ -730,8 +751,10 @@ export default function ChallengeRoom({
                     <Trophy className="w-7 h-7 text-yellow-300 drop-shadow" />
                     Winner:
                     <span className="text-yellow-300">
-                      {gameResults.find((p) => p.wallet === winnerWallet)?.username ||
-                        gameResults.find((p) => p.wallet === winnerWallet)?.oath ||
+                      {gameResults.find((p) => p.wallet === winnerWallet)
+                        ?.username ||
+                        gameResults.find((p) => p.wallet === winnerWallet)
+                          ?.oath ||
                         winnerWallet}
                     </span>
                   </div>
@@ -821,7 +844,7 @@ export default function ChallengeRoom({
                 </h3>
                 <div className="space-y-4">
                   {sortedPlayers.map((player) => (
-                    <PlayerCard key={player.id} player={player as User} />
+                    <PlayerCard key={player.id} player={player} />
                   ))}
                 </div>
               </CardContent>

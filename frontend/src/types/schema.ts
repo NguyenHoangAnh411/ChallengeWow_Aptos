@@ -30,7 +30,7 @@ export interface User {
 
 export interface Player {
   walletId: string;
-  status: "online" | "offline";
+  status: string;
   username: string;
   score: number;
   joinedAt: string; // ISO 8601 string for datetime
