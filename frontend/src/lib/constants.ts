@@ -6,6 +6,7 @@ export const PLAYER_JOINED_TYPE = "player_joined";
 export const PLAYER_LEFT_TYPE = "player_left";
 export const KICK_PLAYER_TYPE = "kick_player";
 export const COUNT_DOWN_UPDATE = "count_down_update";
+export const ROOM_CONFIG_UPDATE = "room_config_update";
 
 // WS Alive-time
 export const RECONNECT_WS = 25000;

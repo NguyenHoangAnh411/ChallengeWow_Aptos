@@ -1,56 +1,64 @@
-from datetime import datetime
-from typing import Dict, List
-from config.database import supabase
+from typing import List
+
+from supabase import AsyncClient
 from models.answer import Answer
 from repositories.interfaces.answer_repo import IAnswerRepository
-import uuid
-
-
 class AnswerRepository(IAnswerRepository):
-    table = "answers"
+    def __init__(self, supabase: AsyncClient):
+        self.supabase = supabase
+        self.table = "answers"
 
-    def save(
-        self,
-        answer: Answer,
-    ) -> None:
-        data = answer.model_dump()
-        data["created_at"] = answer.created_at.isoformat()
-        supabase.table(AnswerRepository.table).insert(
-            data
-        ).execute()
+    async def save(self, answer: Answer) -> None:
+        try:
+            data = answer.model_dump()
+            data["created_at"] = answer.created_at.isoformat()
+            await self.supabase.table(self.table).insert(data).execute()
+        except Exception as e:
+            print(f"Error saving answer: {e}")
 
-    def get_answers_by_room(self, room_id: str) -> List[Dict]:
-        response = (
-            supabase.table(AnswerRepository.table)
-            .select("*")
-            .eq("room_id", room_id)
-            .execute()
-        )
-        return response.data or []
+    async def get_answers_by_room(self, room_id: str) -> List[Answer]:
+        try:
+            response = await (
+                self.supabase.table(self.table)
+                .select("*")
+                .eq("room_id", room_id)
+                .execute()
+            )
+            return [Answer(**item) for item in (response.data or [])]
+        except Exception as e:
+            print(f"Error fetching answers for room {room_id}: {e}")
+            return []
 
-    def get_answers_by_wallet_id(self, room_id: str, wallet_id: str) -> List[Dict]:
-        response = (
-            supabase.table(AnswerRepository.table)
-            .select("*")
-            .eq("room_id", room_id)
-            .eq("wallet_id", wallet_id)
-            .execute()
-        )
-        return response.data or []
+    async def get_answers_by_wallet_id(self, room_id: str, wallet_id: str) -> List[Answer]:
+        try:
+            response = await (
+                self.supabase.table(self.table)
+                .select("*")
+                .eq("room_id", room_id)
+                .eq("wallet_id", wallet_id)
+                .execute()
+            )
+            return [Answer(**item) for item in (response.data or [])]
+        except Exception as e:
+            print(f"Error fetching answers for wallet {wallet_id} in room {room_id}: {e}")
+            return []
 
-    def get_score_by_user(self, room_id: str, wallet_id: str) -> float:
-        response = (
-            supabase.table(AnswerRepository.table)
-            .select("is_correct, response_time")
-            .eq("room_id", room_id)
-            .eq("wallet_id", wallet_id)
-            .execute()
-        )
-        answers = response.data or []
-        # Ví dụ: 1 điểm nếu đúng + 1 điểm bonus nếu trả lời nhanh
-        total_score = 0.0
-        for a in answers:
-            if a["is_correct"]:
-                bonus = max(0, 5 - a["response_time"])  # max bonus 5s
-                total_score += 1 + bonus
-        return total_score
+    async def get_score_by_user(self, room_id: str, wallet_id: str) -> float:
+        try:
+            response = await (
+                self.supabase.table(self.table)
+                .select("is_correct, response_time")
+                .eq("room_id", room_id)
+                .eq("wallet_id", wallet_id)
+                .execute()
+            )
+            answers = response.data or []
+            total_score = 0.0
+            for a in answers:
+                if a["is_correct"]:
+                    bonus = max(0, 5 - a["response_time"])  # Max bonus: 5s
+                    total_score += 1 + bonus
+            return total_score
+        except Exception as e:
+            print(f"Error calculating score for user {wallet_id} in room {room_id}: {e}")
+            return 0.0

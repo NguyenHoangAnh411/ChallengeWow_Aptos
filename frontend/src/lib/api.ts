@@ -1,5 +1,7 @@
 // src/lib/api.ts
 
+import { GameSettings } from "@/app/config/GameSettings";
+
 const BASE_URL = "http://localhost:9000/api"; // Sửa lại nếu backend chạy port khác
 
 async function fetchData(endpoint: string, options: RequestInit = {}) {
@@ -99,6 +101,16 @@ export async function submitAnswer(data: any) {
 
 export async function fetchGameData(roomId: string) {
   return fetchData(`/rooms/${roomId}/results`);
+}
+
+export async function updateGameSettings(roomId: string, data: GameSettings) {
+  return fetchData(`/rooms/${roomId}/settings`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 }
 
 // Gửi zk-proof

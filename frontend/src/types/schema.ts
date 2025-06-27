@@ -6,6 +6,9 @@ export interface Room {
   players: Player[];
   status: RoomStatus;
   totalQuestions: number;
+  easyQuestions: number;
+  mediumQuestions: number;
+  hardQuestions: number;
   timePerQuestion: number;
   prize: number;
   currentQuestion?: Question | null;
@@ -15,6 +18,7 @@ export interface Room {
   startTime?: Date | null;
   startedAt?: Date | null;
   endedAt?: Date | null;
+  countdownDuration: number;
 }
 
 export interface User {
@@ -48,8 +52,25 @@ export interface Question {
   id: string;
   content: string;
   options: string[];
-  correctOptionIndex: number;
-  createdAt: string; // ISO 8601 string for datetime
+}
+
+export interface QuestionPayload {
+  questionIndex: number;
+  question: Question;
+  timing: {
+    questionStartAt: number; // timestamp (ms)
+    questionEndAt: number; // timestamp (ms)
+    timePerQuestion: number; // tính theo giây
+  };
+  config: {
+    shuffleAnswers: boolean;
+    allowSkip?: boolean;
+    [key: string]: any; // nếu có thêm config khác
+  };
+  progress: {
+    current: number; // 1-based index: ví dụ 3/10
+    total: number;
+  };
 }
 
 export interface Answer {

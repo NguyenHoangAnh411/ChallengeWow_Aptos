@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   Clock,
@@ -57,9 +55,7 @@ export default function ChallengeRoom({
   const [countdown, setCountdown] = useState<number>(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionEndAt, setQuestionEndAt] = useState<number | null>(null);
-  const QUESTION_TIME = 15;
-  const [questionCountdown, setQuestionCountdown] =
-    useState<number>(QUESTION_TIME);
+  const [questionCountdown, setQuestionCountdown] = useState<number>(0);
   const nextQuestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [winnerWallet, setWinnerWallet] = useState<string | null>(null);
   const [showJson, setShowJson] = useState(false);
@@ -67,7 +63,11 @@ export default function ChallengeRoom({
   useEffect(() => {
     const onPopState = async () => {
       console.log("[Back] Triggered popstate");
-      await handleLeaveRoom();
+      if (gameStatus !== "finished") {
+        await handleLeaveRoom();
+      } else {
+        await handleFinshed();
+      }
     };
 
     window.addEventListener("popstate", onPopState);
@@ -110,6 +110,7 @@ export default function ChallengeRoom({
   const fetchGameResult = async () => {
     try {
       const res = await fetchGameData(roomId);
+      console.log(res);
       setGameResults(res.data.results);
       setWinnerWallet(res.data.winner_wallet);
     } catch (err: any) {
@@ -316,7 +317,7 @@ export default function ChallengeRoom({
       type: "submit_answer",
       roomId: currentRoom?.id,
       answer,
-      responseTime: QUESTION_TIME - questionCountdown,
+      responseTime: currentRoom.countdownDuration - questionCountdown,
     });
     toast({
       title: "Answer Submitted",
@@ -331,7 +332,7 @@ export default function ChallengeRoom({
         type: "submit_answer",
         roomId: currentRoom?.id,
         answer: null,
-        responseTime: QUESTION_TIME,
+        responseTime: currentRoom.countdownDuration || 0,
       });
       toast({
         title: "Time's Up!",
@@ -363,6 +364,10 @@ export default function ChallengeRoom({
         variant: "default",
       });
     }
+  };
+
+  const handleFinshed = async () => {
+    router.replace("/lobby");
   };
 
   const sortedPlayers = [...players].sort(
@@ -489,7 +494,9 @@ export default function ChallengeRoom({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleLeaveRoom}
+                onClick={
+                  gameStatus === "finished" ? handleFinshed : handleLeaveRoom
+                }
                 className="text-gray-400 hover:text-red-400 transition-all duration-300 hover:scale-110 p-2 rounded-lg glass-morphism"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -605,7 +612,7 @@ export default function ChallengeRoom({
                 )}
                 <button
                   className="mt-8 px-6 py-3 rounded-lg bg-neon-blue text-white font-bold shadow-neon-glow hover:bg-neon-purple transition-all"
-                  onClick={handleLeaveRoom}
+                  onClick={handleFinshed}
                 >
                   Back to Lobby
                 </button>
