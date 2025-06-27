@@ -1,5 +1,4 @@
 import { RoomStatus } from "./RoomStatus";
-
 export interface Room {
   id: string;
   roomCode: string;
@@ -15,9 +14,8 @@ export interface Room {
   winnerWalletId?: string | null;
   proof?: ZKProof | null;
   createdAt: Date;
-  startTime?: Date | null;
-  startedAt?: Date | null;
-  endedAt?: Date | null;
+  startedAt: number | null;
+  endedAt?: number | null;
   countdownDuration: number;
 }
 
@@ -92,6 +90,12 @@ export interface ZKProof {
   proofUrl: string;
   onchainTxHash: string;
   timestamp: Date;
+}
+
+export interface GameResult {
+  wallet: string;
+  oath: string;
+  score: number;
 }
 
 export interface LeaderboardEntry {

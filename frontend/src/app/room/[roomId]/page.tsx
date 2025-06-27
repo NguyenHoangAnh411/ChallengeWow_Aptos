@@ -60,10 +60,11 @@ export default function ChallengeRoom({
   const [winnerWallet, setWinnerWallet] = useState<string | null>(null);
   const [showJson, setShowJson] = useState(false);
 
+  // Pop page
   useEffect(() => {
     const onPopState = async () => {
       console.log("[Back] Triggered popstate");
-      if (gameStatus !== "finished") {
+      if (gameStatus !== RoomStatus.FINISHED) {
         await handleLeaveRoom();
       } else {
         await handleFinshed();
@@ -74,13 +75,14 @@ export default function ChallengeRoom({
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  // Load room data
   useEffect(() => {
     async function loadRoomData() {
       try {
         const room: Room = await fetchRoomById(roomId);
         setCurrentRoom(room);
         setGameStatus(room.status);
-
+        setStartAt(room.startedAt);
         if (room.status === RoomStatus.WAITING) {
           router.replace(`/room/${roomId}/waiting`);
           return;
@@ -101,16 +103,20 @@ export default function ChallengeRoom({
     }
   }, [roomId]);
 
+  // Fetch game results
   useEffect(() => {
-    if (gameStatus === "finished" && roomId && gameResults.length === 0) {
+    if (
+      gameStatus === RoomStatus.FINISHED &&
+      roomId &&
+      gameResults.length === 0
+    ) {
       fetchGameResult();
     }
-  }, [gameStatus, roomId]);
+  }, [gameStatus, roomId, gameResults]);
 
   const fetchGameResult = async () => {
     try {
       const res = await fetchGameData(roomId);
-      console.log(res);
       setGameResults(res.data.results);
       setWinnerWallet(res.data.winner_wallet);
     } catch (err: any) {
@@ -125,12 +131,18 @@ export default function ChallengeRoom({
 
   useEffect(() => {
     if (!startAt) return;
+
     const interval = setInterval(() => {
       const now = Date.now();
       const diff = Math.max(0, Math.floor((startAt - now) / 1000));
       setCountdown(diff);
-      if (diff <= 0) clearInterval(interval);
+
+      if (diff <= 0) {
+        clearInterval(interval);
+        setGameStatus(RoomStatus.IN_PROGRESS);
+      }
     }, 1000);
+
     return () => clearInterval(interval);
   }, [startAt]);
 
@@ -150,20 +162,20 @@ export default function ChallengeRoom({
     return () => clearInterval(interval);
   }, [questionEndAt, hasAnswered, currentQuestion]);
 
-  useEffect(() => {
-    // Nếu zustand không có, lấy từ localStorage
-    if (
-      (!questions || questions.length === 0) &&
-      typeof window !== "undefined"
-    ) {
-      const q = localStorage.getItem("questions");
-      if (q) setQuestions(JSON.parse(q));
-    }
-    if (!startAt && typeof window !== "undefined") {
-      const s = localStorage.getItem("startAt");
-      if (s) setStartAt(Number(s));
-    }
-  }, []);
+  // useEffect(() => {
+  //   // Nếu zustand không có, lấy từ localStorage
+  //   if (
+  //     (!questions || questions.length === 0) &&
+  //     typeof window !== "undefined"
+  //   ) {
+  //     const q = localStorage.getItem("questions");
+  //     if (q) setQuestions(JSON.parse(q));
+  //   }
+  //   if (!startAt && typeof window !== "undefined") {
+  //     const s = localStorage.getItem("startAt");
+  //     if (s) setStartAt(Number(s));
+  //   }
+  // }, []);
 
   // Khi nhận next_question, lưu trạng thái đã trả lời vào localStorage
   useEffect(() => {
@@ -180,74 +192,232 @@ export default function ChallengeRoom({
     }
   }, [currentQuestion]);
 
+  // Fixed useWebSocket message handling logic
   const { sendMessage } = useWebSocket({
     url: currentUser?.walletId
       ? `/${roomId}?wallet_id=${currentUser?.walletId}`
       : undefined,
     onMessage: (data) => {
       switch (data.type) {
+        case "game_started":
+          // Handle game_started event - this is missing in your current code
+          if (data.payload) {
+            const { questions, startAt, totalQuestions, countdownDuration } =
+              data.payload;
+            setQuestions(questions);
+            setStartAt(startAt);
+            setGameStatus(RoomStatus.IN_PROGRESS);
+
+            // Store in localStorage for persistence
+            if (typeof window !== "undefined") {
+              localStorage.setItem("questions", JSON.stringify(questions));
+              localStorage.setItem("startAt", String(startAt));
+            }
+          }
+          break;
+
         case "player_answered":
           updatePlayerStatus(data.playerId, "answered", data.responseTime);
           break;
+
         case "next_question": {
-          // Clear timeout fallback ngay khi nhận được câu hỏi mới
+          // Clear timeout fallback when receiving new question
           if (nextQuestionTimeoutRef.current) {
             clearTimeout(nextQuestionTimeoutRef.current);
             nextQuestionTimeoutRef.current = null;
           }
-          // Nếu không còn câu hỏi (server gửi null hoặc hết danh sách)
-          if (!data.question) {
-            setGameStatus("finished");
+
+          // Handle end of game - when no more questions
+          if (!data.payload || !data.payload.question) {
+            setGameStatus(RoomStatus.FINISHED);
             setCurrentQuestion(null);
-            // Nếu server gửi kèm kết quả
-            if (data.results) setGameResults(data.results);
             if (typeof window !== "undefined") {
               localStorage.setItem("gameEnded", "1");
             }
             break;
           }
-          // Gọi trực tiếp zustand store để tránh closure sai
-          useGameState.getState().setCurrentQuestion(data.question);
-          console.log("Received next_question:", data.question);
-          setQuestionNumber((prev) => prev + 1);
+
+          // Extract data from the correct structure
+          const {
+            question,
+            questionIndex,
+            questionStartAt,
+            questionEndAt,
+            timePerQuestion,
+            progress,
+          } = data.payload;
+
+          // Update question state
+          useGameState.getState().setCurrentQuestion(question);
+          console.log("Received next_question:", question);
+
+          // Update UI state
+          setCurrentQuestionIndex(questionIndex || 0);
+          setQuestionNumber(progress?.current || questionNumber + 1);
           setSelectedAnswer(null);
           setHasAnswered(false);
-          setQuestionEndAt(data.questionEndAt);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("questionEndAt", String(data.questionEndAt));
+
+          if (questionEndAt) {
+            setQuestionEndAt(questionEndAt);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("questionEndAt", String(questionEndAt));
+            }
+
+            // Calculate countdown immediately
+            const now = Date.now();
+            const timeLeft = Math.max(
+              0,
+              Math.floor((questionEndAt - now) / 1000)
+            );
+            setQuestionCountdown(timeLeft);
           }
+
           break;
         }
+
+        case "answer_submitted":
+          // Handle answer submission response - this is missing
+          if (data.payload) {
+            const {
+              isCorrect,
+              points,
+              totalScore,
+              correctAnswer,
+              explanation,
+            } = data.payload;
+
+            // You might want to show this feedback to the user
+            toast({
+              title: isCorrect ? "Correct!" : "Incorrect",
+              description: `You earned ${points} points! Total: ${totalScore}`,
+              variant: isCorrect ? "default" : "destructive",
+            });
+
+            // Store the correct answer and explanation
+            if (currentQuestion && typeof window !== "undefined") {
+              localStorage.setItem(
+                `result_${currentQuestion.id}`,
+                JSON.stringify({
+                  isCorrect,
+                  points,
+                  correctAnswer,
+                  explanation,
+                })
+              );
+            }
+          }
+          break;
+
+        case "question_result":
+          // Handle question result statistics - this is missing
+          if (data.payload) {
+            const { correctAnswer, explanation, answerStats, leaderboard } =
+              data.payload;
+
+            console.log("Question result:", data.payload);
+          }
+          break;
+
         case "game_ended":
-          setGameResults(data.results);
-          setGameStatus("finished");
-          setWinnerWallet(data.winner_wallet || null);
-          // Lưu trạng thái đã kết thúc game vào localStorage
+          setGameResults(data.results || data.payload?.results || []);
+          setGameStatus(RoomStatus.FINISHED);
+          setWinnerWallet(
+            data.winner_wallet || data.payload?.winner_wallet || null
+          );
+
+          // Store game ended state
           if (typeof window !== "undefined") {
             localStorage.setItem("gameEnded", "1");
           }
           break;
+
         case "error":
           toast({
             title: "Error",
-            description: data.message,
+            description:
+              data.message || data.payload?.message || "An error occurred",
             variant: "destructive",
           });
           break;
+
         case "clear_local_storage":
           if (typeof window !== "undefined") {
             Object.keys(localStorage).forEach((key) => {
-              if (key.startsWith("answered_")) localStorage.removeItem(key);
+              if (
+                key.startsWith("answered_") ||
+                key.startsWith("result_") ||
+                key === "questions" ||
+                key === "startAt" ||
+                key === "questionEndAt" ||
+                key === "gameEnded"
+              ) {
+                localStorage.removeItem(key);
+              }
             });
-            localStorage.removeItem("questions");
-            localStorage.removeItem("startAt");
-            localStorage.removeItem("questionEndAt");
-            localStorage.removeItem("gameEnded");
           }
+          break;
+
+        default:
+          console.warn("Unknown WebSocket message type:", data.type);
           break;
       }
     },
   });
+
+  // Fixed answer submission to match backend expectations
+  const handleAnswerSelect = (answer: string) => {
+    if (hasAnswered) return;
+
+    setSelectedAnswer(answer);
+    setHasAnswered(true);
+
+    if (currentQuestion && typeof window !== "undefined") {
+      localStorage.setItem(`answered_${currentQuestion.id}`, answer);
+    }
+
+    // Calculate response time correctly
+    const responseTime = questionEndAt
+      ? Math.max(0, questionEndAt - Date.now())
+      : (currentRoom?.countdownDuration || 0) - questionCountdown;
+
+    sendMessage({
+      type: "submit_answer",
+      data: {
+        // Wrap in data object to match backend structure
+        roomId: currentRoom?.id,
+        answer,
+        responseTime: Math.abs(responseTime), // Ensure positive value
+      },
+    });
+
+    toast({
+      title: "Answer Submitted",
+      description: "Your answer has been recorded!",
+    });
+  };
+
+  // Fixed time up handler
+  const handleTimeUp = () => {
+    if (!hasAnswered) {
+      setHasAnswered(true);
+
+      sendMessage({
+        type: "submit_answer",
+        data: {
+          // Wrap in data object
+          roomId: currentRoom?.id,
+          answer: null, // No answer selected
+          responseTime: currentRoom?.countdownDuration || 0,
+        },
+      });
+
+      toast({
+        title: "Time's Up!",
+        description: "Moving to next question...",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Khi có câu hỏi đầu tiên (sau countdown game), set questionEndAt nếu có
   useEffect(() => {
@@ -263,7 +433,7 @@ export default function ChallengeRoom({
     if (typeof window !== "undefined") {
       const ended = localStorage.getItem("gameEnded");
       if (ended === "1") {
-        setGameStatus("finished");
+        setGameStatus(RoomStatus.FINISHED);
       }
     }
   }, []);
@@ -277,12 +447,8 @@ export default function ChallengeRoom({
   }, [questions]);
 
   useEffect(() => {
-    console.log("StartAt (state):", startAt);
-  }, [startAt]);
-
-  useEffect(() => {
     // Nếu đã hết game thì không đặt timeout fallback nữa
-    if (gameStatus === "finished") return;
+    if (gameStatus === RoomStatus.FINISHED) return;
     if (!currentQuestion) return;
     // Clear timeout cũ nếu có
     if (nextQuestionTimeoutRef.current)
@@ -305,42 +471,6 @@ export default function ChallengeRoom({
         clearTimeout(nextQuestionTimeoutRef.current);
     };
   }, [currentQuestion, gameStatus]);
-
-  const handleAnswerSelect = (answer: string) => {
-    if (hasAnswered) return;
-    setSelectedAnswer(answer);
-    setHasAnswered(true);
-    if (currentQuestion && typeof window !== "undefined") {
-      localStorage.setItem(`answered_${currentQuestion.id}`, answer);
-    }
-    sendMessage({
-      type: "submit_answer",
-      roomId: currentRoom?.id,
-      answer,
-      responseTime: currentRoom.countdownDuration - questionCountdown,
-    });
-    toast({
-      title: "Answer Submitted",
-      description: "Your answer has been recorded!",
-    });
-  };
-
-  const handleTimeUp = () => {
-    if (!hasAnswered) {
-      setHasAnswered(true);
-      sendMessage({
-        type: "submit_answer",
-        roomId: currentRoom?.id,
-        answer: null,
-        responseTime: currentRoom.countdownDuration || 0,
-      });
-      toast({
-        title: "Time's Up!",
-        description: "Moving to next question...",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleLeaveRoom = async () => {
     try {
@@ -495,7 +625,9 @@ export default function ChallengeRoom({
                 variant="ghost"
                 size="sm"
                 onClick={
-                  gameStatus === "finished" ? handleFinshed : handleLeaveRoom
+                  gameStatus === RoomStatus.FINISHED
+                    ? handleFinshed
+                    : handleLeaveRoom
                 }
                 className="text-gray-400 hover:text-red-400 transition-all duration-300 hover:scale-110 p-2 rounded-lg glass-morphism"
               >
@@ -541,7 +673,7 @@ export default function ChallengeRoom({
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Question Area */}
           <div className="lg:col-span-3">
-            {gameStatus === "finished" ? (
+            {gameStatus === RoomStatus.FINISHED ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <h2 className="text-4xl font-orbitron font-bold mb-6 text-neon-blue drop-shadow-neon">
                   Game Results

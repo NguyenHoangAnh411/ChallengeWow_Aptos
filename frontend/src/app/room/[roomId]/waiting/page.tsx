@@ -405,8 +405,10 @@ export default function WaitingRoom({
 
   useEffect(() => {
     if (countdown <= 0 && canStart) {
-      handleStartGame();
+      router.replace(`/room/${roomId}`);
       return;
+    } else if (countdown <= 0 && !canStart) {
+      handleStartGame();
     }
 
     const timer = setTimeout(() => {
@@ -923,7 +925,7 @@ export default function WaitingRoom({
             <p className="text-gray-300">
               <span className="text-red-400 font-semibold">
                 {kickConfirmation.playerName}
-              </span>{" "}
+              </span>
               will be removed from the room and won't be able to rejoin.
             </p>
           </div>
