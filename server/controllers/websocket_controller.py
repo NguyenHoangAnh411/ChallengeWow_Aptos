@@ -7,6 +7,7 @@ from helpers.json_helper import send_json_safe
 from models.answer import Answer
 from models.chat_payload import ChatPayload
 from models.kick_player import KickPayload
+from models.player import Player
 from models.room import Room
 from services.answer_service import AnswerService
 from services.player_service import PlayerService
@@ -53,7 +54,8 @@ class WebSocketController:
                 "payload": {"reason": "You were kicked from the room", "roomId": payload.room_id}
             })
 
-        username = getattr(result["payload"], "username", "user") or "Unknown"
+        kicked_player: Player = result["data"]
+        username = getattr(kicked_player, "username", "Unknown")
         await self.manager.broadcast_to_room(payload.room_id, {
             "type": "player_left",
             "action": "kick",
@@ -135,7 +137,7 @@ class WebSocketController:
             "totalPlayers": total_players,
             "totalQuestions": total_questions,
             "gameMode": getattr(room, 'game_mode', 'standard'),
-            "gameDuration": 0,  # TODO: Calculate from start_time to end_time
+            "gameDuration": (game_end_time - room.started_at).total_seconds(),
             "averageScore": sum(p.score for p in room.players) / total_players if total_players > 0 else 0,
             "highestScore": sorted_players[0].score if sorted_players else 0,
             "questionBreakdown": {
@@ -442,6 +444,7 @@ class WebSocketController:
             answer_record = Answer(
                 room_id=room_id,
                 wallet_id=wallet_id,
+                score=points,
                 question_id=current_question.id if hasattr(current_question, 'id') else None,
                 question_index=room.current_index,
                 player_answer=player_answer,

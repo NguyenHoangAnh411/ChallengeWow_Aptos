@@ -36,7 +36,7 @@ class GameService:
 
     async def start_game(self, room: Room):
         room.status = GAME_STATUS.IN_PROGRESS
-        room.start_time = datetime.now(timezone.utc)
+        room.started_at = datetime.now(timezone.utc)
         self.room_service.save_room(room)
 
         for _ in range(5):

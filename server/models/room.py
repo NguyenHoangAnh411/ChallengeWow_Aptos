@@ -26,7 +26,6 @@ class Room(CamelModel):
     entry_fee: float = 0
     prize: float = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    start_time: Optional[datetime] = None
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
     current_questions: Optional[List[Question]] = None

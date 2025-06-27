@@ -39,7 +39,7 @@ class AnswerController:
             normalized_options = [opt.strip().lower() for opt in question.options]
             selected_index = normalized_options.index(normalized_answer)
 
-            response_time = (timestamp - room.start_time).total_seconds()
+            response_time = (timestamp - room.started_at).total_seconds()
             is_correct = normalized_answer == question.correct_answer
             score = self.game_service.calculate_score(is_correct, response_time, question)
 
