@@ -179,24 +179,32 @@ class RoomController:
         room = await self.room_service.get_room(room_id)
         if not room:
             raise HTTPException(status_code=400, detail="Room is not available")
-        if not room.winner_wallet_id:
-            raise HTTPException(status_code=400, detail="Winner not found")
-
-        results = [
-            {
+        
+        # Tính toán kết quả từ players hiện tại
+        results = []
+        winner_wallet = None
+        max_score = 0
+        
+        for p in room.players:
+            player_score = p.score  # Sử dụng score từ player object
+            results.append({
                 "wallet": p.wallet_id,
                 "oath": p.username,
-                "score": sum(
-                    a.score if isinstance(a, Answer) else a.get("score", 0)
-                    for a in p.answers or []
-                )
-            }
-            for p in room.players
-        ]
+                "score": player_score
+            })
+            
+            # Tìm winner (player có điểm cao nhất)
+            if player_score > max_score:
+                max_score = player_score
+                winner_wallet = p.wallet_id
+        
+        # Nếu có winner_wallet_id từ room, sử dụng nó
+        if room.winner_wallet_id:
+            winner_wallet = room.winner_wallet_id
 
         return {
             "results": results,
-            "winner_wallet": room.winner_wallet_id
+            "winner_wallet": winner_wallet
         }
 
     async def get_room_settings(self, room_id: str) -> GameSettings | None:

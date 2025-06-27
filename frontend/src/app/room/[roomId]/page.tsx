@@ -105,14 +105,12 @@ export default function ChallengeRoom({
 
   // Fetch game results
   useEffect(() => {
-    if (
-      gameStatus === RoomStatus.FINISHED &&
-      roomId &&
-      gameResults.length === 0
-    ) {
-      fetchGameResult();
+    if (gameStatus === "finished" && roomId && gameResults.length === 0) {
+      if (winnerWallet) {
+        fetchGameResult();
+      }
     }
-  }, [gameStatus, roomId, gameResults]);
+  }, [gameStatus, roomId, winnerWallet]);
 
   const fetchGameResult = async () => {
     try {
@@ -219,57 +217,41 @@ export default function ChallengeRoom({
         case "player_answered":
           updatePlayerStatus(data.playerId, "answered", data.responseTime);
           break;
-
+        case "game_started":
+          const gameData = data.payload;
+          setStartAt(gameData.startAt);
+          setCountdown(gameData.countdownDuration);
+          setGameStatus("playing");
+          toast({
+            title: "Game Started!",
+            description: "Get ready for the first question...",
+            variant: "default",
+          });
+          break;
         case "next_question": {
           // Clear timeout fallback when receiving new question
           if (nextQuestionTimeoutRef.current) {
             clearTimeout(nextQuestionTimeoutRef.current);
             nextQuestionTimeoutRef.current = null;
           }
-
-          // Handle end of game - when no more questions
-          if (!data.payload || !data.payload.question) {
-            setGameStatus(RoomStatus.FINISHED);
+          // Nếu không còn câu hỏi (server gửi null hoặc hết danh sách)
+          if (!data.payload?.question) {
+            setGameStatus("finished");
             setCurrentQuestion(null);
             if (typeof window !== "undefined") {
               localStorage.setItem("gameEnded", "1");
             }
             break;
           }
-
-          // Extract data from the correct structure
-          const {
-            question,
-            questionIndex,
-            questionStartAt,
-            questionEndAt,
-            timePerQuestion,
-            progress,
-          } = data.payload;
-
-          // Update question state
-          useGameState.getState().setCurrentQuestion(question);
-          console.log("Received next_question:", question);
-
-          // Update UI state
-          setCurrentQuestionIndex(questionIndex || 0);
-          setQuestionNumber(progress?.current || questionNumber + 1);
+          // Gọi trực tiếp zustand store để tránh closure sai
+          useGameState.getState().setCurrentQuestion(data.payload.question);
+          console.log("Received next_question:", data.payload.question);
+          setQuestionNumber((prev) => prev + 1);
           setSelectedAnswer(null);
           setHasAnswered(false);
-
-          if (questionEndAt) {
-            setQuestionEndAt(questionEndAt);
-            if (typeof window !== "undefined") {
-              localStorage.setItem("questionEndAt", String(questionEndAt));
-            }
-
-            // Calculate countdown immediately
-            const now = Date.now();
-            const timeLeft = Math.max(
-              0,
-              Math.floor((questionEndAt - now) / 1000)
-            );
-            setQuestionCountdown(timeLeft);
+          setQuestionEndAt(data.payload.timing?.questionEndAt);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("questionEndAt", String(data.payload.timing?.questionEndAt));
           }
 
           break;
@@ -319,13 +301,10 @@ export default function ChallengeRoom({
           break;
 
         case "game_ended":
-          setGameResults(data.results || data.payload?.results || []);
-          setGameStatus(RoomStatus.FINISHED);
-          setWinnerWallet(
-            data.winner_wallet || data.payload?.winner_wallet || null
-          );
-
-          // Store game ended state
+          setGameResults(data.payload?.leaderboard || []);
+          setGameStatus("finished");
+          setWinnerWallet(data.payload?.winner?.walletId || null);
+          // Lưu trạng thái đã kết thúc game vào localStorage
           if (typeof window !== "undefined") {
             localStorage.setItem("gameEnded", "1");
           }
@@ -471,6 +450,42 @@ export default function ChallengeRoom({
         clearTimeout(nextQuestionTimeoutRef.current);
     };
   }, [currentQuestion, gameStatus]);
+
+  const handleAnswerSelect = (answer: string) => {
+    if (hasAnswered) return;
+    setSelectedAnswer(answer);
+    setHasAnswered(true);
+    if (currentQuestion && typeof window !== "undefined") {
+      localStorage.setItem(`answered_${currentQuestion.id}`, answer);
+    }
+    sendMessage({
+      type: "submit_answer",
+      roomId: currentRoom?.id,
+      answer,
+      responseTime: currentRoom?.countdownDuration || 15 - questionCountdown,
+    });
+    toast({
+      title: "Answer Submitted",
+      description: "Your answer has been recorded!",
+    });
+  };
+
+  const handleTimeUp = () => {
+    if (!hasAnswered) {
+      setHasAnswered(true);
+      sendMessage({
+        type: "submit_answer",
+        roomId: currentRoom?.id,
+        answer: null,
+        responseTime: currentRoom?.countdownDuration || 0,
+      });
+      toast({
+        title: "Time's Up!",
+        description: "Moving to next question...",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleLeaveRoom = async () => {
     try {
@@ -783,4 +798,4 @@ export default function ChallengeRoom({
       </div>
     </div>
   );
-}
+} 
