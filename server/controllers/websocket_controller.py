@@ -237,6 +237,8 @@ class WebSocketController:
                 is_winner=(result["wallet"] == winner_wallet)
             )
         
+        await self.user_stats_repo.recalculate_ranks()
+
         # Save updated room
         await self.room_service.save_room(room)
 

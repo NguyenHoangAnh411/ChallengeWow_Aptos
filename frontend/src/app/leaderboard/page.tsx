@@ -517,7 +517,6 @@ export default function EnhancedLeaderboard() {
                         {filtered
                           .slice((page - 1) * pageSize, page * pageSize)
                           .map((player, idx) => {
-                            player.rank = (page - 1) * pageSize + idx + 1;
                             const isCurrentUser =
                               currentUser?.walletId === player.walletId;
                             const rank = player.rank;

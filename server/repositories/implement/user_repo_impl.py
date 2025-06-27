@@ -109,3 +109,18 @@ class UserStatsRepository:
         for row in data:
             row["username"] = row.get("users", {}).get("username", "") if row.get("users") else ""
         return data
+
+    async def recalculate_ranks(self):
+        # 1. Lấy tất cả user stats có total_score
+        res = await self.supabase.table(self.table).select("wallet_id, total_score").order("total_score", desc=True).execute()
+        stats = res.data or []
+
+        # 2. Sắp xếp và gán thứ hạng
+        for idx, stat in enumerate(stats):
+            wallet_id = stat["wallet_id"]
+            rank = idx + 1  # Rank bắt đầu từ 1
+
+            # 3. Cập nhật rank cho từng user
+            await self.supabase.table(self.table).update({
+                "rank": rank
+            }).eq("wallet_id", wallet_id).execute()
