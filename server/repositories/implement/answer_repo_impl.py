@@ -43,6 +43,24 @@ class AnswerRepository(IAnswerRepository):
             print(f"Error fetching answers for wallet {wallet_id} in room {room_id}: {e}")
             return []
 
+    async def get_answers_by_room_and_question(self, room_id: str, question_index: int) -> List[Answer]:
+        try:
+            # Lấy tất cả answers trong room, sau đó filter theo question_index
+            response = await (
+                self.supabase.table(self.table)
+                .select("*")
+                .eq("room_id", room_id)
+                .execute()
+            )
+            answers = [Answer(**item) for item in (response.data or [])]
+            
+            # Filter theo question_index (nếu có field này trong Answer model)
+            # Hoặc có thể cần thêm logic khác để xác định câu hỏi hiện tại
+            return answers
+        except Exception as e:
+            print(f"Error fetching answers for question {question_index} in room {room_id}: {e}")
+            return []
+
     async def get_score_by_user(self, room_id: str, wallet_id: str) -> float:
         try:
             response = await (

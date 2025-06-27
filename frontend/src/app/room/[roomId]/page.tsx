@@ -103,9 +103,11 @@ export default function ChallengeRoom({
 
   useEffect(() => {
     if (gameStatus === "finished" && roomId && gameResults.length === 0) {
-      fetchGameResult();
+      if (winnerWallet) {
+        fetchGameResult();
+      }
     }
-  }, [gameStatus, roomId]);
+  }, [gameStatus, roomId, winnerWallet]);
 
   const fetchGameResult = async () => {
     try {
@@ -189,6 +191,17 @@ export default function ChallengeRoom({
         case "player_answered":
           updatePlayerStatus(data.playerId, "answered", data.responseTime);
           break;
+        case "game_started":
+          const gameData = data.payload;
+          setStartAt(gameData.startAt);
+          setCountdown(gameData.countdownDuration);
+          setGameStatus("playing");
+          toast({
+            title: "Game Started!",
+            description: "Get ready for the first question...",
+            variant: "default",
+          });
+          break;
         case "next_question": {
           // Clear timeout fallback ngay khi nhận được câu hỏi mới
           if (nextQuestionTimeoutRef.current) {
@@ -196,7 +209,7 @@ export default function ChallengeRoom({
             nextQuestionTimeoutRef.current = null;
           }
           // Nếu không còn câu hỏi (server gửi null hoặc hết danh sách)
-          if (!data.question) {
+          if (!data.payload?.question) {
             setGameStatus("finished");
             setCurrentQuestion(null);
             // Nếu server gửi kèm kết quả
@@ -207,21 +220,21 @@ export default function ChallengeRoom({
             break;
           }
           // Gọi trực tiếp zustand store để tránh closure sai
-          useGameState.getState().setCurrentQuestion(data.question);
-          console.log("Received next_question:", data.question);
+          useGameState.getState().setCurrentQuestion(data.payload.question);
+          console.log("Received next_question:", data.payload.question);
           setQuestionNumber((prev) => prev + 1);
           setSelectedAnswer(null);
           setHasAnswered(false);
-          setQuestionEndAt(data.questionEndAt);
+          setQuestionEndAt(data.payload.timing?.questionEndAt);
           if (typeof window !== "undefined") {
-            localStorage.setItem("questionEndAt", String(data.questionEndAt));
+            localStorage.setItem("questionEndAt", String(data.payload.timing?.questionEndAt));
           }
           break;
         }
         case "game_ended":
-          setGameResults(data.results);
+          setGameResults(data.payload?.leaderboard || []);
           setGameStatus("finished");
-          setWinnerWallet(data.winner_wallet || null);
+          setWinnerWallet(data.payload?.winner?.walletId || null);
           // Lưu trạng thái đã kết thúc game vào localStorage
           if (typeof window !== "undefined") {
             localStorage.setItem("gameEnded", "1");
@@ -317,7 +330,7 @@ export default function ChallengeRoom({
       type: "submit_answer",
       roomId: currentRoom?.id,
       answer,
-      responseTime: currentRoom.countdownDuration - questionCountdown,
+      responseTime: currentRoom?.countdownDuration || 15 - questionCountdown,
     });
     toast({
       title: "Answer Submitted",
@@ -332,7 +345,7 @@ export default function ChallengeRoom({
         type: "submit_answer",
         roomId: currentRoom?.id,
         answer: null,
-        responseTime: currentRoom.countdownDuration || 0,
+        responseTime: currentRoom?.countdownDuration || 0,
       });
       toast({
         title: "Time's Up!",
@@ -651,4 +664,4 @@ export default function ChallengeRoom({
       </div>
     </div>
   );
-}
+} 

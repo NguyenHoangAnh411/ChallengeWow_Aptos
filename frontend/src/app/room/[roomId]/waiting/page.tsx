@@ -261,6 +261,10 @@ export default function WaitingRoom({
               description: "Get ready for the first question...",
               variant: "default",
             });
+            
+            setTimeout(() => {
+              router.push(`/room/${roomId}`);
+            }, 1000);
 
             break;
 
