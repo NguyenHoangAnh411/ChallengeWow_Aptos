@@ -136,6 +136,43 @@ export default function EnhancedLeaderboard() {
     return winRate.toFixed(1);
   };
 
+  const getPodiumStyling = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return {
+          bgGradient: "bg-gradient-to-r from-yellow-600/40 to-yellow-500/40",
+          border: "border-l-4 border-yellow-400",
+          rankColor: "text-yellow-300",
+          rankIcon: "👑",
+          glow: "shadow-lg shadow-yellow-500/20",
+        };
+      case 2:
+        return {
+          bgGradient: "bg-gradient-to-r from-gray-400/40 to-gray-300/40",
+          border: "border-l-4 border-gray-300",
+          rankColor: "text-gray-300",
+          rankIcon: "🥈",
+          glow: "shadow-lg shadow-gray-400/20",
+        };
+      case 3:
+        return {
+          bgGradient: "bg-gradient-to-r from-amber-600/40 to-amber-500/40",
+          border: "border-l-4 border-amber-400",
+          rankColor: "text-amber-300",
+          rankIcon: "🥉",
+          glow: "shadow-lg shadow-amber-500/20",
+        };
+      default:
+        return {
+          bgGradient: "",
+          border: "",
+          rankColor: "text-cyan-300",
+          rankIcon: "",
+          glow: "",
+        };
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
@@ -480,12 +517,12 @@ export default function EnhancedLeaderboard() {
                         {filtered
                           .slice((page - 1) * pageSize, page * pageSize)
                           .map((player, idx) => {
-                            const rankNum = getRankNumber(
-                              player.rank,
-                              (page - 1) * pageSize + idx
-                            );
+                            player.rank = (page - 1) * pageSize + idx + 1;
                             const isCurrentUser =
                               currentUser?.walletId === player.walletId;
+                            const rank = player.rank;
+                            const podiumStyle = getPodiumStyling(rank);
+                            const isPodium = rank <= 3;
 
                             return (
                               <motion.tr
@@ -500,15 +537,44 @@ export default function EnhancedLeaderboard() {
                                 className={`transition-all duration-300 hover:bg-cyan-900/20 ${
                                   isCurrentUser
                                     ? "bg-gradient-to-r from-cyan-900/40 to-purple-900/40 border-l-4 border-cyan-400"
+                                    : isPodium
+                                    ? `${podiumStyle.bgGradient} ${podiumStyle.border} ${podiumStyle.glow}`
                                     : ""
                                 }`}
                               >
-                                <td className="px-6 py-4 whitespace-nowrap font-bold text-cyan-300 text-shadow-cyber">
-                                  {player.rank}
+                                <td className="px-6 py-4 whitespace-nowrap font-bold text-shadow-cyber">
+                                  <div className="flex items-center space-x-2">
+                                    {isPodium && (
+                                      <span className="text-lg">
+                                        {podiumStyle.rankIcon}
+                                      </span>
+                                    )}
+                                    <span
+                                      className={`${
+                                        isCurrentUser
+                                          ? "text-cyan-300"
+                                          : podiumStyle.rankColor
+                                      } ${
+                                        isPodium ? "text-xl font-extrabold" : ""
+                                      }`}
+                                    >
+                                      {rank}
+                                    </span>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex items-center space-x-3">
-                                    <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full flex items-center justify-center">
+                                    <div
+                                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                        isPodium && !isCurrentUser
+                                          ? rank === 1
+                                            ? "bg-gradient-to-r from-yellow-500 to-yellow-400"
+                                            : rank === 2
+                                            ? "bg-gradient-to-r from-gray-400 to-gray-300"
+                                            : "bg-gradient-to-r from-amber-500 to-amber-400"
+                                          : "bg-gradient-to-r from-cyan-500 to-purple-500"
+                                      }`}
+                                    >
                                       <span className="text-sm font-bold text-white text-shadow-cyber">
                                         {getDisplayName(player)
                                           .substring(0, 2)
@@ -516,8 +582,27 @@ export default function EnhancedLeaderboard() {
                                       </span>
                                     </div>
                                     <div>
-                                      <div className="text-white font-semibold text-shadow-cyber">
+                                      <div
+                                        className={`font-semibold text-shadow-cyber ${
+                                          isPodium && !isCurrentUser
+                                            ? rank === 1
+                                              ? "text-yellow-200"
+                                              : rank === 2
+                                              ? "text-gray-200"
+                                              : "text-amber-200"
+                                            : "text-white"
+                                        }`}
+                                      >
                                         {getDisplayName(player)}
+                                        {isPodium && (
+                                          <span className="ml-2 text-xs px-2 py-1 rounded-full bg-black/30">
+                                            {rank === 1
+                                              ? "CHAMPION"
+                                              : rank === 2
+                                              ? "RUNNER-UP"
+                                              : "3RD PLACE"}
+                                          </span>
+                                        )}
                                       </div>
                                       {isCurrentUser && (
                                         <div className="text-xs text-cyan-400">
@@ -549,7 +634,17 @@ export default function EnhancedLeaderboard() {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                                  <div className="text-xl font-bold text-cyan-200 text-shadow-cyber">
+                                  <div
+                                    className={`font-bold text-shadow-cyber ${
+                                      isPodium && !isCurrentUser
+                                        ? rank === 1
+                                          ? "text-2xl text-yellow-200"
+                                          : rank === 2
+                                          ? "text-xl text-gray-200"
+                                          : "text-xl text-amber-200"
+                                        : "text-xl text-cyan-200"
+                                    }`}
+                                  >
                                     {player.totalScore.toLocaleString()}
                                   </div>
                                 </td>

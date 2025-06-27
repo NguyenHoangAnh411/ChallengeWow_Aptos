@@ -103,5 +103,6 @@ export interface LeaderboardEntry {
   username: string;
   totalScore: number;
   gamesWon: number;
-  rank: string;
+  rank: number;
+  tier: string;
 }
