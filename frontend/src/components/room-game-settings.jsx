@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Settings, Info, Plus, Minus } from "lucide-react";
-import { DEFAULT_GAME_SETTINGS } from "@/app/config/GameSettings";
 
 const Card = ({ children, className }) => (
   <div className={`rounded-lg ${className}`}>{children}</div>

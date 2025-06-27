@@ -115,29 +115,85 @@ class WebSocketController:
         game_end_time = datetime.now(timezone.utc)
         room.ended_at = game_end_time
         
-        # Sắp xếp players theo điểm số (leaderboard)
-        sorted_players = sorted(room.players, key=lambda x: x.score, reverse=True)
+        # Tạo results và tính toán điểm số từ answers
+        results = []
+        for p in room.players:
+            # Lấy answers từ service (chú ý thứ tự tham số)
+            answers = await self.answer_service.get_answers_by_wallet_id(room_id, p.wallet_id)
+            if answers is None:
+                answers = []
+            
+            # Convert Answer objects to dict format for compatibility
+            valid_answers = []
+            for a in answers:
+                if hasattr(a, 'score'):
+                    valid_answers.append({
+                        "score": a.score,
+                        "question_id": a.question_id,
+                        "response_time": getattr(a, 'response_time', 0),
+                        "is_correct": getattr(a, 'is_correct', a.score > 0)
+                    })
+                elif isinstance(a, dict) and "score" in a:
+                    valid_answers.append(a)
+            
+            if not valid_answers and p.answers:
+                for a in p.answers:
+                    valid_answers.append({
+                        "score": a.score,
+                        "question_id": a.question_id,
+                        "response_time": getattr(a, 'response_time', 0),
+                        "is_correct": getattr(a, 'is_correct', a.score > 0)
+                    })
+            
+            score = sum(a["score"] for a in valid_answers)
+            results.append({
+                "wallet": p.wallet_id,
+                "oath": p.username,
+                "score": score,
+                "answers": valid_answers
+            })
+        
+        # Xác định winner
+        winner = max(results, key=lambda x: x['score']) if results else None
+        winner_wallet = winner['wallet'] if winner else None
+        
+        # Cập nhật is_winner trực tiếp trên object Player trong RAM
+        for p in room.players:
+            p.is_winner = (p.wallet_id == winner_wallet)
+        
+        # Sắp xếp results theo điểm số để tạo leaderboard
+        sorted_results = sorted(results, key=lambda x: x['score'], reverse=True)
         
         # Tính toán thống kê game
         total_players = len(room.players)
         total_questions = room.total_questions
         
-        # Chuẩn bị leaderboard với ranking
+        # Chuẩn bị leaderboard với ranking chi tiết
         leaderboard = []
-        for idx, player in enumerate(sorted_players):
-            # Tính accuracy (cần implement logic lưu correct answers per player)
-            # Tạm thời giả sử có method để lấy player stats
+        for idx, result in enumerate(sorted_results):
+            # Tìm player object để lấy thêm thông tin
+            player = next((p for p in room.players if p.wallet_id == result["wallet"]), None)
+            
+            # Tính toán thống kê chi tiết
+            correct_answers = len([a for a in result["answers"] if a.get("score", 0) > 0])
+            total_answers = len(result["answers"])
+            accuracy = (correct_answers / total_answers * 100) if total_answers > 0 else 0.0
+            
+            # Tính average response time nếu có dữ liệu
+            response_times = [a.get("response_time", 0) for a in result["answers"] if "response_time" in a]
+            average_time = sum(response_times) / len(response_times) if response_times else 0.0
+            
             player_stats = {
                 "rank": idx + 1,
-                "walletId": player.wallet_id,
-                "username": player.username,
-                "avatar": getattr(player, 'avatar', None),
-                "score": player.score,
-                "correctAnswers": 0,  # TODO: Implement tracking correct answers
-                "totalAnswers": total_questions,
-                "accuracy": 0.0,  # TODO: Calculate from correct/total ratio
-                "averageTime": 0.0,  # TODO: Calculate average response time
-                "isWinner": idx == 0,  # First place is winner
+                "walletId": result["wallet"],
+                "username": result["oath"],
+                "avatar": getattr(player, 'avatar', None) if player else None,
+                "score": result["score"],
+                "correctAnswers": correct_answers,
+                "totalAnswers": total_answers,
+                "accuracy": round(accuracy, 2),
+                "averageTime": round(average_time, 2),
+                "isWinner": result["wallet"] == winner_wallet,
                 "reward": 0  # TODO: Calculate based on ranking and room settings
             }
             leaderboard.append(player_stats)
@@ -148,22 +204,27 @@ class WebSocketController:
             "totalQuestions": total_questions,
             "gameMode": getattr(room, 'game_mode', 'standard'),
             "gameDuration": (game_end_time - room.started_at).total_seconds(),
-            "averageScore": sum(p.score for p in room.players) / total_players if total_players > 0 else 0,
-            "highestScore": sorted_players[0].score if sorted_players else 0,
+            "averageScore": sum(r['score'] for r in results) / total_players if total_players > 0 else 0,
+            "highestScore": sorted_results[0]['score'] if sorted_results else 0,
             "questionBreakdown": {
-                "easy": room.easy_questions,
-                "medium": room.medium_questions,
-                "hard": room.hard_questions
+                "easy": getattr(room, 'easy_questions', 0),
+                "medium": getattr(room, 'medium_questions', 0),
+                "hard": getattr(room, 'hard_questions', 0)
             }
         }
 
-        # Update player statistics in database
-        await self._update_player_statistics(room, leaderboard)
+        # Cập nhật bảng users với thống kê (await vì method là async)
+        for result in results:
+            await self.user_stats_repo.update_user_stats(
+                wallet_id=result["wallet"],
+                score=result["score"],
+                is_winner=(result["wallet"] == winner_wallet)
+            )
         
         # Save updated room
         await self.room_service.save_room(room)
 
-        # Broadcast game end to all players
+        # Broadcast game end với leaderboard chi tiết
         await self.manager.broadcast_to_room(room_id, {
             "type": "game_ended",
             "payload": {
@@ -172,8 +233,18 @@ class WebSocketController:
                 "winner": leaderboard[0] if leaderboard else None,
                 "endedAt": int(game_end_time.timestamp() * 1000),
                 "roomId": room_id
-            }
+            },
+            # Giữ lại format cũ để tương thích
+            "results": [{"wallet": r["wallet"], "oath": r["oath"], "score": r["score"]} for r in results],
+            "winner_wallet": winner_wallet
         })
+
+        # Broadcast clear local storage
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "clear_local_storage"
+        })
+
+        print(f"[GAME_ENDED] Room {room_id} finished. Results: {results}")
 
         # Schedule room cleanup after some time
         async def cleanup_room():
@@ -318,6 +389,7 @@ class WebSocketController:
         room.hard_questions = hard_count
         room.current_index = 0
         room.question_configs = QUESTION_CONFIG
+        room.time_per_question = settings.get("timePerQuestion", 10)
         room.started_at = datetime.now(timezone.utc)
 
         await self.room_service.save_room(room)
@@ -504,16 +576,15 @@ class WebSocketController:
 
         await self.room_service.save_room(room)
 
-        # Kiểm tra xem tất cả players đã trả lời chưa
-        # Thay vì query database, sử dụng logic đơn giản hơn
-        # Chỉ cần đếm số players và so sánh với số answers đã submit
-        all_answered = True
-        # TODO: Implement logic đếm answers đã submit cho câu hỏi hiện tại
-        # Tạm thời bỏ qua logic này để tránh lỗi database
-        
-        # Nếu tất cả players đã trả lời, hiển thị kết quả và chuyển câu hỏi
-        if all_answered:
-            await self._show_question_result(room_id)
+        try:
+            submitted_answers = await self.answer_service.get_answers_by_room_and_question(
+                room_id=room_id,
+                question_index=room.current_index
+            )
+            if submitted_answers >= len(room.players):
+                await self._show_question_result(room_id)
+        except Exception as e:
+            print(f"Error checking submitted answers: {e}")
 
     # ✅ Helper function để show kết quả câu hỏi (IMPROVED)
     async def _show_question_result(self, room_id: str):

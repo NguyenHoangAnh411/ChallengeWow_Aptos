@@ -118,7 +118,7 @@ export default function WaitingRoom({
           medium: data.mediumQuestions,
           hard: data.hardQuestions,
         },
-        timePerQuestion: data.countdownDuration,
+        timePerQuestion: data.timePerQuestion,
       });
 
       if (currentUser) {
@@ -256,15 +256,16 @@ export default function WaitingRoom({
             setStartAt(gameData.startAt);
             setCountdown(gameData.countdownDuration);
             setCanStart(true);
+            setCurrentRoom({
+              ...currentRoom,
+              countdownDuration: gameData.countdownDuration,
+              startedAt: gameData.startAt,
+            });
             toast({
               title: "Game Starting!",
               description: "Get ready for the first question...",
               variant: "default",
             });
-            
-            setTimeout(() => {
-              router.push(`/room/${roomId}`);
-            }, 1000);
 
             break;
 

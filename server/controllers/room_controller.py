@@ -41,6 +41,11 @@ class RoomController:
         try:
             existing_players = await self.player_service.get_player_by_wallet_id(request.wallet_id)
             for p in existing_players:
+                room_id = p.room_id
+                current_room = await self.room_service.get_room(room_id)
+                if not current_room or current_room.status == GAME_STATUS.FINISHED:
+                    break
+                
                 if p.player_status not in [PLAYER_STATUS.QUIT, PLAYER_STATUS.FINISHED]:
                     raise HTTPException(status_code=400, detail=f"Player is already in an active room {p.room_id}")
 

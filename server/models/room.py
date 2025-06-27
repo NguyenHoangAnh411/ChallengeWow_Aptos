@@ -22,7 +22,7 @@ class Room(CamelModel):
     medium_questions: int = 3
     hard_questions: int = 2
     countdown_duration: int = 10
-    time_per_question: int = 0
+    time_per_question: int = 10
     entry_fee: float = 0
     prize: float = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -52,6 +52,7 @@ export default function ChallengeRoom({
   const [roomTimeRemaining, setRoomTimeRemaining] = useState("2:45");
   const [gameResults, setGameResults] = useState<any[]>([]);
   const [gameStatus, setGameStatus] = useState("waiting");
+  const [totalQuestions, setTotalQuestions] = useState(0);
   const [countdown, setCountdown] = useState<number>(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionEndAt, setQuestionEndAt] = useState<number | null>(null);
@@ -81,6 +82,7 @@ export default function ChallengeRoom({
       try {
         const room: Room = await fetchRoomById(roomId);
         setCurrentRoom(room);
+        setTotalQuestions(currentRoom.totalQuestions);
         setGameStatus(room.status);
         setStartAt(room.startedAt);
         if (room.status === RoomStatus.WAITING) {
@@ -198,13 +200,10 @@ export default function ChallengeRoom({
     onMessage: (data) => {
       switch (data.type) {
         case "game_started":
-          // Handle game_started event - this is missing in your current code
           if (data.payload) {
             const { questions, startAt, totalQuestions, countdownDuration } =
               data.payload;
-            setQuestions(questions);
             setStartAt(startAt);
-            setGameStatus(RoomStatus.IN_PROGRESS);
 
             // Store in localStorage for persistence
             if (typeof window !== "undefined") {
@@ -217,17 +216,7 @@ export default function ChallengeRoom({
         case "player_answered":
           updatePlayerStatus(data.playerId, "answered", data.responseTime);
           break;
-        case "game_started":
-          const gameData = data.payload;
-          setStartAt(gameData.startAt);
-          setCountdown(gameData.countdownDuration);
-          setGameStatus("playing");
-          toast({
-            title: "Game Started!",
-            description: "Get ready for the first question...",
-            variant: "default",
-          });
-          break;
+
         case "next_question": {
           // Clear timeout fallback when receiving new question
           if (nextQuestionTimeoutRef.current) {
@@ -244,14 +233,18 @@ export default function ChallengeRoom({
             break;
           }
           // Gọi trực tiếp zustand store để tránh closure sai
+          setCountdown(data.payload.timing.timePerQuestion);
           useGameState.getState().setCurrentQuestion(data.payload.question);
           console.log("Received next_question:", data.payload.question);
-          setQuestionNumber((prev) => prev + 1);
+          setQuestionNumber(data.payload.progress.current);
           setSelectedAnswer(null);
           setHasAnswered(false);
           setQuestionEndAt(data.payload.timing?.questionEndAt);
           if (typeof window !== "undefined") {
-            localStorage.setItem("questionEndAt", String(data.payload.timing?.questionEndAt));
+            localStorage.setItem(
+              "questionEndAt",
+              String(data.payload.timing?.questionEndAt)
+            );
           }
 
           break;
@@ -418,14 +411,6 @@ export default function ChallengeRoom({
   }, []);
 
   useEffect(() => {
-    console.log("Current question (state):", currentQuestion);
-  }, [currentQuestion]);
-
-  useEffect(() => {
-    console.log("Questions (state):", questions);
-  }, [questions]);
-
-  useEffect(() => {
     // Nếu đã hết game thì không đặt timeout fallback nữa
     if (gameStatus === RoomStatus.FINISHED) return;
     if (!currentQuestion) return;
@@ -450,42 +435,6 @@ export default function ChallengeRoom({
         clearTimeout(nextQuestionTimeoutRef.current);
     };
   }, [currentQuestion, gameStatus]);
-
-  const handleAnswerSelect = (answer: string) => {
-    if (hasAnswered) return;
-    setSelectedAnswer(answer);
-    setHasAnswered(true);
-    if (currentQuestion && typeof window !== "undefined") {
-      localStorage.setItem(`answered_${currentQuestion.id}`, answer);
-    }
-    sendMessage({
-      type: "submit_answer",
-      roomId: currentRoom?.id,
-      answer,
-      responseTime: currentRoom?.countdownDuration || 15 - questionCountdown,
-    });
-    toast({
-      title: "Answer Submitted",
-      description: "Your answer has been recorded!",
-    });
-  };
-
-  const handleTimeUp = () => {
-    if (!hasAnswered) {
-      setHasAnswered(true);
-      sendMessage({
-        type: "submit_answer",
-        roomId: currentRoom?.id,
-        answer: null,
-        responseTime: currentRoom?.countdownDuration || 0,
-      });
-      toast({
-        title: "Time's Up!",
-        description: "Moving to next question...",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleLeaveRoom = async () => {
     try {
@@ -676,7 +625,7 @@ export default function ChallengeRoom({
               <div className="flex items-center space-x-2 px-4 py-2 glass-morphism rounded-lg">
                 <HelpCircle className="w-5 h-5 text-neon-blue" />
                 <span className="font-orbitron font-bold text-neon-blue">
-                  {questionNumber}/{questions.length}
+                  {questionNumber}/{totalQuestions}
                 </span>
               </div>
             </motion.div>
@@ -798,4 +747,4 @@ export default function ChallengeRoom({
       </div>
     </div>
   );
-} 
+}
