@@ -81,8 +81,27 @@ export default function ChallengeRoom({
     async function loadRoomData() {
       try {
         const room: Room = await fetchRoomById(roomId);
+        console.log("[DEBUG] Room data received:", room);
+        
+        if (!room) {
+          throw new Error("Room data is null or undefined");
+        }
+        
+        if (typeof room.totalQuestions !== 'number') {
+          console.warn("[DEBUG] totalQuestions is not a number:", room.totalQuestions);
+          // Try alternative field names
+          if (typeof (room as any).total_questions === 'number') {
+            room.totalQuestions = (room as any).total_questions;
+            console.log("[DEBUG] Using total_questions field:", room.totalQuestions);
+          } else {
+            // Set a default value if totalQuestions is missing
+            room.totalQuestions = 10;
+            console.log("[DEBUG] Using default totalQuestions:", room.totalQuestions);
+          }
+        }
+        
         setCurrentRoom(room);
-        setTotalQuestions(currentRoom.totalQuestions);
+        setTotalQuestions(room.totalQuestions); // Use room instead of currentRoom
         setGameStatus(room.status);
         setStartAt(room.startedAt);
         if (room.status === RoomStatus.WAITING) {
@@ -218,6 +237,7 @@ export default function ChallengeRoom({
           break;
 
         case "next_question": {
+          console.log("[DEBUG] Received next_question, current gameStatus:", gameStatus);
           // Clear timeout fallback when receiving new question
           if (nextQuestionTimeoutRef.current) {
             clearTimeout(nextQuestionTimeoutRef.current);
@@ -225,12 +245,21 @@ export default function ChallengeRoom({
           }
           // Nếu không còn câu hỏi (server gửi null hoặc hết danh sách)
           if (!data.payload?.question) {
+            console.log("[DEBUG] No question in payload, ending game");
             setGameStatus("finished");
             setCurrentQuestion(null);
             if (typeof window !== "undefined") {
               localStorage.setItem("gameEnded", "1");
             }
             break;
+          }
+          // Reset game status to in_progress when receiving new question
+          console.log("[DEBUG] Setting gameStatus to in_progress");
+          setGameStatus("in_progress");
+          // Clear gameEnded flag since we're continuing the game
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("gameEnded");
+            console.log("[DEBUG] Cleared gameEnded from localStorage");
           }
           // Gọi trực tiếp zustand store để tránh closure sai
           setCountdown(data.payload.timing.timePerQuestion);
@@ -290,16 +319,46 @@ export default function ChallengeRoom({
               data.payload;
 
             console.log("Question result:", data.payload);
+            
+            // ✅ FIXED: Show question result to user
+            toast({
+              title: "Question Result",
+              description: `Correct answer: ${correctAnswer}`,
+              variant: "default",
+            });
+            
+            // ✅ FIXED: Update leaderboard if provided
+            if (leaderboard && Array.isArray(leaderboard)) {
+              // Update player scores in game state
+              leaderboard.forEach((player: any) => {
+                updatePlayerStatus(player.walletId, "score", player.score);
+              });
+            }
+            
+            // ✅ FIXED: Store result for current question
+            if (currentQuestion && typeof window !== "undefined") {
+              localStorage.setItem(
+                `result_${currentQuestion.id}`,
+                JSON.stringify({
+                  correctAnswer,
+                  explanation,
+                  answerStats,
+                  leaderboard
+                })
+              );
+            }
           }
           break;
 
         case "game_ended":
+          console.log("[DEBUG] Received game_ended message");
           setGameResults(data.payload?.leaderboard || []);
           setGameStatus("finished");
           setWinnerWallet(data.payload?.winner?.walletId || null);
           // Lưu trạng thái đã kết thúc game vào localStorage
           if (typeof window !== "undefined") {
             localStorage.setItem("gameEnded", "1");
+            console.log("[DEBUG] Set gameEnded in localStorage");
           }
           break;
 
@@ -340,6 +399,9 @@ export default function ChallengeRoom({
   const handleAnswerSelect = (answer: string) => {
     if (hasAnswered) return;
 
+    console.log("[DEBUG] handleAnswerSelect called with answer:", answer);
+    console.log("[DEBUG] Current question:", currentQuestion);
+
     setSelectedAnswer(answer);
     setHasAnswered(true);
 
@@ -347,20 +409,25 @@ export default function ChallengeRoom({
       localStorage.setItem(`answered_${currentQuestion.id}`, answer);
     }
 
-    // Calculate response time correctly
+    // ✅ FIXED: Calculate response time correctly using server timing
     const responseTime = questionEndAt
       ? Math.max(0, questionEndAt - Date.now())
-      : (currentRoom?.countdownDuration || 0) - questionCountdown;
+      : 0; // Fallback if no questionEndAt
 
-    sendMessage({
+    const messageData = {
       type: "submit_answer",
       data: {
         // Wrap in data object to match backend structure
         roomId: currentRoom?.id,
         answer,
         responseTime: Math.abs(responseTime), // Ensure positive value
+        questionStartAt: questionEndAt ? questionEndAt - (currentRoom?.timePerQuestion || 20) * 1000 : Date.now(),
       },
-    });
+    };
+
+    console.log("[DEBUG] Sending submit_answer message:", messageData);
+
+    sendMessage(messageData);
 
     toast({
       title: "Answer Submitted",
@@ -370,18 +437,25 @@ export default function ChallengeRoom({
 
   // Fixed time up handler
   const handleTimeUp = () => {
+    console.log("[DEBUG] handleTimeUp called - hasAnswered:", hasAnswered);
     if (!hasAnswered) {
       setHasAnswered(true);
 
-      sendMessage({
+      // ✅ FIXED: Send empty answer when time is up
+      const messageData = {
         type: "submit_answer",
         data: {
           // Wrap in data object
           roomId: currentRoom?.id,
-          answer: null, // No answer selected
-          responseTime: currentRoom?.countdownDuration || 0,
+          answer: "", // Empty answer when time is up
+          responseTime: questionEndAt ? Math.max(0, questionEndAt - Date.now()) : 0,
+          questionStartAt: questionEndAt ? questionEndAt - (currentRoom?.timePerQuestion || 20) * 1000 : Date.now(),
         },
-      });
+      };
+
+      console.log("[DEBUG] Sending time up message:", messageData);
+
+      sendMessage(messageData);
 
       toast({
         title: "Time's Up!",
@@ -404,7 +478,9 @@ export default function ChallengeRoom({
   useEffect(() => {
     if (typeof window !== "undefined") {
       const ended = localStorage.getItem("gameEnded");
+      console.log("[DEBUG] Checking localStorage gameEnded:", ended);
       if (ended === "1") {
+        console.log("[DEBUG] Setting gameStatus to FINISHED from localStorage");
         setGameStatus(RoomStatus.FINISHED);
       }
     }
@@ -497,7 +573,14 @@ export default function ChallengeRoom({
                         : "cursor-pointer"
                     }
                   `}
-                  onClick={() => !isDisabled && handleAnswerSelect(opt)}
+                  onClick={() => {
+                    console.log("[DEBUG] Button clicked with option:", opt);
+                    console.log("[DEBUG] isDisabled:", isDisabled);
+                    if (!isDisabled) {
+                      console.log("[DEBUG] Calling handleAnswerSelect with:", opt);
+                      handleAnswerSelect(opt);
+                    }
+                  }}
                   disabled={isDisabled}
                 >
                   <span className="mr-2 font-bold text-neon-purple text-xl">
@@ -647,8 +730,9 @@ export default function ChallengeRoom({
                     <Trophy className="w-7 h-7 text-yellow-300 drop-shadow" />
                     Winner:
                     <span className="text-yellow-300">
-                      {gameResults.find((p) => p.wallet === winnerWallet)
-                        ?.oath || winnerWallet}
+                      {gameResults.find((p) => p.wallet === winnerWallet)?.username ||
+                        gameResults.find((p) => p.wallet === winnerWallet)?.oath ||
+                        winnerWallet}
                     </span>
                   </div>
                 )}
@@ -673,10 +757,10 @@ export default function ChallengeRoom({
                           }`}
                         >
                           <td className="px-6 py-3 font-mono text-neon-blue">
-                            {player.wallet}
+                            {player.walletId || player.wallet || "Unknown"}
                           </td>
                           <td className="px-6 py-3 text-neon-purple">
-                            {player.oath}
+                            {player.username || player.oath || "Unknown"}
                           </td>
                           <td className="px-6 py-3 text-xl text-green-400 font-orbitron">
                             {player.score}

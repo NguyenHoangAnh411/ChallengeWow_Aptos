@@ -14,8 +14,7 @@ class PlayerRepository(IPlayerRepository):
 
     async def save_all(self, room_id: str, players: List[Player]) -> None:
         try:
-            await self.supabase.table(self.table).delete().eq("room_id", room_id).execute()
-
+            # Instead of delete + insert, use upsert to handle duplicates
             data = []
             for p in players:
                 data.append({
@@ -31,11 +30,20 @@ class PlayerRepository(IPlayerRepository):
                 })
 
             if data:
+                # Remove duplicates based on room_id and wallet_id
                 unique_data = list({
                     (d["room_id"], d["wallet_id"]): d for d in data
                 }.values())
 
-                await self.supabase.table(self.table).insert(unique_data).execute()
+                # Use upsert to handle existing records
+                for player_data in unique_data:
+                    try:
+                        await self.supabase.table(self.table).upsert(
+                            player_data,
+                            on_conflict="room_id,wallet_id"
+                        ).execute()
+                    except Exception as e:
+                        print(f"Error upserting player {player_data['wallet_id']} in room {room_id}: {e}")
 
         except Exception as e:
             print(f"Error in save_all for room {room_id}: {e}")

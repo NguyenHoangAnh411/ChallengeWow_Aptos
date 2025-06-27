@@ -29,7 +29,11 @@ class RoomController:
         return await self.room_service.get_rooms()
 
     async def get_room_by_id(self, room_id: str) -> Room | None:
-        return await self.room_service.get_room(room_id)
+        room = await self.room_service.get_room(room_id)
+        print(f"[DEBUG] get_room_by_id({room_id}) returned: {room}")
+        if room:
+            print(f"[DEBUG] Room fields: total_questions={getattr(room, 'total_questions', 'NOT_FOUND')}, totalQuestions={getattr(room, 'totalQuestions', 'NOT_FOUND')}")
+        return room
 
     async def get_room_by_code(self, room_code: str) -> Room | None:
         room = await self.room_service.get_room_by_code(room_code)

@@ -79,6 +79,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const sendMessage = (message: any) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       const messageString = JSON.stringify(message);
+      console.log("[DEBUG] WebSocket sending message:", messageString);
       socketRef.current.send(messageString);
     } else {
       console.log(

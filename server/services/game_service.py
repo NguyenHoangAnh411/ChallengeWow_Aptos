@@ -41,7 +41,9 @@ class GameService:
 
         for _ in range(5):
             question = self.question_service.get_random_question()
-            room.current_question = question
+            if room.current_questions is None:
+                room.current_questions = []
+            room.current_questions.append(question)
             self.room_service.save_room(room)
 
             await asyncio.sleep(15)

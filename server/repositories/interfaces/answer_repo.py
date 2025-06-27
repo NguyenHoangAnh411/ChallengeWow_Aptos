@@ -27,6 +27,10 @@ class IAnswerRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_answers_by_room_and_question_id(self, room_id: str, question_id: str) -> List[Answer]:
+        pass
+
+    @abstractmethod
     async def get_score_by_user(self, room_id: str, wallet_id: str) -> float:
         """Tính tổng điểm của người chơi trong phòng"""
         pass

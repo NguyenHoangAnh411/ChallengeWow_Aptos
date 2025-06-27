@@ -15,5 +15,13 @@ class AnswerService:
     async def get_answers_by_room_and_question(self, room_id: str, question_index: int) -> List[Answer]:
         return await self.answer_repo.get_answers_by_room_and_question(room_id, question_index)
 
+    async def get_answers_by_room_and_question_id(self, room_id: str, question_id: str) -> List[Answer]:
+        return await self.answer_repo.get_answers_by_room_and_question_id(room_id, question_id)
+
     async def save_answer(self, answer: Answer):
         await self.answer_repo.save(answer)
+
+    async def get_answer_count_by_room_and_question(self, room_id: str, question_index: int) -> int:
+        """Get the count of answers for a specific question in a room"""
+        answers = await self.answer_repo.get_answers_by_room_and_question(room_id, question_index)
+        return len(answers)

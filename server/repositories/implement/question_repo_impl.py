@@ -47,6 +47,8 @@ class QuestionRepository(IQuestionRepository):
                 .execute()
             )
             questions = res.data or []
+            print(f"[DEBUG] Found {len(questions)} questions for difficulty '{difficulty.value}', requested {limit}")
+            
             if len(questions) <= limit:
                 return [Question(**q) for q in questions]
             return [Question(**q) for q in random.sample(questions, limit)]
