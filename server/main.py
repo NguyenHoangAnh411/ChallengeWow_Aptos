@@ -97,7 +97,7 @@ async def lifespan(app: FastAPI):
 app.router.lifespan_context = lifespan
 
 # -------------------- Uvicorn Runner --------------------
-PORT = int(os.getenv("PORT") or 9000)
+PORT = int(os.getenv("PORT") or 3366)
 HOST = "127.0.0.1"
 
 if __name__ == "__main__":

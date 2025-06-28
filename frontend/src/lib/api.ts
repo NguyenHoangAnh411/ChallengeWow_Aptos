@@ -2,7 +2,7 @@
 
 import { GameSettings } from "@/app/config/GameSettings";
 
-const BASE_URL = "http://localhost:9000/api"; // Sửa lại nếu backend chạy port khác
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function fetchData(endpoint: string, options: RequestInit = {}) {
   const res = await fetch(`${BASE_URL}${endpoint}`, options);

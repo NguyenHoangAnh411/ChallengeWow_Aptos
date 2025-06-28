@@ -147,7 +147,6 @@ export default function WaitingRoom({
     url: currentUser?.walletId
       ? `/${roomId}?wallet_id=${currentUser?.walletId}`
       : undefined,
-    baseUrl: "localhost:9000",
     onMessage: (data) => {
       try {
         switch (data.type) {
