@@ -4,6 +4,7 @@ class PLAYER_STATUS(str, Enum):
     ACTIVE = "active"  # Đang chơi
     WAITING = "waiting"  # Trong phòng chờ
     READY = "ready"
+    FINISHED = "finished"
     QUIT = "quit"  # Chủ động thoát
     DISCONNECTED = "disconnected"  # Mất kết nối
     ELIMINATED = "eliminated"  # Trả lời sai, bị loại

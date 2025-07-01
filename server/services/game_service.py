@@ -36,12 +36,14 @@ class GameService:
 
     async def start_game(self, room: Room):
         room.status = GAME_STATUS.IN_PROGRESS
-        room.start_time = datetime.now(timezone.utc)
+        room.started_at = datetime.now(timezone.utc)
         self.room_service.save_room(room)
 
         for _ in range(5):
             question = self.question_service.get_random_question()
-            room.current_question = question
+            if room.current_questions is None:
+                room.current_questions = []
+            room.current_questions.append(question)
             self.room_service.save_room(room)
 
             await asyncio.sleep(15)

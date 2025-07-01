@@ -1,30 +1,10 @@
 import os
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
-from controllers.websocket_controller import WebSocketController
-from repositories.implement.room_repo_impl import RoomRepository
-from repositories.implement.player_repo_impl import PlayerRepository
-from repositories.implement.question_repo_impl import QuestionRepository
-from repositories.implement.answer_repo_impl import AnswerRepository
-from repositories.implement.zkproof_repo_impl import ZkProofRepository
-
+from config.database import init_async_supabase
 from routers.websocket_router import create_ws_router
-from services.game_service import GameService
-from services.room_service import RoomService
-from services.player_service import PlayerService
-from services.question_service import QuestionService
-from services.answer_service import AnswerService
-from services.websocket_manager import WebSocketManager
-from services.zkproof_service import ZkProofService
-
-from controllers.room_controller import RoomController
-from controllers.player_controller import PlayerController
-from controllers.question_controller import QuestionController
-from controllers.answer_controller import AnswerController
-from controllers.zkproof_controller import ZkProofController
-from controllers.user_controller import UserController
-
 from routers.room_router import create_room_router
 from routers.player_router import create_player_router
 from routers.question_router import create_question_router
@@ -32,6 +12,31 @@ from routers.answer_router import create_answer_router
 from routers.zkproof_router import create_zkproof_router
 from routers.user_router import create_user_router
 
+from controllers.websocket_controller import WebSocketController
+from controllers.room_controller import RoomController
+from controllers.player_controller import PlayerController
+from controllers.question_controller import QuestionController
+from controllers.answer_controller import AnswerController
+from controllers.zkproof_controller import ZkProofController
+from controllers.user_controller import UserController
+
+from services.websocket_manager import WebSocketManager
+from repositories.implement.zkproof_repo_impl import ZkProofRepository
+from services.zkproof_service import ZkProofService
+from services.game_service import GameService
+
+from repositories.implement.room_repo_impl import RoomRepository
+from repositories.implement.player_repo_impl import PlayerRepository
+from repositories.implement.question_repo_impl import QuestionRepository
+from repositories.implement.answer_repo_impl import AnswerRepository
+from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
+
+from services.room_service import RoomService
+from services.player_service import PlayerService
+from services.question_service import QuestionService
+from services.answer_service import AnswerService
+
+# -------------------- App Init --------------------
 app = FastAPI(title="Challenge Wave API")
 
 app.add_middleware(
@@ -42,47 +47,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Repositories
-player_repo = PlayerRepository()
-room_repo = RoomRepository(player_repo=player_repo)
-question_repo = QuestionRepository()
-answer_repo = AnswerRepository()
-zkproof_repo = ZkProofRepository()
+# -------------------- Lifespan --------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    supabase = await init_async_supabase()
+    app.state.async_supabase = supabase
 
-# Services
-room_service = RoomService(room_repo, player_repo, answer_repo)
-player_service = PlayerService(player_repo, room_repo)
-question_service = QuestionService(question_repo)
-answer_service = AnswerService(answer_repo)
-zkproof_service = ZkProofService(zkproof_repo)
-game_service = GameService(room_service, question_service, zkproof_service)
-websocket_manager = WebSocketManager()
+    # Repositories
+    player_repo = PlayerRepository(supabase=supabase)
+    room_repo = RoomRepository(player_repo=player_repo, supabase=supabase)
+    question_repo = QuestionRepository(supabase=supabase)
+    answer_repo = AnswerRepository(supabase=supabase)
+    user_repo = UserRepository(supabase=supabase)
+    user_stats_repo = UserStatsRepository(supabase=supabase)
 
-# Controllers
-room_controller = RoomController(room_service, game_service, player_service, websocket_manager)
-player_controller = PlayerController(player_service, websocket_manager)
-question_controller = QuestionController(question_service)
-answer_controller = AnswerController(answer_service, room_service, game_service)
-zkproof_controller = ZkProofController(zkproof_service)
-user_controller = UserController()
-websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service, answer_service)
+    # Services
+    room_service = RoomService(room_repo, player_repo, answer_repo)
+    player_service = PlayerService(player_repo, room_repo)
+    question_service = QuestionService(question_repo)
+    answer_service = AnswerService(answer_repo)
+    zkproof_service = ZkProofService(ZkProofRepository())
+    game_service = GameService(room_service, question_service, zkproof_service)
+    websocket_manager = WebSocketManager()
 
-# Router
-api_router = APIRouter(prefix="/api")
+    # Controllers
+    app.state.room_controller = RoomController(room_service, game_service, player_service, websocket_manager)
+    app.state.player_controller = PlayerController(player_service, websocket_manager)
+    app.state.question_controller = QuestionController(question_service)
+    app.state.answer_controller = AnswerController(answer_service, room_service, game_service)
+    app.state.user_controller = UserController(user_repo, user_stats_repo)
+    app.state.zkproof_controller = ZkProofController(zkproof_service)
+    app.state.websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service, answer_service, user_repo, user_stats_repo)
 
-# Add your routers to the api_router
-api_router.include_router(create_room_router(room_controller))
-api_router.include_router(create_player_router(player_controller))
-api_router.include_router(create_question_router(question_controller))
-api_router.include_router(create_answer_router(answer_controller))
-api_router.include_router(create_zkproof_router(zkproof_controller))
-api_router.include_router(create_user_router(user_controller))
-ws_router = create_ws_router(websocket_controller)
+    # Router Setup
+    api_router = APIRouter(prefix="/api")
+    api_router.include_router(create_room_router(app.state.room_controller))
+    api_router.include_router(create_player_router(app.state.player_controller))
+    api_router.include_router(create_question_router(app.state.question_controller))
+    api_router.include_router(create_answer_router(app.state.answer_controller))
+    api_router.include_router(create_zkproof_router(app.state.zkproof_controller))
+    api_router.include_router(create_user_router(app.state.user_controller))
 
-app.include_router(api_router)
-app.include_router(ws_router, prefix="/ws")
+    ws_router = create_ws_router(app.state.websocket_controller)
+    app.include_router(ws_router, prefix="/ws")
+    app.include_router(api_router)
 
-PORT = int(os.getenv("PORT")) or 9000
+    yield
+
+app.router.lifespan_context = lifespan
+
+# -------------------- Uvicorn Runner --------------------
+PORT = int(os.getenv("PORT") or 3366)
 HOST = "127.0.0.1"
 
 if __name__ == "__main__":

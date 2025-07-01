@@ -8,32 +8,32 @@ class PlayerController:
         self.player_service = player_service
         self.websocket_manager = websocket_manager
 
-    def get_players(self, room_id: str):
-        players = self.player_service.get_players_by_room(room_id)
+    async def get_players(self, room_id: str):
+        players = await self.player_service.get_players_by_room(room_id)
         if not players:
             raise HTTPException(status_code=404, detail="No players found")
         return players
     
-    async def update_player_status(self, wallet_id: str, status: PLAYER_STATUS):
+    async def update_player_status(self, room_id: str, wallet_id: str, status: PLAYER_STATUS):
         try:
             status_enum = PLAYER_STATUS(status)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid status")
-        
-        self.player_service.update_player_status(wallet_id, status)
-        
-        player = self.player_service.get_player_by_wallet_id(wallet_id)
+
+        result = await self.player_service.update_player_status(room_id, wallet_id, status_enum)
+        if not result or not result.get("success"):
+            raise HTTPException(status_code=404, detail="Player not found")
+
+        player = await self.player_service.get_players_by_wallet_and_room_id(room_id, wallet_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
-        room_id = player.room_id
 
         # Broadcast WebSocket
         await self.websocket_manager.broadcast_to_room(room_id, {
             "type": "player_ready",
             "player": {
                 "wallet_id": wallet_id,
-                "playerStatus": status,
+                "playerStatus": status_enum,
                 "isReady": player.is_ready
             }
         })
-

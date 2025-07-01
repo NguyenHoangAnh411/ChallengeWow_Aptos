@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Settings, Crown, Plus, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Settings,
+  Crown,
+  Plus,
+  Users,
+  RefreshCw,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import RoomCard from "@/components/room-card";
 import { useGameState } from "@/lib/game-state";
@@ -25,6 +32,7 @@ import {
 import { useAccount } from "wagmi";
 import ConnectWalletModal from "@/components/connect-wallet-modal";
 import { RoomStatus } from "@/types/RoomStatus";
+import { RECONNECT_WS } from "@/lib/constants";
 
 export default function Lobby() {
   const router = useRouter();
@@ -44,6 +52,7 @@ export default function Lobby() {
   const [inviteCode, setInviteCode] = useState("");
   const [usernameInput, setUsernameInput] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [hasNewRoom, setHasNewRoom] = useState(false);
 
   // Tham gia phòng hiện tại đang tham gia
   useEffect(() => {
@@ -94,11 +103,13 @@ export default function Lobby() {
   const {
     data: rooms = [],
     isLoading,
+    isFetching,
     refetch,
   } = useQuery<Room[]>({
     queryKey: ["rooms"],
     queryFn: fetchRooms,
-    // refetchInterval: 5000,
+    staleTime: 1000, // 1s stale time để tránh spam
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
@@ -173,26 +184,32 @@ export default function Lobby() {
         variant: "destructive",
       });
       return;
-    }
+    },
   });
 
   const { isWsConnected, sendMessage } = useWebSocket({
     url: "/lobby",
     onMessage: (data) => {
       if (data.type === "room_update") {
-        queryClient.invalidateQueries({ queryKey: ["rooms"] });
+        setHasNewRoom(true);
+        queryClient.refetchQueries({
+          queryKey: ["rooms"],
+          type: "active",
+        });
       }
     },
-    onOpen: async () => {
-      setTimeout(() => {
-        sendMessage({ type: "ping" });
-      }, 0);
-      await refetch();
-    },
-    onClose: () => {
-      console.warn("❌ WebSocket closed.");
-    },
   });
+
+  // Keep connection
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isWsConnected) {
+        sendMessage({ type: "ping" });
+      }
+    }, RECONNECT_WS);
+
+    return () => clearInterval(interval);
+  }, [isWsConnected]);
 
   const handleCreateRoom = () => {
     if (!isConnected) {
@@ -282,7 +299,7 @@ export default function Lobby() {
       <div className="absolute inset-0 neural-network opacity-10"></div>
       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-l from-neon-blue/5 to-transparent rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-r from-neon-purple/5 to-transparent rounded-full blur-3xl"></div>
-  
+
       {/* Enhanced Header */}
       <header className="relative z-10 bg-cyber-darker/80 backdrop-blur-xl border-b border-neon-blue/30 px-4 py-4">
         <div className="container mx-auto">
@@ -296,7 +313,7 @@ export default function Lobby() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push("/")}
+                onClick={() => router.replace("/")}
                 className="text-gray-400 hover:text-neon-blue transition-all duration-300 hover:scale-110 p-2 rounded-lg glass-morphism"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -310,7 +327,7 @@ export default function Lobby() {
                 </h1>
               </div>
             </motion.div>
-  
+
             <motion.div
               className="flex items-center space-x-4"
               initial={{ opacity: 0, x: 20 }}
@@ -337,7 +354,7 @@ export default function Lobby() {
           </div>
         </div>
       </header>
-  
+
       <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Enhanced Sidebar */}
@@ -374,7 +391,7 @@ export default function Lobby() {
                                 : "--")}
                           </span>
                         </div>
-  
+
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-white truncate">
@@ -390,7 +407,7 @@ export default function Lobby() {
                           </div>
                         </div>
                       </div>
-  
+
                       {/* Stats */}
                       <div className="grid grid-cols-1 gap-3">
                         <div className="flex justify-between items-center p-2 bg-neon-blue/10 rounded">
@@ -418,7 +435,7 @@ export default function Lobby() {
                           </span>
                         </div>
                       </div>
-  
+
                       {/* Update Username Form */}
                       <div className="pt-4 mt-4 border-t border-neon-blue/20">
                         <h4 className="font-semibold text-neon-blue text-sm mb-2">
@@ -436,9 +453,7 @@ export default function Lobby() {
                           />
                           <Button
                             onClick={handleSaveUsername}
-                            disabled={
-                              isSavingUsername || !usernameInput.trim()
-                            }
+                            disabled={isSavingUsername || !usernameInput.trim()}
                             className="bg-neon-blue hover:bg-blue-600 px-4 py-2 text-white"
                           >
                             {isSavingUsername ? (
@@ -458,7 +473,7 @@ export default function Lobby() {
                 </CardContent>
               </Card>
             </motion.div>
-  
+
             {/* Enhanced Quick Stats */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -508,7 +523,7 @@ export default function Lobby() {
               </Card>
             </motion.div>
           </div>
-  
+
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* Enhanced Create Room Button */}
@@ -539,9 +554,33 @@ export default function Lobby() {
                 </div>
               </Button>
             </motion.div>
-  
+
             {/* Room List */}
             <div className="space-y-4">
+              {/* Loading indicator nhỏ góc màn hình */}
+              <Button
+                onClick={async () => {
+                  await refetch();
+                  setHasNewRoom(false);
+                }}
+                disabled={isFetching}
+                className="relative bg-neon-blue hover:bg-blue-600 text-white font-bold px-4 py-2 transition-all duration-300 rounded-lg flex items-center space-x-2"
+              >
+                {isFetching ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                <span>Refresh</span>
+
+                {/* 🔔 Badge thông báo dữ liệu mới */}
+                {hasNewRoom && !isFetching && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-bounce shadow-md">
+                    New
+                  </span>
+                )}
+              </Button>
+
               <div className="flex justify-between items-center mb-6 flex-wrap gap-4 relative z-30">
                 <h2 className="text-2xl font-orbitron font-bold">
                   Available Rooms
@@ -566,7 +605,7 @@ export default function Lobby() {
                   </Button>
                 </div>
               </div>
-  
+
               {isLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-blue mx-auto"></div>
@@ -619,7 +658,7 @@ export default function Lobby() {
           </div>
         </div>
       </div>
-  
+
       {/* If user has not connected wallet yet */}
       <ConnectWalletModal
         open={showConnectModal}

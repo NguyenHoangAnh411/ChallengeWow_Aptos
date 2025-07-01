@@ -1,0 +1,215 @@
+from typing import List
+from fastapi import HTTPException, Response, WebSocket, WebSocketDisconnect
+from config.constants import GAME_TIMEOUT_IN_SECOND
+from enums.player_status import PLAYER_STATUS
+from models.answer import Answer
+from models.create_room_request import CreateRoomRequest
+from models.join_request import JoinRoomRequest
+from models.player import Player
+from models.room import Room
+from enums.game_status import GAME_STATUS
+from services.player_service import PlayerService
+from services.room_service import RoomService
+from services.game_service import GameService
+import asyncio
+
+from services.websocket_manager import WebSocketManager
+
+class RoomController:
+    def __init__(
+        self,
+        room_service: RoomService,
+        game_service: GameService,
+        player_service: PlayerService,
+        websocket_manager: WebSocketManager
+    ):
+        self.room_service = room_service
+        self.game_service = game_service
+        self.player_service = player_service
+        self.websocket_manager = websocket_manager
+
+    def get_rooms(self):
+        return self.room_service.get_rooms()
+    
+    def get_room_by_id(self, room_id: str) -> Room | None:
+        return self.room_service.get_room(room_id)
+    
+    def get_room_by_code(self, room_code: str) -> Room | None:
+        data = self.room_service.get_room_by_code(room_code)
+        if not data:
+            raise HTTPException(status_code=404, detail="Room not found")
+        return data
+
+    def create_room(self, request: CreateRoomRequest):
+        try:
+            existing_players = self.player_service.get_player_by_wallet(request.wallet_id)
+            if existing_players:
+                for p in existing_players:
+                    if p.player_status != PLAYER_STATUS.QUIT and not p.quit_at:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Player is already in an active room"
+                        )
+            
+            player = Player(
+                wallet_id=request.wallet_id,
+                username=request.username,
+                room_id="",
+                player_status=PLAYER_STATUS.ACTIVE,
+                is_host=True,
+                is_ready=True
+            )
+
+            room = Room.create(
+                players=[player],
+                total_questions=request.total_questions,
+                countdown_duration=request.countdown_duration
+            )
+            
+            player.room_id = room.id
+            self.room_service.save_room(room)
+            
+            self.websocket_manager.set_room_state(room.id, room.status)
+            
+            return room
+        except Exception as e:
+            print("Error in create_room:", e)
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def join_room(self, request: JoinRoomRequest):
+        room = None
+        if request.room_code:
+            room = self.room_service.get_room_by_code(request.room_code)
+        elif request.room_id:
+            room = self.room_service.get_room(request.room_id)
+       
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        if len(room.players) >= 4:
+            raise HTTPException(status_code=400, detail="Room is full")
+        if room.status != GAME_STATUS.WAITING:
+            raise HTTPException(status_code=400, detail="Game is not available")
+
+        existing_player = next(
+            (p for p in room.players if p.wallet_id == request.wallet_id), None
+        )
+
+        if existing_player:
+            print(f"[JOIN_ROOM] Player {request.wallet_id} already in room {room.id}")
+            player = existing_player
+        else:
+            # 3. Tạo mới player
+            player = Player(
+                wallet_id=request.wallet_id,
+                username=request.username,
+                room_id=room.id,
+            )
+            room.players.append(player)
+            self.room_service.save_room(room)
+
+            await self.websocket_manager.broadcast_to_room(room.id, {
+                "type": "player_joined",
+                "player": player
+            })
+
+        if len(room.players) < 2:
+            self.websocket_manager.start_room_timeout(room.id, GAME_TIMEOUT_IN_SECOND, self.make_timeout_callback(room.id))
+        else:
+            self.websocket_manager.clear_room_timeout(room.id)
+
+        return {"roomId": room.id, "walletId": player.wallet_id}
+
+    async def leave_room(self, wallet_id, room_id):
+        result = self.player_service.leave_room(wallet_id, room_id)
+        
+        is_closed = result.get("closed", False)
+        player_data = result.get("data")
+        
+        if is_closed:
+           self.websocket_manager.disconnect_room_by_room_id(room_id)
+     
+        if not player_data:
+            return result 
+        
+        await self.websocket_manager.broadcast_to_lobby({
+            "type": "room_update",
+            "action": "leave",
+            "roomId": room_id
+        })
+        
+        await self.websocket_manager.broadcast_to_room(room_id, {
+            "type": "player_left",
+            "action": "leave",
+            "payload": {
+                "walletId": player_data.wallet_id,
+                "username": player_data.username
+            }
+        })
+        
+        return result
+
+    def get_current_room(self, wallet_id):
+        players: List[Player] = self.player_service.get_player_by_wallet(wallet_id)
+        if not players or all(p.player_status == PLAYER_STATUS.QUIT for p in players):
+            return Response(status_code=404, content="Not found")
+        
+        # Lấy player còn active
+        active_player = next((p for p in players if p.player_status != PLAYER_STATUS.QUIT), None)
+
+        if not active_player:
+            return Response(status_code=404, content="No active room found")
+
+        return {
+            "roomId": active_player.room_id,
+            "walletId": active_player.wallet_id,
+        }
+
+    def get_room_status(self, room_id: str):
+        room = self.room_service.get_room(room_id)
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        return {
+            "status": room.status,
+            "players": [
+                {"walletId": p.wallet_id, "username": p.username, "score": p.score}
+                for p in room.players
+            ],
+            "currentQuestion": (
+                room.current_question
+                if room.status == GAME_STATUS.IN_PROGRESS
+                else None
+            ),
+        }
+        
+    def get_room_result(self, room_id: str):
+        room: Room = self.room_service.get_room(room_id)
+        if not room:
+            raise HTTPException(status_code=400, detail="Room is not available")
+        
+        if not room.winner_wallet_id:
+            raise HTTPException(status_code=400, detail="Winner not found")
+
+        results = [
+            {
+                "wallet": p.wallet_id,
+                "oath": p.username,
+                "score": sum(a.score if isinstance(a, Answer) else a.get("score", 0) for a in p.answers or [])
+            }
+            for p in room.players
+        ]
+        
+        return {
+            "results": results,
+            "winner_wallet": room.winner_wallet_id
+        }
+    
+    def make_timeout_callback(self, room_id: str):
+        async def on_timeout():
+            if self.websocket_manager.get_room_state(room_id) == GAME_STATUS.WAITING:
+                await self.websocket_manager.broadcast_to_room(room_id, {
+                    "type": "room_closed",
+                    "reason": "timeout"
+                })
+                self.websocket_manager.disconnect_room_by_room_id(room_id)
+                print(f"[ROOM_TIMEOUT] Room {room_id} closed due to inactivity.")
+        return on_timeout

@@ -7,7 +7,7 @@ def create_question_router(controller: QuestionController):
     router = APIRouter()
 
     @router.get("/question/random", response_class=Question)
-    def get_question():
-        return controller.get_random_question()
+    async def get_question():
+        return await controller.get_random_question()
 
     return router

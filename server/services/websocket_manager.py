@@ -1,5 +1,4 @@
 import asyncio
-from typing import Dict, List
 from fastapi import WebSocket
 from enums.game_status import GAME_STATUS
 from helpers.json_helper import send_json_safe
@@ -7,24 +6,22 @@ import asyncio
 
 class WebSocketManager:
     def __init__(self):
-        self.room_connections: Dict[str, List[WebSocket]] = {}
-        self.lobby_connections: List[WebSocket] = []
+        self.room_connections: dict[str, set[WebSocket]] = {}
+        self.lobby_connections: set[WebSocket] = set()
         self.player_connections: dict[str, WebSocket] = {}
         self.room_states: dict[str, GAME_STATUS] = {}
         self.room_timeouts: dict[str, asyncio.Task] = {}
 
     async def connect_room(self, websocket: WebSocket, room_id: str, wallet_id: str):
         await websocket.accept()
-        if room_id not in self.room_connections:
-            self.room_connections[room_id] = []
-        self.room_connections[room_id].append(websocket)
+        self.room_connections.setdefault(room_id, set()).add(websocket)
         self.player_connections[wallet_id] = websocket
         print(f"✅ {wallet_id} connected to room {room_id}")
-
+    
     def disconnect_room(self, websocket: WebSocket, room_id: str, wallet_id: str):
         if room_id in self.room_connections:
             if websocket in self.room_connections[room_id]:
-                self.room_connections[room_id].remove(websocket)
+                self.room_connections[room_id].discard(websocket)
 
         # Gỡ kết nối theo wallet_id luôn
         if self.player_connections.get(wallet_id) == websocket:
@@ -54,8 +51,8 @@ class WebSocketManager:
     async def get_player_socket_by_wallet(self, wallet_id: str) -> WebSocket | None:
         return self.player_connections.get(wallet_id)
     
-    def get_players_in_room(self, room_id: str) -> List[WebSocket]:
-        return self.room_connections.get(room_id, [])
+    def get_players_in_room(self, room_id: str) -> list[WebSocket]:
+        return list(self.room_connections.get(room_id, set()))
 
     async def broadcast_to_room(self, room_id: str, message: dict):
         connections = self.room_connections.get(room_id, [])
@@ -67,11 +64,11 @@ class WebSocketManager:
             
     async def connect_lobby(self, websocket: WebSocket):
         await websocket.accept()
-        self.lobby_connections.append(websocket)
+        self.lobby_connections.add(websocket)
 
     def disconnect_lobby(self, websocket: WebSocket):
         if websocket in self.lobby_connections:
-            self.lobby_connections.remove(websocket)
+            self.lobby_connections.discard(websocket)
 
     async def broadcast_to_lobby(self, message: dict):
         for ws in self.lobby_connections:

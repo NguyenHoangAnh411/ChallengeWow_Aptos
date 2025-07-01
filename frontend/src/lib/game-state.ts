@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { User } from "@/types/schema";
+import type { Player, Question, Room, User } from "@/types/schema";
 
 interface GameState {
   currentUser: User | null;
@@ -10,19 +10,25 @@ interface GameState {
   timeRemaining: number;
   isGameActive: boolean;
   players: (any & { status?: string; responseTime?: number })[];
-  questions: any[];
+  questions: Question[];
   startAt: number | null;
-  
+
   // Actions
   setCurrentUser: (user: User | null) => void;
-  setCurrentRoom: (room: any | null) => void;
-  setCurrentQuestion: (question: any | null) => void;
+  setCurrentRoom: (room: Room | null) => void;
+  setCurrentQuestion: (question: Question | null) => void;
   setTimeRemaining: (time: number) => void;
   setIsGameActive: (active: boolean) => void;
-  setPlayers: (players: (any & { status?: string; responseTime?: number })[]) => void;
-  setQuestions: (questions: any[]) => void;
+  setPlayers: (
+    players: (Player & { status?: string; responseTime?: number })[]
+  ) => void;
+  setQuestions: (questions: Question[]) => void;
   setStartAt: (startAt: number | null) => void;
-  updatePlayerStatus: (playerId: number, status: string, responseTime?: number) => void;
+  updatePlayerStatus: (
+    playerId: number,
+    status: string,
+    responseTime?: number
+  ) => void;
 }
 
 export const useGameState = create<GameState>((set, get) => ({
@@ -46,13 +52,11 @@ export const useGameState = create<GameState>((set, get) => ({
   setPlayers: (players) => set({ players }),
   setQuestions: (questions) => set({ questions }),
   setStartAt: (startAt) => set({ startAt }),
-  
+
   updatePlayerStatus: (playerId, status, responseTime) => {
     const { players } = get();
-    const updatedPlayers = players.map(player => 
-      player.id === playerId 
-        ? { ...player, status, responseTime }
-        : player
+    const updatedPlayers = players.map((player) =>
+      player.id === playerId ? { ...player, status, responseTime } : player
     );
     set({ players: updatedPlayers });
   },

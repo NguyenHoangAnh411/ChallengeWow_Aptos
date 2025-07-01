@@ -1,6 +1,8 @@
 // src/lib/api.ts
 
-const BASE_URL = "http://localhost:9000/api"; // Sửa lại nếu backend chạy port khác
+import { GameSettings } from "@/app/config/GameSettings";
+
+const BASE_URL = "/api";
 
 async function fetchData(endpoint: string, options: RequestInit = {}) {
   const res = await fetch(`${BASE_URL}${endpoint}`, options);
@@ -59,8 +61,12 @@ export async function fetchPlayers(roomId: string) {
   return fetchData(`/room/${roomId}/players`);
 }
 
-export async function changePlayerStatus(walletId: string, status: string) {
-  return fetchData(`/player/${walletId}/status`, {
+export async function changePlayerStatus(
+  roomId: string,
+  walletId: string,
+  status: string
+) {
+  return fetchData(`/${roomId}/player/${walletId}/status`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -89,6 +95,20 @@ export async function submitAnswer(data: any) {
   return fetchData("/submit-answer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchGameData(roomId: string) {
+  return fetchData(`/rooms/${roomId}/results`);
+}
+
+export async function updateGameSettings(roomId: string, data: GameSettings) {
+  return fetchData(`/rooms/${roomId}/settings`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(data),
   });
 }
@@ -125,8 +145,8 @@ export async function updateUser(walletId: string, username: string) {
   });
 }
 
-export async function fetchLeaderboard(limit: number) {
-  return fetchData(`/leaderboard?limit=${limit}`, {
+export async function fetchLeaderboard(limit: number, period: string = "all") {
+  return fetchData(`/leaderboard?limit=${limit}&period=${period}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });

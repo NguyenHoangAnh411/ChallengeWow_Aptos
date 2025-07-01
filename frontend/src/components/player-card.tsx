@@ -3,10 +3,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import type { User } from "@/types/schema";
+import type { Player } from "@/types/schema";
 
 interface PlayerCardProps {
-  player: User & {
+  player: Player & {
     status?: string;
     responseTime?: number;
     isCurrentUser?: boolean;
@@ -183,7 +183,7 @@ export default function PlayerCard({
                   player.isCurrentUser ? "text-neon-purple" : "text-neon-blue"
                 }`}
               >
-                {player.totalScore || 0}
+                {player.score || 0}
               </div>
 
               {player.responseTime !== undefined && (
