@@ -44,7 +44,7 @@ Hệ thống được định hướng trở thành một **“metaverse giáo d
 
 🔹 **Nghiên cứu và ứng dụng các công nghệ Web3**:
 
-* Blockchain (Ethereum, Solana hoặc Layer-2 như Base, Polygon).
+* Blockchain (Olym3 Blockchain, Ethereum, Solana hoặc Layer-2 như Base, Polygon).
 * IPFS/Arweave cho lưu trữ phi tập trung.
 * Smart Contract (Solidity, Move hoặc Rust).
 
