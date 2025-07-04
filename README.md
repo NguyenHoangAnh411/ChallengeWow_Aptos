@@ -22,7 +22,7 @@ Hệ thống được định hướng trở thành một **“metaverse giáo d
 🎯 Xây dựng một nền tảng trò chơi Web3 với:
 
 * **Kiến trúc mở, modular**: Dễ dàng mở rộng và tích hợp các dịch vụ/trò chơi mới.
-* **Tính năng quản lý tài sản số**: NFT hóa thành tích, chứng chỉ, tài sản trong game.
+* **Tính năng quản lý tài sản số**: NFT hóa thành tích, tài sản trong game.
 * **Cơ chế tương tác cộng đồng**: Cho phép người chơi đóng góp nội dung và tham gia quản trị nền tảng thông qua DAO.
 * **Đảm bảo an toàn và bảo mật dữ liệu**: Ứng dụng các chuẩn bảo mật Web3 tiên tiến.
 
