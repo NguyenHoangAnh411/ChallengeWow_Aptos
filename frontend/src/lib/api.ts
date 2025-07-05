@@ -2,7 +2,7 @@
 
 import { GameSettings } from "@/app/config/GameSettings";
 
-const BASE_URL = "/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9000/api";
 
 async function fetchData(endpoint: string, options: RequestInit = {}) {
   const res = await fetch(`${BASE_URL}${endpoint}`, options);
@@ -149,6 +149,15 @@ export async function fetchLeaderboard(limit: number, period: string = "all") {
   return fetchData(`/leaderboard?limit=${limit}&period=${period}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
+  });
+}
+
+// Gọi backend để mint hoặc transfer NFT cho winner
+export async function awardNFT(to_address: string, token_id?: number) {
+  return fetchData("/nft/award", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to_address, token_id }),
   });
 }
 

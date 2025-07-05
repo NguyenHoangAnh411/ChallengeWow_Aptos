@@ -22,7 +22,7 @@ class UserRepository:
             return User(**res.data[0])
         return None
 
-    async def create(self, wallet_id: str, username: str = None):
+    async def create(self, wallet_id: str, username: str = ""):
         data = {"wallet_id": wallet_id}
         if username:
             data["username"] = username
@@ -82,7 +82,7 @@ class UserStatsRepository:
                 "wallet_id": wallet_id,
                 "total_score": score,
                 "games_won": 1 if is_winner else 0,
-                "rank": "Unrank"
+                "rank": 0  # Sửa từ "Unrank" thành 0
             }).execute()
         else:
             print(f"[ERROR] Multiple user_stats found with wallet_id={wallet_id}, cannot update stats.")
@@ -124,3 +124,8 @@ class UserStatsRepository:
             await self.supabase.table(self.table).update({
                 "rank": rank
             }).eq("wallet_id", wallet_id).execute()
+
+    async def get_user_stats(self, wallet_id: str):
+        res = await self.supabase.table(self.table).select("*").eq("wallet_id", wallet_id).execute()
+        stats = res.data or []
+        return stats[0] if stats else None

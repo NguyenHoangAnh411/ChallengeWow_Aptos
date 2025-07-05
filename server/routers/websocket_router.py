@@ -19,4 +19,14 @@ def create_ws_router(controller: WebSocketController):
             return
         await controller.handle_room_socket(websocket, room_id, wallet_id)
 
+    # Thêm endpoint để force end game cho test
+    @router.post("/force-end-game/{room_id}")
+    async def force_end_game(room_id: str):
+        """Force end game for testing NFT minting and transferring"""
+        try:
+            result = await controller.force_end_game_for_test(room_id)
+            return {"success": True, "message": result["message"]}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     return router

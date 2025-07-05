@@ -17,6 +17,7 @@ class PlayerController:
     async def update_player_status(self, room_id: str, wallet_id: str, status: PLAYER_STATUS):
         try:
             status_enum = PLAYER_STATUS(status)
+            print("STATUS: ", status)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid status")
 
@@ -31,7 +32,7 @@ class PlayerController:
         # Broadcast WebSocket
         await self.websocket_manager.broadcast_to_room(room_id, {
             "type": "player_ready",
-            "player": {
+            "payload": {
                 "wallet_id": wallet_id,
                 "playerStatus": status_enum,
                 "isReady": player.is_ready

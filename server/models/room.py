@@ -3,11 +3,13 @@ from typing import Any, List, Optional
 from datetime import datetime, timezone
 import uuid
 
+from config.question_config import QUESTION_CONFIG
 from models.base import CamelModel
 from models.player import Player
 from models.question import Question
 from models.zkproof import ZKProof
 from enums.game_status import GAME_STATUS
+from enums.question_difficulty import QUESTION_DIFFICULTY
 
 # 🏠 Phòng chơi
 class Room(CamelModel):
@@ -30,9 +32,17 @@ class Room(CamelModel):
     ended_at: Optional[datetime] = None
     current_questions: Optional[List[Question]] = None
     current_index: int = 0
-    question_configs: dict[str, Any] = {}
+    question_configs: dict[QUESTION_DIFFICULTY, Any] = QUESTION_CONFIG
 
-    model_config = ConfigDict(ser_enum_as_value=True)
+    @model_validator(mode="before")
+    @classmethod
+    def fill_none_defaults(cls, data: dict):
+        data = data.copy()
+        if data.get("current_questions") is None:
+            data["current_questions"] = []
+        if data.get("current_index") is None:
+            data["current_index"] = 0
+        return data
 
     @model_validator(mode="before")
     @classmethod

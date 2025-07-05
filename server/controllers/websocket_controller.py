@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import List
 from fastapi import WebSocket, WebSocketDisconnect
 from config.question_config import QUESTION_CONFIG
 from enums.player_status import PLAYER_STATUS
@@ -18,6 +19,9 @@ from pydantic import ValidationError
 from enums.game_status import GAME_STATUS
 from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
 import random, asyncio, pprint, time, uuid
+from services.nft_service import BlockchainService
+import json
+from typing import Dict, List, Optional, Any
 
 class WebSocketController:
     def __init__(self, manager: WebSocketManager, player_service: PlayerService, room_service: RoomService,
@@ -29,6 +33,7 @@ class WebSocketController:
         self.answer_service = answer_service
         self.user_repo = user_repo
         self.user_stats_repo = user_stats_repo
+        self.nft_service = BlockchainService()  # Thêm NFT service
         # Thêm tracking cho active tasks
         self.active_tasks = {}
 
@@ -91,25 +96,25 @@ class WebSocketController:
         # Tăng index và lưu
         room.current_index += 1
         
-        print(f"[DEBUG] Room {room_id} - Current index: {room.current_index}, Total questions: {len(room.current_questions)}, Total questions config: {room.total_questions}")
+        print(f"[DEBUG] Room {room_id} - Current index: {room.current_index}, Total questions: {len(room.current_questions or [])}, Total questions config: {room.total_questions}")
         
         # Kiểm tra xem còn câu hỏi không
         if room.current_index >= room.total_questions:
-            print(f"[GAME_END] Room {room_id} - Game ending because current_index ({room.current_index}) >= total_questions ({room.total_questions})")
             # Game kết thúc
             await self._handle_game_end(room_id)
             return
             
         # Fallback: Nếu không có câu hỏi hiện tại nhưng vẫn chưa đạt total_questions, tạo câu hỏi mặc định
-        if room.current_index >= len(room.current_questions) and room.current_index < room.total_questions:
+        if room.current_index >= len(room.current_questions or []) and room.current_index < room.total_questions:
             print(f"[WARNING] Room {room_id} - No current question but game should continue. Creating fallback question.")
             # Tạo câu hỏi mặc định để game tiếp tục
             fallback_question = await self.question_service.get_random_question()
+            room.current_questions = room.current_questions or []
             if fallback_question:
                 room.current_questions.append(fallback_question)
             else:
                 # Nếu không có câu hỏi nào, kết thúc game
-                print(f"[GAME_END] Room {room_id} - No fallback question available, ending game")
+                # print(f"[GAME_END] Room {room_id} - No fallback question available, ending game")
                 await self._handle_game_end(room_id)
                 return
         
@@ -210,7 +215,7 @@ class WebSocketController:
                 "accuracy": round(accuracy, 2),
                 "averageTime": round(average_time, 2),
                 "isWinner": result["wallet"] == winner_wallet,
-                "reward": 0  # TODO: Calculate based on ranking and room settings
+                "reward": 0 
             }
             leaderboard.append(player_stats)
 
@@ -219,7 +224,7 @@ class WebSocketController:
             "totalPlayers": total_players,
             "totalQuestions": total_questions,
             "gameMode": getattr(room, 'game_mode', 'standard'),
-            "gameDuration": (game_end_time - room.started_at).total_seconds(),
+            "gameDuration": (game_end_time - room.started_at).total_seconds() if room.started_at else 0,
             "averageScore": sum(r['score'] for r in results) / total_players if total_players > 0 else 0,
             "highestScore": sorted_results[0]['score'] if sorted_results else 0,
             "questionBreakdown": {
@@ -237,6 +242,7 @@ class WebSocketController:
                 is_winner=(result["wallet"] == winner_wallet)
             )
         
+        # TODO: COULD RECALC EVERY PERIOD
         await self.user_stats_repo.recalculate_ranks()
 
         # Save updated room
@@ -262,7 +268,33 @@ class WebSocketController:
             "type": "clear_local_storage"
         })
 
-        print(f"[GAME_ENDED] Room {room_id} finished. Results: {results}")
+        # print(f"[GAME_ENDED] Room {room_id} finished. Results: {results}")
+
+        # Mint và transfer NFT cho winner (nếu có)
+        if winner_wallet:
+            try:
+                # Không cần tự tạo metadata_uri nữa, chỉ truyền room_id và winner_wallet
+                nft_result = await self._mint_and_transfer_nft(room_id, winner_wallet)
+                # print(f"[NFT] Mint and transfer result for room {room_id}: {nft_result}")
+                # Broadcast NFT result to room
+                await self.manager.broadcast_to_room(room_id, {
+                    "type": "nft_awarded",
+                    "payload": {
+                        "winner_wallet": winner_wallet,
+                        "nft_result": nft_result,
+                        "room_id": room_id
+                    }
+                })
+            except Exception as e:
+                # print(f"[NFT_ERROR] Failed to mint/transfer NFT for room {room_id}: {str(e)}")
+                # Broadcast error to room
+                await self.manager.broadcast_to_room(room_id, {
+                    "type": "nft_error",
+                    "payload": {
+                        "error": str(e),
+                        "room_id": room_id
+                    }
+                })
 
         # Schedule room cleanup after some time
         async def cleanup_room():
@@ -312,7 +344,7 @@ class WebSocketController:
                 user_stats["average_accuracy"] = user_stats["total_correct_answers"] / user_stats["total_questions_answered"] if user_stats["total_questions_answered"] > 0 else 0.0
                 
                 # Save updated stats
-                await self.user_stats_repo.update_user_stats(wallet_id, user_stats)
+                await self.user_stats_repo.update_user_stats(wallet_id, user_stats["total_score"], user_stats["total_wins"] > 0)
                 
         except Exception as e:
             print(f"Error updating player statistics: {e}")
@@ -322,7 +354,7 @@ class WebSocketController:
         """Dọn dẹp room đã kết thúc"""
         try:
             # Disconnect all remaining connections
-            await self.manager.disconnect_all_from_room(room_id)
+            self.manager.disconnect_room_by_room_id(room_id)
             
             # Optionally remove room from cache/database
             # await self.room_service.delete_room(room_id)
@@ -356,13 +388,9 @@ class WebSocketController:
             })
             return
 
-        # ✅ 3. Lấy cấu hình game
-        settings = data.get("settings", {})
-        questions_config = settings.get("questions", {})
-
-        easy_count = questions_config.get("easy", QUESTION_CONFIG[QUESTION_DIFFICULTY.EASY]["quantity"])
-        medium_count = questions_config.get("medium", QUESTION_CONFIG[QUESTION_DIFFICULTY.MEDIUM]["quantity"])
-        hard_count = questions_config.get("hard", QUESTION_CONFIG[QUESTION_DIFFICULTY.HARD]["quantity"])
+        easy_count = room.easy_questions if room.easy_questions is not None else QUESTION_CONFIG[QUESTION_DIFFICULTY.EASY]["quantity"]
+        medium_count = room.medium_questions if room.medium_questions is not None else QUESTION_CONFIG[QUESTION_DIFFICULTY.MEDIUM]["quantity"]
+        hard_count = room.hard_questions if room.hard_questions is not None else QUESTION_CONFIG[QUESTION_DIFFICULTY.HARD]["quantity"]
 
         # ✅ 4. Lấy danh sách câu hỏi và shuffle
         easy_qs = await self.question_service.get_random_questions_by_difficulty(QUESTION_DIFFICULTY.EASY, easy_count)
@@ -372,17 +400,12 @@ class WebSocketController:
         questions = [*easy_qs, *medium_qs, *hard_qs]
         random.shuffle(questions)
 
-        print(f"[DEBUG] Room {room_id} - Loaded questions: Easy={len(easy_qs)}/{easy_count}, Medium={len(medium_qs)}/{medium_count}, Hard={len(hard_qs)}/{hard_count}, Total={len(questions)}")
-
         if not questions:
             await send_json_safe(websocket, {"type": "error", "message": "No questions found."})
             return
             
         # Nếu không đủ câu hỏi, điều chỉnh total_questions
         if len(questions) < (easy_count + medium_count + hard_count):
-            print(f"[WARNING] Room {room_id} - Not enough questions in database. Requested: {easy_count + medium_count + hard_count}, Available: {len(questions)}")
-            # Có thể lặp lại câu hỏi hoặc điều chỉnh số lượng
-            # Tạm thời sử dụng số câu hỏi có sẵn
             pass
             
         # Đảm bảo có đủ câu hỏi bằng cách lặp lại nếu cần
@@ -393,24 +416,19 @@ class WebSocketController:
             while len(repeated_questions) < target_questions:
                 repeated_questions.extend(questions[:target_questions - len(repeated_questions)])
             questions = repeated_questions[:target_questions]
-            print(f"[INFO] Room {room_id} - Repeated questions to reach target: {len(questions)}")
 
         # ✅ 5. Chuẩn bị dữ liệu câu hỏi cho client (loại bỏ đáp án đúng)
         def prepare_question_for_client(question):
             """Chuẩn bị câu hỏi để gửi cho client, loại bỏ correct_answer"""
             question_dict = question.dict()
-            
-            # Tạo danh sách các options đã shuffle
             options = question_dict.get("options", [])
             if options:
-                # Shuffle options để tránh predictable pattern
                 shuffled_options = options.copy()
                 random.shuffle(shuffled_options)
                 question_dict["options"] = shuffled_options
-            
-            # Loại bỏ correct_answer khỏi dữ liệu gửi client
+                # Gán lại options đã shuffle vào object gốc để lưu vào room
+                question.options = shuffled_options
             question_dict.pop("correct_answer", None)
-            
             return question_dict
 
         # ✅ 6. Chuẩn bị danh sách câu hỏi cho client
@@ -419,14 +437,8 @@ class WebSocketController:
         # ✅ 7. Cập nhật trạng thái phòng
         room.players = [p.model_copy(update={"status": PLAYER_STATUS.ACTIVE}) for p in room.players]
         room.status = GAME_STATUS.IN_PROGRESS
-        room.total_questions = len(questions)
         room.current_questions = questions 
-        room.easy_questions = easy_count
-        room.medium_questions = medium_count
-        room.hard_questions = hard_count
         room.current_index = 0
-        room.question_configs = QUESTION_CONFIG
-        room.time_per_question = settings.get("timePerQuestion", 10)
         room.started_at = datetime.now(timezone.utc)
 
         await self.room_service.save_room(room)
@@ -437,7 +449,6 @@ class WebSocketController:
         await self.manager.broadcast_to_room(room_id, {
             "type": "game_started",
             "payload": {
-                # "questions": client_questions,
                 "totalQuestions": len(questions),
                 "easyCount": easy_count,
                 "mediumCount": medium_count,
@@ -469,7 +480,7 @@ class WebSocketController:
         current_question = room.current_question
         if not current_question:
             # Không nên xảy ra vì logic này đã được xử lý trong _move_to_next_question
-            print(f"Warning: No current question for room {room_id}")
+            # print(f"Warning: No current question for room {room_id}")
             return
 
         # Lấy config cho câu hỏi hiện tại
@@ -478,7 +489,15 @@ class WebSocketController:
             # Fallback config nếu không tìm thấy
             question_config = QUESTION_CONFIG[QUESTION_DIFFICULTY.EASY]
 
-        time_per_question = question_config["time_per_question"]
+        # Tính thời gian dựa trên độ khó và setup
+        base_time = room.time_per_question
+        if current_question.difficulty == QUESTION_DIFFICULTY.EASY:
+            time_per_question = base_time
+        else:
+            # Medium & Hard: base_time + question_config time
+            additional_time = question_config["time_per_question"]
+            time_per_question = base_time + additional_time
+            
         question_start_at = int(time.time() * 1000)
         question_end_at = question_start_at + time_per_question * 1000
 
@@ -489,6 +508,9 @@ class WebSocketController:
             shuffled_options = options.copy()
             random.shuffle(shuffled_options)
             client_question["options"] = shuffled_options
+            # Gán lại options đã shuffle vào current_question và lưu lại vào room
+            current_question.options = shuffled_options
+            await self.room_service.save_room(room)
         client_question.pop("correct_answer", None)
 
         await self.manager.broadcast_to_room(room_id, {
@@ -509,24 +531,39 @@ class WebSocketController:
             }
         })
         
-        print(f"[QUESTION] Room {room_id} - Question {room.current_index + 1}/{room.total_questions} - Start: {question_start_at}, End: {question_end_at}, Duration: {time_per_question}s")
 
         # ✅ FIXED: Only create fallback timer for safety, not for normal progression
         # This timer will only trigger if all players don't answer within time limit
         if room_id not in self.active_tasks:
             async def fallback_auto_next_question():
                 try:
+                    print(f"[FALLBACK] Room {room_id} - Starting fallback timer for question {room.current_index + 1}")
                     # Wait for the full question time + buffer, then force move to next question
                     await asyncio.sleep(time_per_question + 10)  # 10 seconds buffer
                     
                     # Check if we still need to move (in case normal flow already handled it)
                     current_room = await self.room_service.get_room(room_id)
                     if current_room and current_room.status == GAME_STATUS.IN_PROGRESS and current_room.current_index == room.current_index:
-                        print(f"[FALLBACK] Auto moving to next question for room {room_id} after timeout")
-                        await self._move_to_next_question(room_id)
+                        print(f"[FALLBACK] Room {room_id} - Auto moving to next question after timeout")
+                        
+                        # ✅ FIXED: Handle unanswered questions before moving to next question
+                        current_question = current_room.current_question
+                        if current_question:
+                            await self._handle_unanswered_questions(room_id, current_question)
+                        
+                        # Show question result with all answers (including no answers)
+                        await self._show_question_result(room_id, handle_unanswered=False)
+                        
+                        # ✅ FIXED: The result will automatically trigger next question after 3 seconds
+                        # (handled by next_question_delay in _show_question_result)
+                    else:
+                        print(f"[FALLBACK] Room {room_id} - Skipping fallback (game ended or question already moved)")
+                except Exception as e:
+                    print(f"[ERROR] Error in fallback_auto_next_question for room {room_id}: {e}")
                 finally:
                     # Xóa task khỏi tracking khi hoàn thành
                     self.active_tasks.pop(room_id, None)
+                    print(f"[FALLBACK] Room {room_id} - Fallback timer completed")
 
             task = asyncio.create_task(fallback_auto_next_question())
             self.active_tasks[room_id] = task
@@ -534,7 +571,7 @@ class WebSocketController:
     # ✅ Helper function để xử lý submit answer (IMPROVED)
     async def _handle_submit_answer(self, websocket: WebSocket, room_id: str, wallet_id: str, data: dict):
         """Xử lý khi player submit câu trả lời"""
-        print(f"[DEBUG] Received submit_answer data: {data}")
+        # print(f"[DEBUG] Received submit_answer data: {data}")
         
         room = await self.room_service.get_room(room_id)
         if not room or room.status != GAME_STATUS.IN_PROGRESS:
@@ -559,14 +596,28 @@ class WebSocketController:
 
         # ✅ FIXED: Extract answer from the correct nested structure
         player_answer = data.get("data", {}).get("answer")
+        answer = data.get("data", {}).get("answer")
         print(f"[DEBUG] Player answer: '{player_answer}', type: {type(player_answer)}")
+        
+        # Check if this is a "no answer" submission
+        if not player_answer or player_answer == "":
+            print(f"[NO_ANSWER] Player {wallet_id} submitted no answer for question {room.current_index + 1}")
+        
         print(f"[DEBUG] Current question correct answer: '{current_question.correct_answer}'")
         
         submit_time = int(time.time() * 1000)
         
         # Calculate question start time based on room start time and current question index
-        time_per_question = question_config["time_per_question"]
-        question_start_at = int(room.started_at.timestamp() * 1000) + room.current_index * time_per_question * 1000
+        # Tính thời gian dựa trên độ khó và setup
+        base_time = room.time_per_question
+        if current_question.difficulty == QUESTION_DIFFICULTY.EASY:
+            time_per_question = base_time
+        else:
+            # Medium & Hard: base_time + question_config time
+            additional_time = question_config["time_per_question"]
+            time_per_question = base_time + additional_time
+            
+        question_start_at = int(room.started_at.timestamp() * 1000) + room.current_index * time_per_question * 1000 if room.started_at else 0
         
         # Use client-provided timing as fallback if it's reasonable
         client_question_start = data.get("data", {}).get("questionStartAt")
@@ -575,11 +626,13 @@ class WebSocketController:
 
         # Kiểm tra đáp án đúng (sử dụng correct_answer từ server)
         is_correct = player_answer == current_question.correct_answer
-        print(f"[DEBUG] Is correct: {is_correct} (player: '{player_answer}' == correct: '{current_question.correct_answer}')")
         
         # Tính điểm dựa trên config và thời gian trả lời
         points = 0
         speed_bonus = 0
+        time_bonus = 0
+        order_bonus = 0
+        
         if is_correct:
             base_score = question_config["score"]
             points = base_score
@@ -587,20 +640,55 @@ class WebSocketController:
             # Tính speed bonus nếu được bật
             if question_config["speed_bonus_enabled"]:
                 time_taken = (submit_time - question_start_at) / 1000
-                time_per_question = question_config["time_per_question"]
+                # Sử dụng time_per_question đã tính toán ở trên
                 
                 # Tính tỷ lệ thời gian còn lại
                 time_remaining_ratio = max(0, (time_per_question - time_taken) / time_per_question)
                 speed_bonus = int(question_config["max_speed_bonus"] * time_remaining_ratio)
                 points += speed_bonus
+                
+                # ✅ NEW: Time-based bonus - faster answers get more points
+                # Tính thời gian nộp sớm (0-100% của thời gian cho phép)
+                time_percentage = min(1.0, time_taken / time_per_question)
+                # Càng sớm càng nhiều điểm (linear decrease)
+                time_bonus = int(question_config["max_speed_bonus"] * 0.5 * (1.0 - time_percentage))
+                points += time_bonus
+                
+                # ✅ NEW: Order bonus - first correct answers get extra points
+                try:
+                    current_submit_time = datetime.now(timezone.utc)
 
-        print(f"[DEBUG] Points calculated: {points} (base: {question_config['score']}, bonus: {speed_bonus})")
+                    correct_answers = await self.answer_service.get_correct_answers_by_question_id(room_id, current_question.id)
+                    if correct_answers:
+                        # Tách bước lọc để Pyright không báo lỗi
+                        valid_correct_answers: List[Answer] = [a for a in correct_answers if a.submitted_at]
+
+                        correct_answers_sorted = sorted(
+                            valid_correct_answers,
+                            key=lambda a: a.submitted_at if a.submitted_at else datetime.min
+                        )
+
+                        for idx, answer in enumerate(correct_answers_sorted):
+                            if answer.wallet_id == wallet_id:
+                                if idx == 0:
+                                    order_bonus = int(question_config["max_speed_bonus"] * 0.3)
+                                elif idx == 1:
+                                    order_bonus = int(question_config["max_speed_bonus"] * 0.15)
+                                elif idx == 2:
+                                    order_bonus = int(question_config["max_speed_bonus"] * 0.05)
+                                break
+
+                        points += order_bonus
+                except Exception as e:
+                    print(f"Error calculating order bonus: {e}")
+
+        print(f"[DEBUG] Points calculated: {points} (base: {question_config['score']}, speed_bonus: {speed_bonus}, time_bonus: {time_bonus}, order_bonus: {order_bonus})")
 
         # Cập nhật điểm player
         for player in room.players:
             if player.wallet_id == wallet_id:
                 player.score += points
-                print(f"[DEBUG] Updated player {wallet_id} score: {player.score}")
+                # print(f"[DEBUG] Updated player {wallet_id} score: {player.score}")
                 break
 
         # Lưu answer để tracking (nếu cần)
@@ -609,8 +697,9 @@ class WebSocketController:
                 room_id=room_id,
                 wallet_id=wallet_id,
                 score=points,
-                question_id=current_question.id if hasattr(current_question, 'id') else None,
+                question_id=current_question.id if hasattr(current_question, 'id') else "",
                 question_index=room.current_index,
+                answer=player_answer,
                 player_answer=player_answer,
                 correct_answer=current_question.correct_answer,
                 is_correct=is_correct,
@@ -619,12 +708,19 @@ class WebSocketController:
                 submitted_at=datetime.now(timezone.utc)
             )
             await self.answer_service.save_answer(answer_record)
-            print(f"[DEBUG] Saved answer record: {answer_record.model_dump()}")
+            # print(f"[DEBUG] Saved answer record: {answer_record.model_dump()}")
         except Exception as e:
             print(f"Error saving answer: {e}")
 
         # Phản hồi cho player đã submit
         response_time = submit_time - question_start_at
+        
+        # Determine response message based on answer type
+        if not player_answer or player_answer == "":
+            response_message = "No answer submitted - 0 points"
+        else:
+            response_message = f"You earned {points} points"
+        
         await send_json_safe(websocket, {
             "type": "answer_submitted",
             "payload": {
@@ -632,14 +728,17 @@ class WebSocketController:
                 "points": points,
                 "baseScore": question_config["score"] if is_correct else 0,
                 "speedBonus": speed_bonus,
+                "timeBonus": time_bonus,
+                "orderBonus": order_bonus,
                 "correctAnswer": current_question.correct_answer,
                 "explanation": getattr(current_question, 'explanation', None),
                 "totalScore": next(p.score for p in room.players if p.wallet_id == wallet_id),
-                "responseTime": response_time
+                "responseTime": response_time,
+                "message": response_message,
+                "isNoAnswer": not player_answer or player_answer == ""
             }
         })
         
-        print(f"[ANSWER] Player {wallet_id} answered '{player_answer}' (correct: {current_question.correct_answer}) - Score: {points}, Response time: {response_time}ms")
 
         await self.room_service.save_room(room)
 
@@ -656,20 +755,19 @@ class WebSocketController:
                     if answer.wallet_id:
                         answered_players.add(answer.wallet_id)
             
-            print(f"[DEBUG] Question {room.current_index + 1}: {len(answered_players)}/{len(room.players)} players answered")
-            
             # If all players have answered, show result and move to next question
             if len(answered_players) >= len(room.players):
-                print(f"[DEBUG] All players answered question {room.current_index + 1}, showing result")
+                # print(f"[DEBUG] All players answered question {room.current_index + 1}, showing result")
                 # Cancel any existing auto timer
                 if room_id in self.active_tasks:
+                    print(f"[DEBUG] Cancelling fallback timer for room {room_id}")
                     self.active_tasks[room_id].cancel()
                     self.active_tasks.pop(room_id, None)
                 
                 # Show question result immediately
                 await self._show_question_result(room_id)
             else:
-                print(f"[DEBUG] Waiting for more players to answer question {room.current_index + 1}")
+                print(f"[DEBUG] Waiting for more players to answer question {room.current_index + 1} ({len(answered_players)}/{len(room.players)})")
                 
         except Exception as e:
             print(f"Error checking submitted answers: {e}")
@@ -677,7 +775,7 @@ class WebSocketController:
             pass
 
     # ✅ Helper function để show kết quả câu hỏi (IMPROVED)
-    async def _show_question_result(self, room_id: str):
+    async def _show_question_result(self, room_id: str, handle_unanswered: bool = True):
         """Hiển thị kết quả của câu hỏi hiện tại"""
         room = await self.room_service.get_room(room_id)
         if not room:
@@ -687,20 +785,32 @@ class WebSocketController:
         if not current_question:
             return
         
+        # ✅ NEW: Handle unanswered questions - automatically submit "no answer" for players who didn't respond
+        if handle_unanswered:
+            await self._handle_unanswered_questions(room_id, current_question)
+        
         # Thống kê câu trả lời từ database
         answer_stats = {}
         for option in current_question.options:
             answer_stats[option] = 0
+        
+        # Add "No Answer" option to stats
+        answer_stats["No Answer"] = 0
         
         # Lấy thống kê từ database
         try:
             current_question_answers = await self.answer_service.get_answers_by_room_and_question_id(room_id, current_question.id)
             if current_question_answers:
                 for answer in current_question_answers:
-                    if answer.player_answer and answer.player_answer in answer_stats:
-                        answer_stats[answer.player_answer] += 1
+                    if answer.answer and answer.answer in answer_stats:
+                        answer_stats[answer.answer] += 1
+                    elif not answer.answer or answer.answer == "":
+                        answer_stats["No Answer"] += 1
         except Exception as e:
             print(f"Error getting answer stats: {e}")
+        
+        # Calculate total responses (excluding "No Answer" for percentage calculations)
+        total_responses = sum(count for option, count in answer_stats.items() if option != "No Answer")
         
         await self.manager.broadcast_to_room(room_id, {
             "type": "question_result",
@@ -709,7 +819,9 @@ class WebSocketController:
                 "correctAnswer": current_question.correct_answer,
                 "explanation": getattr(current_question, 'explanation', None),
                 "answerStats": answer_stats,
-                "totalResponses": sum(answer_stats.values()),
+                "totalResponses": total_responses,
+                "totalPlayers": len(room.players),
+                "options": current_question.options,
                 "leaderboard": [
                     {
                         "walletId": p.wallet_id,
@@ -720,23 +832,123 @@ class WebSocketController:
                 ]
             }
         })
-        
-        print(f"[RESULT] Question {room.current_index + 1} result shown - Correct: {current_question.correct_answer}, Stats: {answer_stats}")
 
         # ✅ FIXED: Move to next question after showing result
         # Chỉ tạo task nếu chưa có task active cho room này
         if room_id not in self.active_tasks:
             async def next_question_delay():
                 try:
+                    print(f"[NEXT_QUESTION] Room {room_id} - Waiting 3 seconds before moving to next question")
                     # Wait 3 seconds to show result, then move to next question
                     await asyncio.sleep(3)
+                    print(f"[NEXT_QUESTION] Room {room_id} - Moving to next question now")
                     await self._move_to_next_question(room_id)
+                except Exception as e:
+                    print(f"[ERROR] Error in next_question_delay for room {room_id}: {e}")
                 finally:
                     # Xóa task khỏi tracking khi hoàn thành
                     self.active_tasks.pop(room_id, None)
+                    print(f"[NEXT_QUESTION] Room {room_id} - Next question delay task completed")
             
             task = asyncio.create_task(next_question_delay())
             self.active_tasks[room_id] = task
+            print(f"[NEXT_QUESTION] Room {room_id} - Created next question delay task")
+        else:
+            print(f"[NEXT_QUESTION] Room {room_id} - Skipping next question delay task (already exists)")
+
+    # ✅ NEW: Handle unanswered questions
+    async def _handle_unanswered_questions(self, room_id: str, current_question):
+        """Automatically submit 'no answer' for players who didn't respond"""
+        room = await self.room_service.get_room(room_id)
+        if not room:
+            return
+
+        try:
+            # Get all answers for current question
+            current_question_answers = await self.answer_service.get_answers_by_room_and_question_id(room_id, current_question.id)
+            
+            # Get list of players who answered
+            answered_players = set()
+            if current_question_answers:
+                for answer in current_question_answers:
+                    if answer.wallet_id:
+                        answered_players.add(answer.wallet_id)
+            
+            # Find players who didn't answer
+            all_players = set(p.wallet_id for p in room.players)
+            unanswered_players = all_players - answered_players
+            
+            print(f"[UNANSWERED] Room {room_id} - Question {room.current_index + 1}: {len(unanswered_players)} players didn't answer")
+            
+            # Submit "no answer" for each player who didn't respond
+            for wallet_id in unanswered_players:
+                try:
+                    # Create answer record with no answer (empty string)
+                    answer_record = Answer(
+                        room_id=room_id,
+                        wallet_id=wallet_id,
+                        score=0,  # No points for unanswered questions
+                        question_id=current_question.id if hasattr(current_question, 'id') else "",
+                        question_index=room.current_index,
+                        answer="",
+                        player_answer="",  # Empty string indicates no answer
+                        correct_answer=current_question.correct_answer,
+                        is_correct=False,  # No answer is always incorrect
+                        points_earned=0,
+                        response_time=0,  # No response time for unanswered
+                        submitted_at=datetime.now(timezone.utc)
+                    )
+                    
+                    await self.answer_service.save_answer(answer_record)
+                    print(f"[UNANSWERED] Auto-submitted no answer for player {wallet_id}")
+                    
+                except Exception as e:
+                    print(f"Error auto-submitting no answer for player {wallet_id}: {e}")
+                    
+        except Exception as e:
+            print(f"Error handling unanswered questions: {e}")
+
+    # Sửa hàm _mint_and_transfer_nft để có logic trực tiếp từ controller
+    async def _mint_and_transfer_nft(self, room_id: str, winner_wallet: str) -> dict:
+        """Mint NFT cho deployer và transfer cho winner"""
+        try:
+            # Generate default metadata_uri
+            metadata_uri = f"https://challengewave.com/nft/{room_id}"
+            
+            # Mint NFT trước (nếu chưa có), sau đó transfer cho winner
+            try:
+                # Thử mint NFT (có thể đã tồn tại)
+                mint_result = self.nft_service.mint_nft(room_id, metadata_uri)
+                # print(f"[NFT] Mint NFT result: {mint_result}")
+            except Exception as mint_error:
+                # Nếu NFT đã tồn tại, bỏ qua lỗi và tiếp tục
+                if "NFT already exists" in str(mint_error):
+                    # print(f"[NFT] NFT already exists for room {room_id}, continuing with transfer...")
+                    mint_result = "NFT already existed"
+                else:
+                    raise mint_error
+            
+            # Transfer NFT cho winner bằng cách submit game result
+            score = 100
+            zk_proof = "0x" + "00"*32
+            transfer_result = self.nft_service.submit_game_result(room_id, winner_wallet, score, zk_proof)
+            
+            return {
+                "message": "NFT minted and transferred successfully",
+                "mint_result": mint_result,
+                "transfer_result": transfer_result,
+                "winner_wallet": winner_wallet
+            }
+            
+        except Exception as e:
+            print(f"[NFT_ERROR] Error in _mint_and_transfer_nft: {str(e)}")
+            raise e
+
+    async def force_end_game_for_test(self, room_id: str):
+        """Force kết thúc game cho mục đích test NFT"""
+        # print(f"[TEST] Force ending game for room {room_id}")
+        await self._handle_game_end(room_id)
+        return {"message": f"Game force ended for room {room_id}"}
 
     async def handle_lobby_socket(self, websocket: WebSocket):
         await self.manager.connect_lobby(websocket)
@@ -765,10 +977,18 @@ class WebSocketController:
                 # Kiểm tra xem câu hỏi còn thời gian không
                 current_time = int(time.time() * 1000)
                 question_config = QUESTION_CONFIG.get(current_question.difficulty, QUESTION_CONFIG[QUESTION_DIFFICULTY.EASY])
-                time_per_question = question_config["time_per_question"]
+                
+                # Tính thời gian dựa trên độ khó và setup
+                base_time = room.time_per_question
+                if current_question.difficulty == QUESTION_DIFFICULTY.EASY:
+                    time_per_question = base_time
+                else:
+                    # Medium & Hard: base_time + question_config time
+                    additional_time = question_config["time_per_question"]
+                    time_per_question = base_time + additional_time
                 
                 # Tính thời gian bắt đầu câu hỏi hiện tại
-                question_start_time = int(room.started_at.timestamp() * 1000) + room.current_index * time_per_question * 1000
+                question_start_time = int(room.started_at.timestamp() * 1000) + room.current_index * time_per_question * 1000 if room.started_at else 0
                 question_end_time = question_start_time + time_per_question * 1000
                 
                 # Chỉ gửi nếu còn thời gian (ví dụ: còn ít nhất 5 giây)
@@ -780,6 +1000,9 @@ class WebSocketController:
                         shuffled_options = options.copy()
                         random.shuffle(shuffled_options)
                         client_question["options"] = shuffled_options
+                        # Gán lại options đã shuffle vào current_question và lưu lại vào room
+                        current_question.options = shuffled_options
+                        await self.room_service.save_room(room)
                     client_question.pop("correct_answer", None)
                     
                     await send_json_safe(websocket, {
@@ -811,12 +1034,10 @@ class WebSocketController:
             while True:
                 try:
                     data = await websocket.receive_json()
-                    print(f"[DEBUG] Received WebSocket message: {data}")
                 except WebSocketDisconnect:
                     break
 
                 msg_type = data.get("type")
-                print(f"[DEBUG] Message type: {msg_type}")
                 handler = room_handlers.get(msg_type)
                 if handler:
                     await handler(websocket, room_id, wallet_id, data)

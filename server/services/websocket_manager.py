@@ -1,5 +1,6 @@
 import asyncio
 from fastapi import WebSocket
+from gotrue import Callable
 from enums.game_status import GAME_STATUS
 from helpers.json_helper import send_json_safe
 import asyncio
@@ -16,7 +17,6 @@ class WebSocketManager:
         await websocket.accept()
         self.room_connections.setdefault(room_id, set()).add(websocket)
         self.player_connections[wallet_id] = websocket
-        print(f"✅ {wallet_id} connected to room {room_id}")
     
     def disconnect_room(self, websocket: WebSocket, room_id: str, wallet_id: str):
         if room_id in self.room_connections:
@@ -46,7 +46,6 @@ class WebSocketManager:
         self.clear_room_timeout(room_id)
         self.room_states.pop(room_id, None)
 
-        print(f"❌ All connections closed for room {room_id}")
 
     async def get_player_socket_by_wallet(self, wallet_id: str) -> WebSocket | None:
         return self.player_connections.get(wallet_id)
@@ -75,7 +74,7 @@ class WebSocketManager:
             await send_json_safe(ws, message)
 
     # Timeout
-    def start_room_timeout(self, room_id: str, timeout_seconds: int, on_timeout: callable):
+    def start_room_timeout(self, room_id: str, timeout_seconds: int, on_timeout: Callable):
         if room_id in self.room_timeouts:
             return  # timeout đã tồn tại
 

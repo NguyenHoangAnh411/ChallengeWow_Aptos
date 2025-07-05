@@ -19,10 +19,12 @@ import {
   FileText,
   Wallet,
   XIcon,
+  Network,
 } from "lucide-react";
 import { ethers } from "ethers";
 import "@rainbow-me/rainbowkit/styles.css";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { NetworkStatusBanner } from "@/components/network-status-banner";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global {
@@ -177,6 +179,16 @@ export default function Landing() {
             leaderboard.
           </motion.p>
 
+          {/* Network Status Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="max-w-2xl mx-auto mb-8"
+          >
+            <NetworkStatusBanner />
+          </motion.div>
+
           {/* CTA Buttons */}
           <motion.div
             className="flex flex-col sm:flex-row gap-4 justify-center mb-12 z-50"
@@ -194,9 +206,10 @@ export default function Landing() {
             <Button
               variant="outline"
               className="border-2 border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-white px-8 py-4 rounded-lg text-xl font-semibold transition-all duration-300"
+              onClick={() => router.push("/setup-network")}
             >
-              <BookOpen className="w-6 h-6 mr-2" />
-              Read Whitepaper
+              <Network className="w-6 h-6 mr-2" />
+              Thiết lập mạng
             </Button>
           </motion.div>
 

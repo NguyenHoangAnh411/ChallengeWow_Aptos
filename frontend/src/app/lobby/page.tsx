@@ -34,6 +34,7 @@ import ConnectWalletModal from "@/components/connect-wallet-modal";
 import { RoomStatus } from "@/types/RoomStatus";
 import { RECONNECT_WS } from "@/lib/constants";
 
+
 export default function Lobby() {
   const router = useRouter();
   const { toast } = useToast();
@@ -43,6 +44,7 @@ export default function Lobby() {
 
   const { currentUser, setCurrentUser } = useGameState();
   const { isConnected, address } = useAccount();
+  
   const [onlineStats, setOnlineStats] = useState({
     activeRooms: 0,
     playersOnline: 0,
@@ -53,6 +55,8 @@ export default function Lobby() {
   const [usernameInput, setUsernameInput] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [hasNewRoom, setHasNewRoom] = useState(false);
+
+
 
   // Tham gia phòng hiện tại đang tham gia
   useEffect(() => {
@@ -334,6 +338,8 @@ export default function Lobby() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
+
+              
               <Button
                 variant="ghost"
                 size="sm"

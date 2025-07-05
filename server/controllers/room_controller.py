@@ -30,7 +30,7 @@ class RoomController:
 
     async def get_room_by_id(self, room_id: str) -> Room | None:
         room = await self.room_service.get_room(room_id)
-        print(f"[DEBUG] get_room_by_id({room_id}) returned: {room}")
+        
         if room:
             print(f"[DEBUG] Room fields: total_questions={getattr(room, 'total_questions', 'NOT_FOUND')}, totalQuestions={getattr(room, 'totalQuestions', 'NOT_FOUND')}")
         return room
@@ -107,7 +107,9 @@ class RoomController:
 
             await self.websocket_manager.broadcast_to_room(room.id, {
                 "type": "player_joined",
-                "player": player
+                "payload": {
+                    "player": player
+                }
             })
 
         if len(room.players) < 2:

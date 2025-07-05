@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 import uuid
 
 from enums.question_difficulty import QUESTION_DIFFICULTY
@@ -14,6 +14,5 @@ class Question(CamelModel):
     options: List[str]
     correct_answer: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = None
-
-    model_config = ConfigDict(ser_enum_as_value=True)
+    updated_at: Optional[datetime] = None
+    model_config: ConfigDict = {"use_enum_values": True}

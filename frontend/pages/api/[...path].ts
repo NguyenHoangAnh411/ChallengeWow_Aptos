@@ -10,7 +10,7 @@ export const config = {
 };
 
 const apiProxy = createProxyMiddleware({
-  target: "http://localhost:3366",
+  target: "http://localhost:9000",
   changeOrigin: true,
   pathRewrite: {
     "^/api": "/api", // giữ nguyên /api path

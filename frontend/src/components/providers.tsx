@@ -11,12 +11,14 @@ import { useEffect } from "react";
 import { loginUser } from "@/lib/api";
 import { useGameState } from "@/lib/game-state";
 import { Toaster } from "./ui/toaster";
+import { OLYM3_TESTNET } from "@/lib/constants";
 
 const config = getDefaultConfig({
   appName: "Challenge Wave",
   projectId: "325fbe143f7ef647abd49c4a299b304a", // Đăng ký free tại https://cloud.walletconnect.com/
-  chains: [baseSepolia],
+  chains: [OLYM3_TESTNET, baseSepolia], // Olym3 Testnet as primary, Base Sepolia as fallback
   transports: {
+    [OLYM3_TESTNET.id]: http(),
     [baseSepolia.id]: http(),
   },
 });

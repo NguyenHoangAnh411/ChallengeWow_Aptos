@@ -89,10 +89,10 @@ class RoomService:
         q = game_settings.questions
         room.easy_questions = q.easy
         room.medium_questions = q.medium
+        print(q.hard)
         room.hard_questions = q.hard
         room.total_questions = q.easy + q.medium + q.hard
         room.time_per_question = game_settings.time_per_question
-        room.countdown_duration = game_settings.time_per_question
 
         await self.room_repo.save(room)
         return True

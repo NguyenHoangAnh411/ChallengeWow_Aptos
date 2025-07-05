@@ -18,6 +18,7 @@ import {
   Book,
   Github,
   MessageCircle,
+  Database,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,9 @@ export default function Settings() {
     general: true,
     sports: false,
   });
+
+  // Blockchain section state
+  const [showBlockchainSection, setShowBlockchainSection] = useState(false);
 
   const handleDisconnectWallet = async () => {
     setIsDisconnecting(true);
@@ -108,7 +112,7 @@ export default function Settings() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
           {/* Wallet Connection */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -173,11 +177,58 @@ export default function Settings() {
             </Card>
           </motion.div>
 
-          {/* Interface Preferences */}
+          {/* Blockchain Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <Card className="glass-morphism rounded-lg p-6">
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold flex items-center text-neon-green">
+                    <Database className="w-5 h-5 mr-2" />
+                    Blockchain & Smart Contracts
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowBlockchainSection(!showBlockchainSection)}
+                    className="text-neon-green hover:text-green-400"
+                  >
+                    {showBlockchainSection ? "Hide" : "Show"} Details
+                  </Button>
+                </div>
+                
+                {showBlockchainSection && (
+                  <div className="w-full">
+                    {/* GameContractActions component was removed */}
+                  </div>
+                )}
+                
+                {!showBlockchainSection && (
+                  <div className="text-center py-8">
+                    <Database className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-400 mb-4">
+                      View blockchain information and interact with smart contracts
+                    </p>
+                    <Button
+                      onClick={() => setShowBlockchainSection(true)}
+                      className="bg-neon-green hover:bg-green-600 px-6 py-2 rounded-lg font-medium transition-all duration-300"
+                    >
+                      Show Blockchain Info
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Interface Preferences */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Card className="glass-morphism rounded-lg p-6">
               <CardContent className="p-0">
@@ -199,20 +250,19 @@ export default function Settings() {
                         onClick={() => setTheme("dark")}
                         className={`px-3 py-1 rounded text-sm ${
                           theme === "dark"
-                            ? "bg-neon-blue text-white"
-                            : "text-gray-400 hover:text-white bg-transparent"
+                            ? "bg-neon-purple text-white"
+                            : "bg-gray-700 text-gray-300"
                         }`}
                       >
                         Dark
                       </Button>
                       <Button
                         size="sm"
-                        variant="ghost"
                         onClick={() => setTheme("light")}
                         className={`px-3 py-1 rounded text-sm ${
                           theme === "light"
-                            ? "bg-neon-blue text-white"
-                            : "text-gray-400 hover:text-white"
+                            ? "bg-neon-purple text-white"
+                            : "bg-gray-700 text-gray-300"
                         }`}
                       >
                         Light
@@ -230,7 +280,6 @@ export default function Settings() {
                     <Switch
                       checked={soundEffects}
                       onCheckedChange={setSoundEffects}
-                      className="data-[state=checked]:bg-neon-blue"
                     />
                   </div>
 
@@ -238,13 +287,12 @@ export default function Settings() {
                     <div>
                       <div className="font-medium">Animations</div>
                       <div className="text-sm text-gray-400">
-                        Reduce motion for better performance
+                        Enable smooth animations
                       </div>
                     </div>
                     <Switch
                       checked={animations}
                       onCheckedChange={setAnimations}
-                      className="data-[state=checked]:bg-neon-purple"
                     />
                   </div>
                 </div>
@@ -252,112 +300,7 @@ export default function Settings() {
             </Card>
           </motion.div>
 
-          {/* Game Preferences */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card className="glass-morphism rounded-lg p-6">
-              <CardContent className="p-0">
-                <h3 className="text-xl font-semibold mb-4 flex items-center text-green-400">
-                  <Gamepad2 className="w-5 h-5 mr-2" />
-                  Game Settings
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Auto-Join Rooms</div>
-                      <div className="text-sm text-gray-400">
-                        Automatically join available rooms
-                      </div>
-                    </div>
-                    <Switch
-                      checked={autoJoinRooms}
-                      onCheckedChange={setAutoJoinRooms}
-                      className="data-[state=checked]:bg-green-400"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Notifications</div>
-                      <div className="text-sm text-gray-400">
-                        Get notified about new challenges
-                      </div>
-                    </div>
-                    <Switch
-                      checked={notifications}
-                      onCheckedChange={setNotifications}
-                      className="data-[state=checked]:bg-green-400"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="font-medium mb-2">
-                      Preferred Question Categories
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="technology"
-                          checked={questionCategories.technology}
-                          onCheckedChange={(checked) =>
-                            handleCategoryChange("technology", !!checked)
-                          }
-                          className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
-                        />
-                        <label htmlFor="technology" className="text-sm">
-                          Technology
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="science"
-                          checked={questionCategories.science}
-                          onCheckedChange={(checked) =>
-                            handleCategoryChange("science", !!checked)
-                          }
-                          className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
-                        />
-                        <label htmlFor="science" className="text-sm">
-                          Science
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="general"
-                          checked={questionCategories.general}
-                          onCheckedChange={(checked) =>
-                            handleCategoryChange("general", !!checked)
-                          }
-                          className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
-                        />
-                        <label htmlFor="general" className="text-sm">
-                          General Knowledge
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="sports"
-                          checked={questionCategories.sports}
-                          onCheckedChange={(checked) =>
-                            handleCategoryChange("sports", !!checked)
-                          }
-                          className="border-gray-600 data-[state=checked]:bg-neon-blue data-[state=checked]:border-neon-blue"
-                        />
-                        <label htmlFor="sports" className="text-sm">
-                          Sports
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* About Section */}
+          {/* Game Settings */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -365,78 +308,129 @@ export default function Settings() {
           >
             <Card className="glass-morphism rounded-lg p-6">
               <CardContent className="p-0">
-                <h3 className="text-xl font-semibold mb-4 flex items-center text-orange-400">
-                  <Info className="w-5 h-5 mr-2" />
-                  About
+                <h3 className="text-xl font-semibold mb-4 flex items-center text-neon-orange">
+                  <Gamepad2 className="w-5 h-5 mr-2" />
+                  Game Settings
                 </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Version:</span>
-                    <span>1.0.0-beta</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Auto-join Rooms</div>
+                      <div className="text-sm text-gray-400">
+                        Automatically join available rooms
+                      </div>
+                    </div>
+                    <Switch
+                      checked={autoJoinRooms}
+                      onCheckedChange={setAutoJoinRooms}
+                    />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Network:</span>
-                    <span>OLYM3 Testnet</span>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">Notifications</div>
+                      <div className="text-sm text-gray-400">
+                        Receive game notifications
+                      </div>
+                    </div>
+                    <Switch
+                      checked={notifications}
+                      onCheckedChange={setNotifications}
+                    />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Contract:</span>
-                    <span className="font-mono">0xABC...123</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <a
-                      href="#"
-                      className="text-neon-blue hover:text-blue-400 transition-colors flex items-center"
-                    >
-                      <Book className="w-4 h-4 mr-1" />
-                      Documentation
-                    </a>
-                    <a
-                      href="#"
-                      className="text-neon-blue hover:text-blue-400 transition-colors flex items-center"
-                    >
-                      <Github className="w-4 h-4 mr-1" />
-                      GitHub
-                    </a>
-                    <a
-                      href="#"
-                      className="text-neon-blue hover:text-blue-400 transition-colors flex items-center"
-                    >
-                      <MessageCircle className="w-4 h-4 mr-1" />
-                      Support
-                    </a>
+
+                  <div>
+                    <div className="font-medium mb-3">Question Categories</div>
+                    <div className="space-y-2">
+                      {Object.entries(questionCategories).map(([category, checked]) => (
+                        <div key={category} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(checked) =>
+                              handleCategoryChange(category, checked as boolean)
+                            }
+                          />
+                          <label className="text-sm capitalize">
+                            {category}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Danger Zone */}
+          {/* Data Management */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <Card className="glass-morphism rounded-lg p-6 border border-red-500">
+            <Card className="glass-morphism rounded-lg p-6">
               <CardContent className="p-0">
                 <h3 className="text-xl font-semibold mb-4 flex items-center text-red-400">
-                  <AlertTriangle className="w-5 h-5 mr-2" />
-                  Danger Zone
+                  <Trash className="w-5 h-5 mr-2" />
+                  Data Management
                 </h3>
                 <div className="space-y-4">
                   <Button
                     onClick={handleClearData}
-                    className="w-full bg-red-600 hover:bg-red-700 px-4 py-3 rounded-lg font-medium transition-all duration-300"
+                    variant="outline"
+                    className="w-full border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
                   >
-                    <Trash className="w-4 h-4 mr-2" />
                     Clear All Data
                   </Button>
                   <Button
                     onClick={handleDeleteAccount}
                     variant="outline"
-                    className="w-full border border-red-500 text-red-400 hover:bg-red-600 hover:text-white px-4 py-3 rounded-lg font-medium transition-all duration-300"
+                    className="w-full border-red-600 text-red-500 hover:bg-red-600 hover:text-white"
                   >
                     <UserMinus className="w-4 h-4 mr-2" />
                     Delete Account
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Help & Support */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <Card className="glass-morphism rounded-lg p-6">
+              <CardContent className="p-0">
+                <h3 className="text-xl font-semibold mb-4 flex items-center text-neon-blue">
+                  <Info className="w-5 h-5 mr-2" />
+                  Help & Support
+                </h3>
+                <div className="space-y-4">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open("https://docs.challengewave.xyz", "_blank")}
+                  >
+                    <Book className="w-4 h-4 mr-2" />
+                    Documentation
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open("https://github.com/challengewave", "_blank")}
+                  >
+                    <Github className="w-4 h-4 mr-2" />
+                    GitHub
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.open("https://discord.gg/challengewave", "_blank")}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Discord Community
                   </Button>
                 </div>
               </CardContent>

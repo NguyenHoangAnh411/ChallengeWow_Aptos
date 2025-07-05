@@ -99,9 +99,9 @@ const GameSettingsView = ({ gameSettings }) => {
     (totalQuestions * gameSettings.timePerQuestion) / 60
   );
   const totalPoints =
-    gameSettings.questions.easy * 10 +
-    gameSettings.questions.medium * 20 +
-    gameSettings.questions.hard * 30;
+    gameSettings.questions.easy * 50 +
+    gameSettings.questions.medium * 100 +
+    gameSettings.questions.hard * 150;
 
   const getDifficultyLevel = () => {
     const hardRatio = gameSettings.questions.hard / totalQuestions;
@@ -233,9 +233,9 @@ const GameSettingsView = ({ gameSettings }) => {
               <div className="text-green-300 font-medium mb-2">
                 Easy Questions
               </div>
-              <div className="text-xs text-gray-400">10 points each</div>
+              <div className="text-xs text-gray-400">50 points each</div>
               <div className="text-sm text-green-400 mt-2 font-semibold">
-                {gameSettings.questions.easy * 10} points available
+                {gameSettings.questions.easy * 50} points available
               </div>
             </CardContent>
           </Card>
@@ -249,9 +249,9 @@ const GameSettingsView = ({ gameSettings }) => {
               <div className="text-yellow-300 font-medium mb-2">
                 Medium Questions
               </div>
-              <div className="text-xs text-gray-400">20 points each</div>
+              <div className="text-xs text-gray-400">100 points each</div>
               <div className="text-sm text-yellow-400 mt-2 font-semibold">
-                {gameSettings.questions.medium * 20} points available
+                {gameSettings.questions.medium * 100} points available
               </div>
             </CardContent>
           </Card>
@@ -265,9 +265,9 @@ const GameSettingsView = ({ gameSettings }) => {
               <div className="text-red-300 font-medium mb-2">
                 Hard Questions
               </div>
-              <div className="text-xs text-gray-400">30 points each</div>
+              <div className="text-xs text-gray-400">150 points each</div>
               <div className="text-sm text-red-400 mt-2 font-semibold">
-                {gameSettings.questions.hard * 30} points available
+                {gameSettings.questions.hard * 150} points available
               </div>
             </CardContent>
           </Card>

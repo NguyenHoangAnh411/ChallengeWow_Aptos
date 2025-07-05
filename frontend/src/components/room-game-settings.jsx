@@ -153,6 +153,10 @@ const EnhancedGameSettings = ({
     try {
       // Call the onSave callback prop if provided
       if (onSave) {
+        if (totalQuestions === 0) {
+          setSaveStatus("error");
+          return;
+        }
         await onSave(gameSettings);
       }
 
@@ -223,6 +227,7 @@ const EnhancedGameSettings = ({
                   <SelectItem value="10">10 secs</SelectItem>
                   <SelectItem value="15">15 secs</SelectItem>
                   <SelectItem value="20">20 secs</SelectItem>
+                  <SelectItem value="25">25 secs</SelectItem>
                   <SelectItem value="30">30 secs</SelectItem>
                   <SelectItem value="45">45 secs</SelectItem>
                   <SelectItem value="60">60 secs</SelectItem>
@@ -328,23 +333,23 @@ const EnhancedGameSettings = ({
                     onClick={() =>
                       setGameSettings((prev) => ({
                         ...prev,
-                        questions: { easy: 3, medium: 3, hard: 2 },
+                        questions: { easy: 5, medium: 3, hard: 2 },
                       }))
                     }
                     className="px-3 py-2 bg-green-600/20 text-green-400 rounded border border-green-600/30 hover:bg-green-600/30 transition-colors text-sm"
                   >
-                    Least (8 questions)
+                    Default (10 questions)
                   </button>
                   <button
                     onClick={() =>
                       setGameSettings((prev) => ({
                         ...prev,
-                        questions: { easy: 5, medium: 5, hard: 5 },
+                        questions: { easy: 3, medium: 4, hard: 3 },
                       }))
                     }
                     className="px-3 py-2 bg-blue-600/20 text-blue-400 rounded border border-blue-600/30 hover:bg-blue-600/30 transition-colors text-sm"
                   >
-                    Standard (15 questions)
+                    Balanced (10 questions)
                   </button>
                   <button
                     onClick={() =>
@@ -355,7 +360,7 @@ const EnhancedGameSettings = ({
                     }
                     className="px-3 py-2 bg-orange-600/20 text-orange-400 rounded border border-orange-600/30 hover:bg-orange-600/30 transition-colors text-sm"
                   >
-                    Longest (25 questions)
+                    Extended (25 questions)
                   </button>
                 </div>
               </div>
