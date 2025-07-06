@@ -86,3 +86,65 @@ Hệ thống được định hướng trở thành một **“metaverse giáo d
    * **IPFS/Arweave** cho lưu trữ phi tập trung.
 4. Các tiêu chuẩn bảo mật Web3 (OpenZeppelin, Chainlink CCIP).
 
+## Các bước commit và push code lên GitHub:
+
+### 1. Kiểm tra trạng thái hiện tại
+```bash
+<code_block_to_apply_changes_from>
+```
+
+### 2. Thêm các file đã thay đổi vào staging area
+```bash
+# Thêm tất cả file đã thay đổi
+git add .
+
+# Hoặc thêm từng file cụ thể
+git add frontend/package.json
+```
+
+### 3. Kiểm tra lại những gì sẽ được commit
+```bash
+git status
+```
+
+### 4. Commit với message mô tả thay đổi
+```bash
+git commit -m "Update frontend package.json configuration"
+```
+
+### 5. Push code lên GitHub
+```bash
+git push origin main
+```
+
+## Các câu lệnh bổ sung hữu ích:
+
+### Xem lịch sử commit
+```bash
+git log --oneline
+```
+
+### Xem branch hiện tại
+```bash
+git branch
+```
+
+### Nếu muốn tạo branch mới
+```bash
+git checkout -b feature/your-feature-name
+git add .
+git commit -m "Your commit message"
+git push origin feature/your-feature-name
+```
+
+### Nếu có conflict khi push
+```bash
+git pull origin main
+# Giải quyết conflict nếu có
+git add .
+git commit -m "Resolve merge conflicts"
+git push origin main
+```
+
+Bạn có thể thực hiện từng bước theo thứ tự trên. Nếu gặp vấn đề gì, hãy cho tôi biết!
+
