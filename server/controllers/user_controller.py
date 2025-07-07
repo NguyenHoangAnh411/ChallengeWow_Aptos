@@ -1,5 +1,4 @@
 from enums.leaderboard_period import LEADERBOARD_PERIOD
-from helpers.name_helper import generate_funny_username
 from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
 from models.leaderboard_entry import LeaderboardEntry
 from fastapi import APIRouter, HTTPException, Response
@@ -14,10 +13,8 @@ class UserController:
         if user:
             return user
 
-        if not username:
-            username = generate_funny_username(wallet_id)
-
-        return self.user_repo.create(wallet_id, username)
+        # Nếu chưa có username thì tạo user với username rỗng
+        return await self.user_repo.create(wallet_id, username or "")
 
     async def get_by_wallet(self, wallet_id: str):
         user = await self.user_repo.get_by_wallet(wallet_id)

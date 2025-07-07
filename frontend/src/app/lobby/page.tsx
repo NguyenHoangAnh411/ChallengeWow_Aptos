@@ -31,6 +31,7 @@ import {
 
 import { useAccount } from "wagmi";
 import ConnectWalletModal from "@/components/connect-wallet-modal";
+import UsernameModal from "@/components/connect-wallet-modal";
 import { RoomStatus } from "@/types/RoomStatus";
 import { RECONNECT_WS } from "@/lib/constants";
 
@@ -41,6 +42,7 @@ export default function Lobby() {
 
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
 
   const { currentUser, setCurrentUser } = useGameState();
   const { isConnected, address } = useAccount();
@@ -55,6 +57,7 @@ export default function Lobby() {
   const [usernameInput, setUsernameInput] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [hasNewRoom, setHasNewRoom] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(RoomStatus.WAITING);
 
 
 
@@ -76,7 +79,6 @@ export default function Lobby() {
       });
   }, [currentUser]);
 
-  // Connect Wallet Modal
   const requireWallet = (callback: () => void) => {
     if (!isConnected) {
       setPendingAction(() => callback);
@@ -95,14 +97,16 @@ export default function Lobby() {
   }, [isConnected, pendingAction]);
 
   useEffect(() => {
-    if (!currentUser && isConnected && address) {
+    if (isConnected && address) {
       fetchUserByWallet(address).then((user) => {
-        if (user) {
-          setCurrentUser(user);
+        console.log("User from API:", user);
+        setCurrentUser(user);
+        if (!user || !user.username || user.username === null || user.username === "") {
+          setShowUsernameModal(true);
         }
       });
     }
-  }, [currentUser, isConnected, address, setCurrentUser]);
+  }, [isConnected, address, setCurrentUser]);
 
   const {
     data: rooms = [],
@@ -110,8 +114,8 @@ export default function Lobby() {
     isFetching,
     refetch,
   } = useQuery<Room[]>({
-    queryKey: ["rooms"],
-    queryFn: fetchRooms,
+    queryKey: ["rooms", activeTab],
+    queryFn: () => fetchRooms(activeTab),
     staleTime: 1000, // 1s stale time để tránh spam
     refetchOnWindowFocus: false,
   });
@@ -272,29 +276,12 @@ export default function Lobby() {
     });
   };
 
-  const handleSaveUsername = async () => {
-    if (!currentUser?.walletId || !usernameInput.trim()) return;
-    if (usernameInput.length < 2) return;
-    setIsSavingUsername(true);
-    try {
-      const finalUsername = `${usernameInput.trim()}#${currentUser.walletId.slice(
-        -4
-      )}`;
-      await updateUser(currentUser.walletId, finalUsername);
-      setCurrentUser({ ...currentUser, username: finalUsername });
-      setUsernameInput("");
-      toast({
-        title: "Username updated!",
-        description: "You can now create a room.",
-      });
-    } catch (e) {
-      toast({
-        title: "Error",
-        description: "Failed to update username.",
-        variant: "destructive",
-      });
-    }
-    setIsSavingUsername(false);
+  const handleSaveUsername = async (username: string) => {
+    if (!address) return;
+    await updateUser(address, username);
+    const updatedUser = await fetchUserByWallet(address);
+    setCurrentUser(updatedUser);
+    setShowUsernameModal(false);
   };
 
   return (
@@ -441,35 +428,6 @@ export default function Lobby() {
                           </span>
                         </div>
                       </div>
-
-                      {/* Update Username Form */}
-                      <div className="pt-4 mt-4 border-t border-neon-blue/20">
-                        <h4 className="font-semibold text-neon-blue text-sm mb-2">
-                          {currentUser.username ? "Update" : "Set"} your
-                          username
-                        </h4>
-                        <div className="flex space-x-2">
-                          <input
-                            className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-full"
-                            placeholder={
-                              currentUser.username || "Enter username"
-                            }
-                            value={usernameInput}
-                            onChange={(e) => setUsernameInput(e.target.value)}
-                          />
-                          <Button
-                            onClick={handleSaveUsername}
-                            disabled={isSavingUsername || !usernameInput.trim()}
-                            className="bg-neon-blue hover:bg-blue-600 px-4 py-2 text-white"
-                          >
-                            {isSavingUsername ? (
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                            ) : (
-                              "Save"
-                            )}
-                          </Button>
-                        </div>
-                      </div>
                     </div>
                   ) : (
                     <p className="text-gray-400 text-center py-4">
@@ -532,6 +490,21 @@ export default function Lobby() {
 
           {/* Main Content */}
           <div className="lg:col-span-3">
+            {/* Tabs for room status */}
+            <div className="mb-6 flex space-x-2">
+              <Button
+                variant={activeTab === RoomStatus.WAITING ? "default" : "outline"}
+                onClick={() => setActiveTab(RoomStatus.WAITING)}
+              >
+                Waiting
+              </Button>
+              <Button
+                variant={activeTab === RoomStatus.IN_PROGRESS ? "default" : "outline"}
+                onClick={() => setActiveTab(RoomStatus.IN_PROGRESS)}
+              >
+                In Progress
+              </Button>
+            </div>
             {/* Enhanced Create Room Button */}
             <motion.div
               className="mb-8"
@@ -670,6 +643,7 @@ export default function Lobby() {
         open={showConnectModal}
         onOpenChange={setShowConnectModal}
       />
+
     </div>
   );
 }

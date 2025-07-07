@@ -19,8 +19,8 @@ class RoomService:
         self.player_repo = player_repo
         self.answer_repo = answer_repo
 
-    async def get_rooms(self) -> List[Room]:
-        return await self.room_repo.get_all()
+    async def get_rooms(self, status: str = None) -> List[Room]:
+        return await self.room_repo.get_all(status)
 
     async def create_room(self, player: Player) -> Room:
         room = Room.create(

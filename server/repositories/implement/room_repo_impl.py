@@ -12,9 +12,12 @@ class RoomRepository(IRoomRepository):
         self.supabase = supabase
         self.player_repo = player_repo
 
-    async def get_all(self) -> List[Room]:
+    async def get_all(self, status: str = None) -> List[Room]:
         try:
-            response = await self.supabase.table(self.table).select("*").execute()
+            query = self.supabase.table(self.table).select("*")
+            if status:
+                query = query.eq("status", status)
+            response = await query.execute()
             data = response.data
             rooms = []
             for item in data:

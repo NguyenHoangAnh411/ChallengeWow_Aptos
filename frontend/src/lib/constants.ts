@@ -50,6 +50,112 @@ export const OLYM3_TESTNET = {
     },
   },
   testnet: true,
+  iconUrl: "/olym3-logo.svg", // Đảm bảo đã tải logo này vào public
+} as const;
+
+// Solana Devnet Configuration (dummy EVM config for UI dropdown)
+export const SOLANA_DEVNET = {
+  id: 103,
+  name: "Solana Devnet",
+  network: "solana-devnet",
+  nativeCurrency: {
+    decimals: 9,
+    name: "SOL",
+    symbol: "SOL",
+  },
+  rpcUrls: {
+    default: { http: ["https://api.devnet.solana.com"] },
+    public: { http: ["https://api.devnet.solana.com"] },
+  },
+  blockExplorers: {
+    default: { name: "Solana Explorer", url: "https://explorer.solana.com?cluster=devnet" },
+  },
+  testnet: true,
+  iconUrl: "/solana-sol-logo.svg",
+} as const;
+
+// Aptos Testnet Configuration (dummy EVM config for UI dropdown)
+export const APTOS_TESTNET = {
+  id: 104,
+  name: "Aptos Testnet",
+  network: "aptos-testnet",
+  nativeCurrency: {
+    decimals: 8,
+    name: "APT",
+    symbol: "APT",
+  },
+  rpcUrls: {
+    default: { http: ["https://fullnode.testnet.aptoslabs.com/v1"] },
+    public: { http: ["https://fullnode.testnet.aptoslabs.com/v1"] },
+  },
+  blockExplorers: {
+    default: { name: "Aptos Explorer", url: "https://explorer.aptoslabs.com?network=testnet" },
+  },
+  testnet: true,
+  iconUrl: "/aptos-apt-logo.svg",
+} as const;
+
+// Ronin Saigon Configuration (dummy EVM config for UI dropdown)
+export const RONIN_SAIGON = {
+  id: 2021,
+  name: "Ronin Saigon",
+  network: "ronin-saigon",
+  nativeCurrency: {
+    decimals: 18,
+    name: "RON",
+    symbol: "RON",
+  },
+  rpcUrls: {
+    default: { http: ["https://saigon-testnet.roninchain.com/rpc"] },
+    public: { http: ["https://saigon-testnet.roninchain.com/rpc"] },
+  },
+  blockExplorers: {
+    default: { name: "Ronin Explorer", url: "https://saigon-explorer.roninchain.com" },
+  },
+  testnet: true,
+  iconUrl: "/ronin-ron-logo.svg",
+} as const;
+
+// LISK Testnet Configuration (dummy EVM config for UI dropdown)
+export const LISK_TESTNET = {
+  id: 113,
+  name: "Lisk Testnet",
+  network: "lisk-testnet",
+  nativeCurrency: {
+    decimals: 18,
+    name: "LSK",
+    symbol: "LSK",
+  },
+  rpcUrls: {
+    default: { http: ["https://testnet-service.lisk.com/rpc"] },
+    public: { http: ["https://testnet-service.lisk.com/rpc"] },
+  },
+  blockExplorers: {
+    default: { name: "Lisk Explorer", url: "https://testnet-explorer.lisk.com" },
+  },
+  testnet: true,
+  iconUrl: "/lisk-lsk-logo.svg",
+} as const;
+
+// Viction Testnet Configuration (dummy EVM config for UI dropdown)
+export const VICTION_TESTNET = {
+  id: 88,
+  name: "Viction Testnet",
+  network: "viction-testnet",
+  nativeCurrency: {
+    decimals: 18,
+    name: "VIC",
+    symbol: "VIC",
+  },
+  rpcUrls: {
+    default: { http: ["https://rpc-testnet.viction.xyz"] },
+    public: { http: ["https://rpc-testnet.viction.xyz"] },
+  },
+  blockExplorers: {
+    default: { name: "Viction Explorer", url: "https://explorer.viction.xyz" },
+  },
+  testnet: true,
+  iconUrl: "https://viction.xyz/favicon.ico",
 } as const;
 
 // Contract addresses (if needed for your game)

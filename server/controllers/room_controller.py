@@ -25,8 +25,8 @@ class RoomController:
         self.player_service = player_service
         self.websocket_manager = websocket_manager
 
-    async def get_rooms(self):
-        return await self.room_service.get_rooms()
+    async def get_rooms(self, status: str = None):
+        return await self.room_service.get_rooms(status)
 
     async def get_room_by_id(self, room_id: str) -> Room | None:
         room = await self.room_service.get_room(room_id)

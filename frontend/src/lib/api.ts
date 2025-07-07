@@ -13,8 +13,12 @@ async function fetchData(endpoint: string, options: RequestInit = {}) {
 }
 
 // Lấy danh sách phòng
-export async function fetchRooms() {
-  return fetchData("/rooms");
+export async function fetchRooms(status?: string) {
+  let endpoint = "/rooms";
+  if (status) {
+    endpoint += `?status=${status}`;
+  }
+  return fetchData(endpoint);
 }
 
 // Lấy data phòng

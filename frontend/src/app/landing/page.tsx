@@ -25,6 +25,42 @@ import { ethers } from "ethers";
 import "@rainbow-me/rainbowkit/styles.css";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { NetworkStatusBanner } from "@/components/network-status-banner";
+import {
+  OLYM3_TESTNET,
+  SOLANA_DEVNET,
+  APTOS_TESTNET,
+  RONIN_SAIGON,
+  LISK_TESTNET,
+  VICTION_TESTNET,
+} from "@/lib/constants";
+
+const NETWORKS = [
+  OLYM3_TESTNET,
+  SOLANA_DEVNET,
+  APTOS_TESTNET,
+  RONIN_SAIGON,
+  LISK_TESTNET,
+  VICTION_TESTNET,
+];
+
+function addNetworkToWallet(network: any) {
+  if (window.ethereum && network) {
+    window.ethereum.request({
+      method: "wallet_addEthereumChain",
+      params: [
+        {
+          chainId: "0x" + network.id.toString(16),
+          chainName: network.name,
+          nativeCurrency: network.nativeCurrency,
+          rpcUrls: network.rpcUrls.default.http,
+          blockExplorerUrls: [network.blockExplorers.default.url],
+        },
+      ],
+    });
+  } else {
+    alert("Please install MetaMask or a compatible wallet extension.");
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global {
@@ -360,6 +396,41 @@ export default function Landing() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Blockchain Networks Add Section */}
+      <motion.div
+        className="container mx-auto px-4 py-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 1.2 }}
+      >
+        <h2 className="text-2xl font-bold mb-6 text-center text-neon-blue">Supported Networks</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          {NETWORKS.map((net) => (
+            <div key={net.id} className="glass-morphism rounded-lg p-4 text-center flex flex-col items-center">
+              <img src={net.iconUrl} alt={net.name} className="w-10 h-10 mb-2" />
+              <div className="font-bold text-lg mb-2">{net.name}</div>
+              <Button className="mt-2" onClick={() => addNetworkToWallet(net)}>
+                Add Network
+              </Button>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Video Section */}
+      <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
+        <h2 className="text-3xl font-bold mb-6 text-center text-neon-blue">Watch Game Demo</h2>
+        <p className="mb-6 text-lg text-gray-300 text-center max-w-2xl">
+          Experience the gameplay, real-time quiz battles, and blockchain-powered rewards of Challenge Wave in this demo video.
+        </p>
+        <div className="w-full max-w-2xl rounded-xl overflow-hidden shadow-lg bg-cyber-darker p-4">
+          <video controls className="w-full h-auto rounded-lg">
+            <source src="/Demo_video.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 text-center text-gray-400">

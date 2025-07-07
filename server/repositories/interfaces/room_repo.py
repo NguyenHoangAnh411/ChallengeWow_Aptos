@@ -5,7 +5,7 @@ from models.room import Room
 
 class IRoomRepository(ABC):
     @abstractmethod
-    async def get_all(self) -> List[Room]:
+    async def get_all(self, status: str = None) -> List[Room]:
         pass
 
     @abstractmethod
