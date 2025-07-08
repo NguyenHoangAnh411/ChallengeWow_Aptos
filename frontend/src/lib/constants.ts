@@ -75,10 +75,10 @@ export const SOLANA_DEVNET = {
 } as const;
 
 // Aptos Testnet Configuration (dummy EVM config for UI dropdown)
-export const APTOS_TESTNET = {
+export const APTOS_DEVNET = {
   id: 104,
-  name: "Aptos Testnet",
-  network: "aptos-testnet",
+  name: "Aptos Devnet",
+  network: "aptos-devnet",
   nativeCurrency: {
     decimals: 8,
     name: "APT",

@@ -28,7 +28,7 @@ import { NetworkStatusBanner } from "@/components/network-status-banner";
 import {
   OLYM3_TESTNET,
   SOLANA_DEVNET,
-  APTOS_TESTNET,
+  APTOS_DEVNET,
   RONIN_SAIGON,
   LISK_TESTNET,
   VICTION_TESTNET,
@@ -37,7 +37,7 @@ import {
 const NETWORKS = [
   OLYM3_TESTNET,
   SOLANA_DEVNET,
-  APTOS_TESTNET,
+  APTOS_DEVNET,
   RONIN_SAIGON,
   LISK_TESTNET,
   VICTION_TESTNET,
@@ -397,27 +397,6 @@ export default function Landing() {
         </div>
       </motion.div>
 
-      {/* Blockchain Networks Add Section */}
-      <motion.div
-        className="container mx-auto px-4 py-8"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1.2 }}
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center text-neon-blue">Supported Networks</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          {NETWORKS.map((net) => (
-            <div key={net.id} className="glass-morphism rounded-lg p-4 text-center flex flex-col items-center">
-              <img src={net.iconUrl} alt={net.name} className="w-10 h-10 mb-2" />
-              <div className="font-bold text-lg mb-2">{net.name}</div>
-              <Button className="mt-2" onClick={() => addNetworkToWallet(net)}>
-                Add Network
-              </Button>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
       {/* Video Section */}
       <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
         <h2 className="text-3xl font-bold mb-6 text-center text-neon-blue">Watch Game Demo</h2>
@@ -437,27 +416,26 @@ export default function Landing() {
         <div className="flex flex-wrap justify-center gap-6 mb-4">
           <a
             href="#"
-            className="hover:text-neon-blue transition-colors flex items-center"
-          >
-            <ExternalLink className="w-4 h-4 mr-2" />
-            OLYM3 Explorer
-          </a>
-          <a
-            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
             className="hover:text-neon-blue transition-colors flex items-center"
           >
             <FileText className="w-4 h-4 mr-2" />
             Whitepaper
           </a>
           <a
-            href="#"
+            href="https://github.com/Olym3Chain/Challenge-Wow"
+            target="_blank"
+            rel="noopener noreferrer"
             className="hover:text-neon-blue transition-colors flex items-center"
           >
             <Github className="w-4 h-4 mr-2" />
             GitHub
           </a>
           <a
-            href="#"
+            href="https://discord.gg/AwMZfrSC7u"
+            target="_blank"
+            rel="noopener noreferrer"
             className="hover:text-neon-blue transition-colors flex items-center"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
