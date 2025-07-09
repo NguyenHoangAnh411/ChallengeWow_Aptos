@@ -27,7 +27,9 @@ class AnswerRepository(IAnswerRepository):
                 "is_correct": data.get("is_correct"),
                 "score": data.get("score"),
                 "response_time": data.get("response_time"),
-                "created_at": data.get("created_at")
+                "created_at": data.get("created_at"),
+                "answer_type": data.get("answer_type", "regular"),
+                "tie_break_round": data.get("tie_break_round")
             }
             
             # Remove None values
@@ -114,3 +116,36 @@ class AnswerRepository(IAnswerRepository):
         except Exception as e:
             print(f"Error calculating score for user {wallet_id} in room {room_id}: {e}")
             return 0.0
+
+    async def get_tie_break_answers_by_room(self, room_id: str) -> List[Answer]:
+        """Get all tie-break and sudden death answers for a room"""
+        try:
+            response = await (
+                self.supabase.table(self.table)
+                .select("*")
+                .eq("room_id", room_id)
+                .in_("answer_type", ["tie_break", "sudden_death"])
+                .order("created_at", desc=False)
+                .execute()
+            )
+            return [Answer(**item) for item in (response.data or [])]
+        except Exception as e:
+            print(f"Error fetching tie-break answers for room {room_id}: {e}")
+            return []
+
+    async def get_tie_break_answers_by_round(self, room_id: str, tie_break_round: int) -> List[Answer]:
+        """Get tie-break answers for a specific round"""
+        try:
+            response = await (
+                self.supabase.table(self.table)
+                .select("*")
+                .eq("room_id", room_id)
+                .eq("tie_break_round", tie_break_round)
+                .in_("answer_type", ["tie_break", "sudden_death"])
+                .order("created_at", desc=False)
+                .execute()
+            )
+            return [Answer(**item) for item in (response.data or [])]
+        except Exception as e:
+            print(f"Error fetching tie-break answers for round {tie_break_round} in room {room_id}: {e}")
+            return []

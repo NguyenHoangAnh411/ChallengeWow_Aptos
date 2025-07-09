@@ -245,7 +245,7 @@ export default function Landing() {
               onClick={() => router.push("/setup-network")}
             >
               <Network className="w-6 h-6 mr-2" />
-              Network setup
+              Setup Network
             </Button>
           </motion.div>
 
@@ -399,9 +399,12 @@ export default function Landing() {
 
       {/* Video Section */}
       <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
-        <h2 className="text-3xl font-bold mb-6 text-center text-neon-blue">Watch Game Demo</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-neon-blue">
+          Watch Game Demo
+        </h2>
         <p className="mb-6 text-lg text-gray-300 text-center max-w-2xl">
-          Experience the gameplay, real-time quiz battles, and blockchain-powered rewards of Challenge Wave in this demo video.
+          Experience the gameplay, real-time quiz battles, and
+          blockchain-powered rewards of Challenge Wave in this demo video.
         </p>
         <div className="w-full max-w-2xl rounded-xl overflow-hidden shadow-lg bg-cyber-darker p-4">
           <video controls className="w-full h-auto rounded-lg">
@@ -447,8 +450,7 @@ export default function Landing() {
             rel="noopener noreferrer"
             className="hover:text-neon-blue transition-colors flex items-center"
           >
-            <XIcon className="w-4 h-4 mr-2" />
-            X (Twitter)
+            <XIcon className="w-4 h-4 mr-2" />X (Twitter)
           </a>
         </div>
         <p>&copy; 2024 Challenge Wave. Built with blockchain transparency.</p>

@@ -26,6 +26,7 @@ from services.websocket_manager import WebSocketManager
 from repositories.implement.zkproof_repo_impl import ZkProofRepository
 from services.zkproof_service import ZkProofService
 from services.game_service import GameService
+from services.tie_break_service import TieBreakService
 
 from repositories.implement.room_repo_impl import RoomRepository
 from repositories.implement.player_repo_impl import PlayerRepository
@@ -69,14 +70,15 @@ async def lifespan(app: FastAPI):
     question_service = QuestionService(question_repo)
     answer_service = AnswerService(answer_repo)
     zkproof_service = ZkProofService(ZkProofRepository())
-    game_service = GameService(room_service, question_service, zkproof_service)
+    tie_break_service = TieBreakService(room_service, question_service, answer_service)
+    game_service = GameService(room_service, question_service, zkproof_service, tie_break_service)
     websocket_manager = WebSocketManager()
 
     # Controllers
     app.state.room_controller = RoomController(room_service, game_service, player_service, websocket_manager)
     app.state.player_controller = PlayerController(player_service, websocket_manager)
     app.state.question_controller = QuestionController(question_service)
-    app.state.answer_controller = AnswerController(answer_service, room_service, game_service)
+    app.state.answer_controller = AnswerController(answer_service, room_service, game_service, tie_break_service)
     app.state.user_controller = UserController(user_repo, user_stats_repo)
     app.state.zkproof_controller = ZkProofController(zkproof_service)
     app.state.websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service, answer_service, user_repo, user_stats_repo)
@@ -107,3 +109,4 @@ HOST = "127.0.0.1"
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host=HOST, port=PORT, reload=True)
+    

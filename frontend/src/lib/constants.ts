@@ -22,6 +22,18 @@ export const KICKED_TYPE = "kicked";
 export const PING_TYPE = "ping";
 export const PONG_TYPE = "pong";
 
+// Tie-break Message Types
+export const TIE_BREAK_ACTIVATED_TYPE = "tie_break_activated";
+export const TIE_BREAK_QUESTION_TYPE = "tie_break_question";
+export const TIE_BREAK_ANSWER_SUBMITTED_TYPE = "tie_break_answer_submitted";
+export const TIE_BREAK_WINNER_TYPE = "tie_break_winner";
+export const TIE_BREAK_NEXT_ROUND_TYPE = "tie_break_next_round";
+export const TIE_BREAK_TIMEOUT_TYPE = "tie_break_timeout";
+export const TIE_BREAK_CANCELLED_TYPE = "tie_break_cancelled";
+export const SUDDEN_DEATH_ACTIVATED_TYPE = "sudden_death_activated";
+export const SUDDEN_DEATH_QUESTION_TYPE = "sudden_death_question";
+export const SUDDEN_DEATH_TIMEOUT_TYPE = "sudden_death_timeout";
+
 // WS Alive-time
 export const RECONNECT_WS = 25000;
 
@@ -68,7 +80,10 @@ export const SOLANA_DEVNET = {
     public: { http: ["https://api.devnet.solana.com"] },
   },
   blockExplorers: {
-    default: { name: "Solana Explorer", url: "https://explorer.solana.com?cluster=devnet" },
+    default: {
+      name: "Solana Explorer",
+      url: "https://explorer.solana.com?cluster=devnet",
+    },
   },
   testnet: true,
   iconUrl: "/solana-sol-logo.svg",
@@ -89,7 +104,10 @@ export const APTOS_DEVNET = {
     public: { http: ["https://fullnode.testnet.aptoslabs.com/v1"] },
   },
   blockExplorers: {
-    default: { name: "Aptos Explorer", url: "https://explorer.aptoslabs.com?network=testnet" },
+    default: {
+      name: "Aptos Explorer",
+      url: "https://explorer.aptoslabs.com?network=testnet",
+    },
   },
   testnet: true,
   iconUrl: "/aptos-apt-logo.svg",
@@ -110,7 +128,10 @@ export const RONIN_SAIGON = {
     public: { http: ["https://saigon-testnet.roninchain.com/rpc"] },
   },
   blockExplorers: {
-    default: { name: "Ronin Explorer", url: "https://saigon-explorer.roninchain.com" },
+    default: {
+      name: "Ronin Explorer",
+      url: "https://saigon-explorer.roninchain.com",
+    },
   },
   testnet: true,
   iconUrl: "/ronin-ron-logo.svg",
@@ -131,7 +152,10 @@ export const LISK_TESTNET = {
     public: { http: ["https://testnet-service.lisk.com/rpc"] },
   },
   blockExplorers: {
-    default: { name: "Lisk Explorer", url: "https://testnet-explorer.lisk.com" },
+    default: {
+      name: "Lisk Explorer",
+      url: "https://testnet-explorer.lisk.com",
+    },
   },
   testnet: true,
   iconUrl: "/lisk-lsk-logo.svg",

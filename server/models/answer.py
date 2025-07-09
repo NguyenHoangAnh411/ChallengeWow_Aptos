@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Union, Optional
 
 from models.base import CamelModel
+from enums.answer_type import ANSWER_TYPE
 
 class Answer(CamelModel):
     id: Union[str, uuid.UUID] = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -15,6 +16,10 @@ class Answer(CamelModel):
     score: int
     response_time: float
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    # Tie-break fields
+    answer_type: ANSWER_TYPE = ANSWER_TYPE.REGULAR  # "regular", "tie_break", "sudden_death"
+    tie_break_round: Optional[int] = None  # 1 or 2 for tie-break answers
     
     # Additional fields used in WebSocket controller (not stored in DB)
     question_index: Optional[int] = Field(default=None, exclude=True)

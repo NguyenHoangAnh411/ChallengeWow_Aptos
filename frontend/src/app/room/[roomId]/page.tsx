@@ -66,6 +66,17 @@ import {
   KICK_PLAYER_TYPE,
   PLAYER_JOINED_TYPE,
   PLAYER_READY_TYPE,
+  // Tie-break message types
+  TIE_BREAK_ACTIVATED_TYPE,
+  TIE_BREAK_QUESTION_TYPE,
+  TIE_BREAK_ANSWER_SUBMITTED_TYPE,
+  TIE_BREAK_WINNER_TYPE,
+  TIE_BREAK_NEXT_ROUND_TYPE,
+  TIE_BREAK_TIMEOUT_TYPE,
+  TIE_BREAK_CANCELLED_TYPE,
+  SUDDEN_DEATH_ACTIVATED_TYPE,
+  SUDDEN_DEATH_QUESTION_TYPE,
+  SUDDEN_DEATH_TIMEOUT_TYPE,
 } from "@/lib/constants";
 import EnhancedGameSettings from "@/components/room-game-settings";
 import GameSettingsView from "@/components/room-settings-view";
@@ -120,6 +131,23 @@ export default function ChallengeRoom({
     winnerWallet,
     setWinnerWallet,
     resetGameState,
+    // ✅ NEW: Tie-break states from game-state store
+    isTieBreakActive,
+    setIsTieBreakActive,
+    tieBreakRound,
+    setTieBreakRound,
+    isSuddenDeathActive,
+    setIsSuddenDeathActive,
+    tieBreakQuestion,
+    setTieBreakQuestion,
+    tieBreakQuestionEndAt,
+    setTieBreakQuestionEndAt,
+    tieBreakQuestionCountdown,
+    setTieBreakQuestionCountdown,
+    hasAnsweredTieBreak,
+    setHasAnsweredTieBreak,
+    selectedTieBreakAnswer,
+    setSelectedTieBreakAnswer,
   } = useGameState();
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -137,6 +165,8 @@ export default function ChallengeRoom({
   const [gameSettings, setGameSettings] = useState(DEFAULT_GAME_SETTINGS);
   const [isLoadingRoom, setIsLoadingRoom] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
+
+  // ✅ NEW: Tie-break states are now managed by useGameState hook
 
   // WebSocket connection
   const { sendMessage, isWsConnected, closeConnection } = useWebSocket({
@@ -179,6 +209,37 @@ export default function ChallengeRoom({
         break;
       case PLAYER_READY_TYPE:
         handlePlayerReady(data.payload);
+        break;
+      // ✅ NEW: Tie-break message handlers
+      case TIE_BREAK_ACTIVATED_TYPE:
+        handleTieBreakActivated(data.payload);
+        break;
+      case TIE_BREAK_QUESTION_TYPE:
+        handleTieBreakQuestion(data.payload);
+        break;
+      case TIE_BREAK_ANSWER_SUBMITTED_TYPE:
+        handleTieBreakAnswerSubmitted(data.payload);
+        break;
+      case TIE_BREAK_WINNER_TYPE:
+        handleTieBreakWinner(data.payload);
+        break;
+      case TIE_BREAK_NEXT_ROUND_TYPE:
+        handleTieBreakNextRound(data.payload);
+        break;
+      case TIE_BREAK_TIMEOUT_TYPE:
+        handleTieBreakTimeout(data.payload);
+        break;
+      case TIE_BREAK_CANCELLED_TYPE:
+        handleTieBreakCancelled(data.payload);
+        break;
+      case SUDDEN_DEATH_ACTIVATED_TYPE:
+        handleSuddenDeathActivated(data.payload);
+        break;
+      case SUDDEN_DEATH_QUESTION_TYPE:
+        handleSuddenDeathQuestion(data.payload);
+        break;
+      case SUDDEN_DEATH_TIMEOUT_TYPE:
+        handleSuddenDeathTimeout(data.payload);
         break;
       default:
         console.log("[WS] Unknown message type:", data.type);
@@ -403,6 +464,124 @@ export default function ChallengeRoom({
     router.push("/lobby");
   }
 
+  // ✅ NEW: Tie-break handlers
+  function handleTieBreakActivated(payload: any) {
+    console.log("[TIE_BREAK] Activated:", payload);
+    setIsTieBreakActive(true);
+    setTieBreakRound(payload.round);
+    setGameStatus("tie_break");
+
+    toast({
+      title: "🎯 Tie-Break Activated!",
+      description: payload.message,
+      variant: "default",
+    });
+  }
+
+  function handleTieBreakQuestion(payload: any) {
+    console.log("[TIE_BREAK] Question:", payload);
+    setTieBreakQuestion(payload.question);
+    setTieBreakQuestionEndAt(payload.timing.questionEndAt);
+    setHasAnsweredTieBreak(false);
+    setSelectedTieBreakAnswer(null);
+    setGameStatus("tie_break_question");
+  }
+
+  function handleTieBreakAnswerSubmitted(payload: any) {
+    console.log("[TIE_BREAK] Answer submitted:", payload);
+    setHasAnsweredTieBreak(true);
+
+    // Show confetti for correct answers
+    if (payload.isCorrect) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
+
+    toast({
+      title: payload.isCorrect ? "✅ Correct!" : "❌ Incorrect",
+      description: payload.message,
+      variant: payload.isCorrect ? "default" : "destructive",
+    });
+  }
+
+  function handleTieBreakWinner(payload: any) {
+    console.log("[TIE_BREAK] Winner:", payload);
+    setIsTieBreakActive(false);
+    setIsSuddenDeathActive(false);
+
+    toast({
+      title: "🏆 Tie-Break Winner!",
+      description: payload.message,
+      variant: "default",
+    });
+
+    // Game will end normally after this
+  }
+
+  function handleTieBreakNextRound(payload: any) {
+    console.log("[TIE_BREAK] Next round:", payload);
+    setTieBreakRound(payload.round);
+
+    toast({
+      title: `🔄 Round ${payload.round}`,
+      description: payload.message,
+      variant: "default",
+    });
+  }
+
+  function handleTieBreakTimeout(payload: any) {
+    console.log("[TIE_BREAK] Timeout:", payload);
+
+    toast({
+      title: "⏰ Time's Up!",
+      description: payload.message,
+      variant: "destructive",
+    });
+  }
+
+  function handleTieBreakCancelled(payload: any) {
+    console.log("[TIE_BREAK] Cancelled:", payload);
+    setIsTieBreakActive(false);
+    setIsSuddenDeathActive(false);
+
+    toast({
+      title: "❌ Tie-Break Cancelled",
+      description: payload.message,
+      variant: "destructive",
+    });
+  }
+
+  function handleSuddenDeathActivated(payload: any) {
+    console.log("[SUDDEN_DEATH] Activated:", payload);
+    setIsSuddenDeathActive(true);
+    setGameStatus("sudden_death");
+
+    toast({
+      title: "⚡ Sudden Death!",
+      description: payload.message,
+      variant: "default",
+    });
+  }
+
+  function handleSuddenDeathQuestion(payload: any) {
+    console.log("[SUDDEN_DEATH] Question:", payload);
+    setTieBreakQuestion(payload.question);
+    setTieBreakQuestionEndAt(payload.timing.questionEndAt);
+    setHasAnsweredTieBreak(false);
+    setSelectedTieBreakAnswer(null);
+    setGameStatus("sudden_death_question");
+  }
+
+  function handleSuddenDeathTimeout(payload: any) {
+    console.log("[SUDDEN_DEATH] Timeout:", payload);
+
+    toast({
+      title: "⏰ Time's Up!",
+      description: payload.message,
+      variant: "destructive",
+    });
+  }
+
   // Load room data
   useEffect(() => {
     async function loadRoomData() {
@@ -473,6 +652,16 @@ export default function ChallengeRoom({
     setGameSettings(DEFAULT_GAME_SETTINGS);
     setIsLoadingRoom(true); // ✅ Set loading state to true when entering new room
 
+    // ✅ NEW: Reset tie-break states
+    setIsTieBreakActive(false);
+    setTieBreakRound(1);
+    setIsSuddenDeathActive(false);
+    setTieBreakQuestion(null);
+    setTieBreakQuestionEndAt(null);
+    setTieBreakQuestionCountdown(0);
+    setHasAnsweredTieBreak(false);
+    setSelectedTieBreakAnswer(null);
+
     console.log("[ROOM] Game state reset for room:", roomId);
   }, [roomId, resetGameState]);
 
@@ -494,6 +683,33 @@ export default function ChallengeRoom({
     const interval = setInterval(updateCountdown, 250);
     return () => clearInterval(interval);
   }, [questionEndAt, hasAnswered, currentQuestion, gameStatus]);
+
+  // ✅ NEW: Tie-break question countdown timer
+  useEffect(() => {
+    if (
+      !tieBreakQuestionEndAt ||
+      (gameStatus !== "tie_break_question" &&
+        gameStatus !== "sudden_death_question")
+    )
+      return;
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const diff = Math.max(
+        0,
+        Math.floor((tieBreakQuestionEndAt - now) / 1000)
+      );
+      setTieBreakQuestionCountdown(diff);
+
+      if (diff <= 0 && !hasAnsweredTieBreak) {
+        handleTieBreakTimeUp();
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 250);
+    return () => clearInterval(interval);
+  }, [tieBreakQuestionEndAt, hasAnsweredTieBreak, gameStatus]);
 
   // Handle time up
   const handleTimeUp = () => {
@@ -520,6 +736,35 @@ export default function ChallengeRoom({
     }
   };
 
+  // ✅ NEW: Handle tie-break time up
+  const handleTieBreakTimeUp = () => {
+    if (!hasAnsweredTieBreak) {
+      if (selectedTieBreakAnswer) {
+        // Player had selected an answer but didn't submit - submit it now
+        handleTieBreakAnswerSelect(selectedTieBreakAnswer);
+      } else {
+        // Player didn't select any answer - submit "no answer"
+        console.log("[FRONTEND] Tie-break time up - submitting no answer");
+        setHasAnsweredTieBreak(true);
+
+        // Send "no answer" to server
+        const messageType = isSuddenDeathActive
+          ? "submit_sudden_death_answer"
+          : "submit_tie_break_answer";
+        sendMessage({
+          type: messageType,
+          data: {
+            answer: "",
+            questionStartAt: tieBreakQuestionEndAt
+              ? tieBreakQuestionEndAt -
+                (tieBreakQuestion?.timePerQuestion || 30) * 1000
+              : Date.now(),
+          },
+        });
+      }
+    }
+  };
+
   // Handle answer selection
   const handleAnswerSelect = (answer: string) => {
     if (hasAnswered || gameStatus !== "in_progress") return;
@@ -534,6 +779,34 @@ export default function ChallengeRoom({
         answer: answer,
         questionStartAt: questionEndAt
           ? questionEndAt - (currentQuestion?.timePerQuestion || 10) * 1000
+          : Date.now(),
+      },
+    });
+  };
+
+  // ✅ NEW: Handle tie-break answer selection
+  const handleTieBreakAnswerSelect = (answer: string) => {
+    if (
+      hasAnsweredTieBreak ||
+      (gameStatus !== "tie_break_question" &&
+        gameStatus !== "sudden_death_question")
+    )
+      return;
+
+    setSelectedTieBreakAnswer(answer);
+    setHasAnsweredTieBreak(true);
+
+    // Send answer to server
+    const messageType = isSuddenDeathActive
+      ? "submit_sudden_death_answer"
+      : "submit_tie_break_answer";
+    sendMessage({
+      type: messageType,
+      data: {
+        answer: answer,
+        questionStartAt: tieBreakQuestionEndAt
+          ? tieBreakQuestionEndAt -
+            (tieBreakQuestion?.timePerQuestion || 30) * 1000
           : Date.now(),
       },
     });
@@ -744,6 +1017,15 @@ export default function ChallengeRoom({
         return renderQuestionResult();
       case "finished":
         return renderGameResults();
+      // ✅ NEW: Tie-break states
+      case "tie_break":
+        return renderTieBreakActivated();
+      case "tie_break_question":
+        return renderTieBreakQuestion();
+      case "sudden_death":
+        return renderSuddenDeathActivated();
+      case "sudden_death_question":
+        return renderSuddenDeathQuestion();
       default:
         return renderWaitingRoom();
     }
@@ -1964,6 +2246,39 @@ export default function ChallengeRoom({
                     </div>
                   </>
                 )}
+
+                {/* ✅ NEW: Tie-break status indicators */}
+                {(gameStatus === "tie_break_question" ||
+                  gameStatus === "sudden_death_question") && (
+                  <>
+                    <div className="flex items-center space-x-2 px-4 py-2 glass-morphism rounded-lg">
+                      <Clock className="w-5 h-5 text-yellow-400" />
+                      <span className="font-orbitron text-lg font-bold text-yellow-400">
+                        {tieBreakQuestionCountdown}s
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2 px-4 py-2 glass-morphism rounded-lg">
+                      <Target className="w-5 h-5 text-yellow-400" />
+                      <span className="font-orbitron font-bold text-yellow-400">
+                        {gameStatus === "tie_break_question"
+                          ? `Tie-Break R${tieBreakRound}`
+                          : "Sudden Death"}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {(gameStatus === "tie_break" ||
+                  gameStatus === "sudden_death") && (
+                  <div className="flex items-center space-x-2 px-4 py-2 glass-morphism rounded-lg">
+                    <Target className="w-5 h-5 text-yellow-400" />
+                    <span className="font-orbitron font-bold text-yellow-400">
+                      {gameStatus === "tie_break"
+                        ? `Tie-Break R${tieBreakRound}`
+                        : "Sudden Death"}
+                    </span>
+                  </div>
+                )}
               </motion.div>
             </div>
           </div>
@@ -2079,6 +2394,260 @@ export default function ChallengeRoom({
       </div>
     );
   };
+
+  // ✅ NEW: Tie-break render functions
+  const renderTieBreakActivated = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="text-center"
+      >
+        <div className="mb-8">
+          <div className="w-32 h-32 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <Target className="w-16 h-16 text-white" />
+          </div>
+        </div>
+        <h2 className="text-4xl font-orbitron font-bold mb-4 text-yellow-400 drop-shadow-neon">
+          🎯 Tie-Break Activated! 🎯
+        </h2>
+        <div className="text-2xl font-orbitron font-bold text-neon-purple mb-4">
+          Round {tieBreakRound}
+        </div>
+        <p className="text-xl text-gray-400 mb-8">
+          Two players are tied! Time to break the tie with special questions!
+        </p>
+        <div className="flex items-center justify-center space-x-4">
+          <Badge
+            variant="secondary"
+            className="bg-yellow-500/20 text-yellow-400 text-lg px-4 py-2"
+          >
+            Round {tieBreakRound}
+          </Badge>
+          <Badge
+            variant="secondary"
+            className="bg-neon-purple/20 text-neon-purple text-lg px-4 py-2"
+          >
+            Medium Questions
+          </Badge>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  const renderTieBreakQuestion = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="w-full max-w-4xl">
+        {/* Question Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center space-x-4 mb-4">
+            <Badge
+              variant="secondary"
+              className="bg-yellow-500/20 text-yellow-400 text-lg px-4 py-2"
+            >
+              Tie-Break Round {tieBreakRound}
+            </Badge>
+            <Badge
+              variant="secondary"
+              className="bg-neon-purple/20 text-neon-purple text-lg px-4 py-2"
+            >
+              {tieBreakQuestionCountdown}s remaining
+            </Badge>
+          </div>
+          <TimerCircle
+            duration={tieBreakQuestion?.timePerQuestion || 30}
+            onTimeUp={handleTieBreakTimeUp}
+            isPaused={false}
+            className="mx-auto"
+          />
+        </div>
+
+        {/* Question Content */}
+        <Card className="glass-morphism-deep border border-yellow-400/30 shadow-neon-glow-md mb-8">
+          <CardContent className="p-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-yellow-400 text-center drop-shadow-lg">
+              {tieBreakQuestion?.content}
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl mx-auto">
+              {tieBreakQuestion?.options?.map((opt: string, idx: number) => {
+                const isSelected = selectedTieBreakAnswer === opt;
+                const isDisabled = hasAnsweredTieBreak;
+                return (
+                  <button
+                    key={idx}
+                    className={`
+                      w-full py-5 px-6 rounded-2xl border-2 font-orbitron text-lg md:text-xl transition-all duration-200
+                      flex items-center gap-3 shadow-lg
+                      ${
+                        isSelected
+                          ? "bg-gradient-to-r from-yellow-400 to-orange-500 border-yellow-400 text-white scale-105 ring-2 ring-yellow-400"
+                          : "bg-gray-900 border-gray-700 text-white hover:bg-yellow-400/20 hover:border-yellow-400"
+                      }
+                      ${
+                        isDisabled && !isSelected
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }
+                    `}
+                    onClick={() => handleTieBreakAnswerSelect(opt)}
+                    disabled={isDisabled}
+                  >
+                    <span className="mr-2 font-bold text-yellow-400 text-xl">
+                      {String.fromCharCode(65 + idx)}.
+                    </span>
+                    <span className="flex-1 text-left">{opt}</span>
+                    {isSelected && (
+                      <span className="ml-2 text-yellow-400 text-2xl animate-bounce">
+                        ✔
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {hasAnsweredTieBreak && (
+          <div className="text-center">
+            <div className="inline-flex items-center space-x-2 px-6 py-3 bg-yellow-500/20 border border-yellow-500/30 rounded-full text-yellow-400 animate-pulse">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-semibold">
+                Answer submitted! Waiting for next question...
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderSuddenDeathActivated = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="text-center"
+      >
+        <div className="mb-8">
+          <div className="w-32 h-32 bg-gradient-to-r from-red-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <Zap className="w-16 h-16 text-white" />
+          </div>
+        </div>
+        <h2 className="text-4xl font-orbitron font-bold mb-4 text-red-400 drop-shadow-neon">
+          ⚡ Sudden Death! ⚡
+        </h2>
+        <p className="text-xl text-gray-400 mb-8">
+          Still tied! First player to answer correctly wins!
+        </p>
+        <div className="flex items-center justify-center space-x-4">
+          <Badge
+            variant="secondary"
+            className="bg-red-500/20 text-red-400 text-lg px-4 py-2"
+          >
+            Sudden Death
+          </Badge>
+          <Badge
+            variant="secondary"
+            className="bg-purple-500/20 text-purple-400 text-lg px-4 py-2"
+          >
+            20s per question
+          </Badge>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  const renderSuddenDeathQuestion = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="w-full max-w-4xl">
+        {/* Question Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center space-x-4 mb-4">
+            <Badge
+              variant="secondary"
+              className="bg-red-500/20 text-red-400 text-lg px-4 py-2"
+            >
+              Sudden Death
+            </Badge>
+            <Badge
+              variant="secondary"
+              className="bg-purple-500/20 text-purple-400 text-lg px-4 py-2"
+            >
+              {tieBreakQuestionCountdown}s remaining
+            </Badge>
+          </div>
+          <TimerCircle
+            duration={tieBreakQuestion?.timePerQuestion || 20}
+            onTimeUp={handleTieBreakTimeUp}
+            isPaused={false}
+            className="mx-auto"
+          />
+        </div>
+
+        {/* Question Content */}
+        <Card className="glass-morphism-deep border border-red-500/30 shadow-neon-glow-md mb-8">
+          <CardContent className="p-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-red-400 text-center drop-shadow-lg">
+              {tieBreakQuestion?.content}
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl mx-auto">
+              {tieBreakQuestion?.options?.map((opt: string, idx: number) => {
+                const isSelected = selectedTieBreakAnswer === opt;
+                const isDisabled = hasAnsweredTieBreak;
+                return (
+                  <button
+                    key={idx}
+                    className={`
+                      w-full py-5 px-6 rounded-2xl border-2 font-orbitron text-lg md:text-xl transition-all duration-200
+                      flex items-center gap-3 shadow-lg
+                      ${
+                        isSelected
+                          ? "bg-gradient-to-r from-red-500 to-purple-600 border-red-500 text-white scale-105 ring-2 ring-red-500"
+                          : "bg-gray-900 border-gray-700 text-white hover:bg-red-500/20 hover:border-red-500"
+                      }
+                      ${
+                        isDisabled && !isSelected
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }
+                    `}
+                    onClick={() => handleTieBreakAnswerSelect(opt)}
+                    disabled={isDisabled}
+                  >
+                    <span className="mr-2 font-bold text-red-400 text-xl">
+                      {String.fromCharCode(65 + idx)}.
+                    </span>
+                    <span className="flex-1 text-left">{opt}</span>
+                    {isSelected && (
+                      <span className="ml-2 text-red-400 text-2xl animate-bounce">
+                        ✔
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {hasAnsweredTieBreak && (
+          <div className="text-center">
+            <div className="inline-flex items-center space-x-2 px-6 py-3 bg-red-500/20 border border-red-500/30 rounded-full text-red-400 animate-pulse">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-semibold">
+                Answer submitted! Waiting for result...
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-cyber-dark cyber-grid-fast relative overflow-hidden">
