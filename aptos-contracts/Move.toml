@@ -1,0 +1,16 @@
+[package]
+name = "Aptos_ChallengeWave"
+version = "1.0.0"
+authors = []
+
+[addresses]
+challenge_wow_aptos = "0x16433aded23efef052959ed158b1ac6a725ab8df3f531166bb46207e4c38b335"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]

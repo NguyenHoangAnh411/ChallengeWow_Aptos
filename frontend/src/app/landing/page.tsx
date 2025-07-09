@@ -245,7 +245,7 @@ export default function Landing() {
               onClick={() => router.push("/setup-network")}
             >
               <Network className="w-6 h-6 mr-2" />
-              Thiết lập mạng
+              Network setup
             </Button>
           </motion.div>
 

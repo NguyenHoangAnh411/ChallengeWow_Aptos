@@ -16,6 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className="dark">
+      <head>
+        <link rel="icon" href="/olym3-logo.svg" type="image/svg+xml" />
+      </head>
       <body suppressHydrationWarning className="min-h-screen bg-background font-sans antialiased">
         <Providers>
           <main className="relative flex min-h-screen flex-col">
