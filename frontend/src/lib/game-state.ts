@@ -19,7 +19,11 @@ interface GameState {
     | "countdown"
     | "in_progress"
     | "question_result"
-    | "finished";
+    | "finished"
+    | "tie_break"
+    | "tie_break_question"
+    | "sudden_death"
+    | "sudden_death_question";
   questionIndex: number;
   totalQuestions: number;
   questionEndAt: number | null;
@@ -50,6 +54,16 @@ interface GameState {
   gameResults: any[];
   winnerWallet: string | null;
 
+  // ✅ NEW: Tie-break States
+  isTieBreakActive: boolean;
+  tieBreakRound: number;
+  isSuddenDeathActive: boolean;
+  tieBreakQuestion: any | null;
+  tieBreakQuestionEndAt: number | null;
+  tieBreakQuestionCountdown: number;
+  hasAnsweredTieBreak: boolean;
+  selectedTieBreakAnswer: string | null;
+
   // Actions
   setCurrentUser: (user: User | null) => void;
   setCurrentRoom: (room: Room | null) => void;
@@ -73,6 +87,10 @@ interface GameState {
       | "in_progress"
       | "question_result"
       | "finished"
+      | "tie_break"
+      | "tie_break_question"
+      | "sudden_death"
+      | "sudden_death_question"
   ) => void;
   setQuestionIndex: (index: number) => void;
   setTotalQuestions: (total: number) => void;
@@ -83,6 +101,16 @@ interface GameState {
   setQuestionResult: (result: any) => void;
   setGameResults: (results: any[]) => void;
   setWinnerWallet: (wallet: string | null) => void;
+
+  // ✅ NEW: Tie-break Actions
+  setIsTieBreakActive: (active: boolean) => void;
+  setTieBreakRound: (round: number) => void;
+  setIsSuddenDeathActive: (active: boolean) => void;
+  setTieBreakQuestion: (question: any | null) => void;
+  setTieBreakQuestionEndAt: (endAt: number | null) => void;
+  setTieBreakQuestionCountdown: (countdown: number) => void;
+  setHasAnsweredTieBreak: (answered: boolean) => void;
+  setSelectedTieBreakAnswer: (answer: string | null) => void;
 
   // Reset game state
   resetGameState: () => void;
@@ -114,6 +142,16 @@ export const useGameState = create<GameState>((set, get) => ({
   gameResults: [],
   winnerWallet: null,
 
+  // ✅ NEW: Tie-break States
+  isTieBreakActive: false,
+  tieBreakRound: 1,
+  isSuddenDeathActive: false,
+  tieBreakQuestion: null,
+  tieBreakQuestionEndAt: null,
+  tieBreakQuestionCountdown: 0,
+  hasAnsweredTieBreak: false,
+  selectedTieBreakAnswer: null,
+
   setCurrentUser: (user) => set({ currentUser: user }),
   setCurrentRoom: (room) => set({ currentRoom: room }),
   setCurrentQuestion: (question) => {
@@ -137,7 +175,10 @@ export const useGameState = create<GameState>((set, get) => ({
   },
 
   // Game Flow Actions
-  setGameStatus: (status) => set({ gameStatus: status }),
+  setGameStatus: (status) => {
+    console.log("[ZUSTAND] setGameStatus called with:", status);
+    set({ gameStatus: status });
+  },
   setQuestionIndex: (index) => set({ questionIndex: index }),
   setTotalQuestions: (total) => set({ totalQuestions: total }),
   setQuestionEndAt: (endAt) => set({ questionEndAt: endAt }),
@@ -148,8 +189,21 @@ export const useGameState = create<GameState>((set, get) => ({
   setGameResults: (results) => set({ gameResults: results }),
   setWinnerWallet: (wallet) => set({ winnerWallet: wallet }),
 
+  // ✅ NEW: Tie-break Actions
+  setIsTieBreakActive: (active) => set({ isTieBreakActive: active }),
+  setTieBreakRound: (round) => set({ tieBreakRound: round }),
+  setIsSuddenDeathActive: (active) => set({ isSuddenDeathActive: active }),
+  setTieBreakQuestion: (question) => set({ tieBreakQuestion: question }),
+  setTieBreakQuestionEndAt: (endAt) => set({ tieBreakQuestionEndAt: endAt }),
+  setTieBreakQuestionCountdown: (countdown) =>
+    set({ tieBreakQuestionCountdown: countdown }),
+  setHasAnsweredTieBreak: (answered) => set({ hasAnsweredTieBreak: answered }),
+  setSelectedTieBreakAnswer: (answer) =>
+    set({ selectedTieBreakAnswer: answer }),
+
   // Reset game state
-  resetGameState: () =>
+  resetGameState: () => {
+    console.log("[ZUSTAND] resetGameState called");
     set({
       gameStatus: "waiting",
       questionIndex: 0,
@@ -163,5 +217,15 @@ export const useGameState = create<GameState>((set, get) => ({
       winnerWallet: null,
       currentQuestion: null,
       isGameActive: false,
-    }),
+      // ✅ NEW: Reset tie-break states
+      isTieBreakActive: false,
+      tieBreakRound: 1,
+      isSuddenDeathActive: false,
+      tieBreakQuestion: null,
+      tieBreakQuestionEndAt: null,
+      tieBreakQuestionCountdown: 0,
+      hasAnsweredTieBreak: false,
+      selectedTieBreakAnswer: null,
+    });
+  },
 }));

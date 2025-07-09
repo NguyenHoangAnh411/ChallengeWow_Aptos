@@ -6,6 +6,7 @@ from models.room import Room
 from services.question_service import QuestionService
 from services.zkproof_service import ZkProofService
 from services.room_service import RoomService
+from services.tie_break_service import TieBreakService
 from enums.game_status import GAME_STATUS
 import hashlib
 import json
@@ -17,10 +18,12 @@ class GameService:
         room_service: RoomService,
         question_service: QuestionService,
         zkproof_service: ZkProofService,
+        tie_break_service: TieBreakService,
     ):
         self.room_service = room_service
         self.question_service = question_service
         self.zkproof_service = zkproof_service
+        self.tie_break_service = tie_break_service
 
     async def start_countdown(self, room: Room):
         room.status = GAME_STATUS.COUNTING_DOWN
@@ -56,12 +59,23 @@ class GameService:
                         {"question_id": question["id"], "answer": None, "score": 0}
                     )
 
-        self.end_game(room)
+        await self.end_game(room)
 
-    def end_game(self, room: Room):
+    async def end_game(self, room: Room):
+        """End the main game and check for tie-break"""
         room.status = GAME_STATUS.FINISHED
+        
+        # Check if tie-break is needed
+        if self.tie_break_service.check_for_tie_break(room):
+            # Activate tie-break
+            room = await self.tie_break_service.activate_tie_break(room)
+            return
+        
+        # No tie-break needed, determine winner
         winner = max(room.players, key=lambda p: p.score)
-        room.winner_wallet_id = winner.id
+        room.winner_wallet_id = winner.wallet_id
+        room.status = GAME_STATUS.COMPLETED
+        room.ended_at = datetime.now(timezone.utc)
 
         proof = self.generate_fake_proof(room)
         room.proof = proof
@@ -73,7 +87,7 @@ class GameService:
             for p in room.players
         ]
 
-        self.zkproof_service.store_proof(room.room_id, winner.id, proof, scores)
+        self.zkproof_service.store_proof(room.room_id, winner.wallet_id, proof, scores)
 
     def generate_fake_proof(self, room: Room) -> str:
         data = {

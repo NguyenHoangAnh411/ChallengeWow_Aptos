@@ -6,12 +6,13 @@ from controllers.room_controller import RoomController
 from models.leave_room_request import LeaveRoomRequest
 from models.room import Room
 from models.update_settings import GameSettings
+from enums.game_status import GAME_STATUS
 
 def create_room_router(room_controller: RoomController):
     router = APIRouter()
 
     @router.get("/rooms", response_model=List[Room])
-    async def get_rooms(status: str = None):
+    async def get_rooms(status: str = GAME_STATUS.WAITING):
         return await room_controller.get_rooms(status)
 
     @router.post("/rooms", response_model=Room)

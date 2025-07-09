@@ -33,6 +33,14 @@ class Room(CamelModel):
     current_questions: Optional[List[Question]] = None
     current_index: int = 0
     question_configs: dict[QUESTION_DIFFICULTY, Any] = QUESTION_CONFIG
+    
+    # Tie-break fields
+    tie_break_round: int = 0
+    tie_break_questions: Optional[List[Question]] = None
+    tie_break_current_index: int = 0
+    sudden_death_activated: bool = False
+    tie_break_started_at: Optional[datetime] = None
+    tie_break_winners: Optional[List[Optional[str]]] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -42,16 +50,10 @@ class Room(CamelModel):
             data["current_questions"] = []
         if data.get("current_index") is None:
             data["current_index"] = 0
-        return data
-
-    @model_validator(mode="before")
-    @classmethod
-    def fill_none_defaults(cls, data: dict):
-        data = data.copy()
-        if data.get("current_questions") is None:
-            data["current_questions"] = []
-        if data.get("current_index") is None:
-            data["current_index"] = 0
+        if data.get("tie_break_questions") is None:
+            data["tie_break_questions"] = []
+        if data.get("tie_break_current_index") is None:
+            data["tie_break_current_index"] = 0
         return data
 
     @classmethod
@@ -68,3 +70,15 @@ class Room(CamelModel):
         ):
             return self.current_questions[self.current_index]
         return None
+    
+    @property
+    def current_tie_break_question(self) -> Optional[Question]:
+        if (
+            self.tie_break_questions
+            and 0 <= self.tie_break_current_index < len(self.tie_break_questions)
+        ):
+            return self.tie_break_questions[self.tie_break_current_index]
+        return None
+    
+    def is_tie_break_active(self) -> bool:
+        return self.status in [GAME_STATUS.TIE_BREAK, GAME_STATUS.SUDDEN_DEATH]

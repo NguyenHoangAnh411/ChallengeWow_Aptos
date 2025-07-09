@@ -15,6 +15,7 @@ from services.player_service import PlayerService
 from services.question_service import QuestionService
 from services.room_service import RoomService
 from services.websocket_manager import WebSocketManager
+from services.tie_break_service import TieBreakService
 from pydantic import ValidationError
 from enums.game_status import GAME_STATUS
 from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
@@ -34,6 +35,7 @@ class WebSocketController:
         self.user_repo = user_repo
         self.user_stats_repo = user_stats_repo
         self.nft_service = BlockchainService()  # Thêm NFT service
+        self.tie_break_service = TieBreakService(room_service, question_service, answer_service)  # Thêm Tie-break service
         # Thêm tracking cho active tasks
         self.active_tasks = {}
 
@@ -135,6 +137,12 @@ class WebSocketController:
         room.status = GAME_STATUS.FINISHED
         game_end_time = datetime.now(timezone.utc)
         room.ended_at = game_end_time
+        
+        # ✅ NEW: Check for tie-break condition
+        if self.tie_break_service.check_for_tie_break(room):
+            print(f"[TIE_BREAK] Room {room_id} - Tie detected, activating tie-break mode")
+            await self._activate_tie_break_mode(room_id)
+            return
         
         # Tạo results và tính toán điểm số từ answers
         results = []
@@ -302,6 +310,391 @@ class WebSocketController:
             await self._cleanup_finished_room(room_id)
         
         asyncio.create_task(cleanup_room())
+
+    # ✅ NEW: Activate tie-break mode
+    async def _activate_tie_break_mode(self, room_id: str):
+        """Kích hoạt chế độ tie-break"""
+        room = await self.room_service.get_room(room_id)
+        if not room:
+            return
+
+        # Activate tie-break using service
+        room = await self.tie_break_service.activate_tie_break(room)
+        
+        # Broadcast tie-break activation to all players
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "tie_break_activated",
+            "payload": {
+                "message": "Hòa! Bắt đầu tie-break để tìm người chiến thắng cuối cùng!",
+                "round": room.tie_break_round,
+                "players": [
+                    {
+                        "walletId": p.wallet_id,
+                        "username": p.username,
+                        "score": p.score
+                    } for p in room.players
+                ]
+            }
+        })
+        
+        # Send first tie-break question after 3 seconds
+        async def send_first_tie_break_question():
+            await asyncio.sleep(3)
+            await self._send_tie_break_question(room_id)
+        
+        asyncio.create_task(send_first_tie_break_question())
+
+    # ✅ NEW: Send tie-break question
+    async def _send_tie_break_question(self, room_id: str):
+        """Gửi câu hỏi tie-break hiện tại"""
+        room = await self.room_service.get_room(room_id)
+        if not room or room.status != GAME_STATUS.TIE_BREAK:
+            return
+
+        if not room.tie_break_questions or room.tie_break_current_index >= len(room.tie_break_questions):
+            print(f"[TIE_BREAK] Room {room_id} - No more tie-break questions available")
+            return
+
+        current_question = room.tie_break_questions[room.tie_break_current_index]
+        
+        # Prepare question for client (remove correct answer)
+        client_question = current_question.model_dump(exclude={"correct_answer"})
+        
+        # Shuffle options if available
+        options = getattr(current_question, 'options', []) or client_question.get("options", [])
+        if options:
+            shuffled_options = options.copy()
+            random.shuffle(shuffled_options)
+            client_question["options"] = shuffled_options
+        
+        question_start_at = int(time.time() * 1000)
+        question_end_at = question_start_at + (30 * 1000)  # 30 seconds for tie-break questions
+        
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "tie_break_question",
+            "payload": {
+                "questionIndex": room.tie_break_current_index,
+                "question": client_question,
+                "round": room.tie_break_round,
+                "timing": {
+                    "questionStartAt": question_start_at,
+                    "questionEndAt": question_end_at,
+                    "timePerQuestion": 30
+                }
+            }
+        })
+        
+        # Set timeout for tie-break question
+        if room_id not in self.active_tasks:
+            async def tie_break_timeout():
+                try:
+                    await asyncio.sleep(35)  # 30 seconds + 5 seconds buffer
+                    
+                    current_room = await self.room_service.get_room(room_id)
+                    if current_room and current_room.status == GAME_STATUS.TIE_BREAK:
+                        # Handle timeout - no answer submitted
+                        await self._handle_tie_break_timeout(room_id)
+                except Exception as e:
+                    print(f"[ERROR] Error in tie_break_timeout for room {room_id}: {e}")
+                finally:
+                    self.active_tasks.pop(room_id, None)
+            
+            task = asyncio.create_task(tie_break_timeout())
+            self.active_tasks[room_id] = task
+
+    # ✅ NEW: Handle tie-break answer submission
+    async def _handle_tie_break_answer(self, websocket: WebSocket, room_id: str, wallet_id: str, data: dict):
+        """Xử lý khi player submit câu trả lời tie-break"""
+        room = await self.room_service.get_room(room_id)
+        if not room or room.status != GAME_STATUS.TIE_BREAK:
+            await send_json_safe(websocket, {
+                "type": "error",
+                "message": "Tie-break is not active."
+            })
+            return
+
+        if not room.tie_break_questions or room.tie_break_current_index >= len(room.tie_break_questions):
+            await send_json_safe(websocket, {
+                "type": "error",
+                "message": "No tie-break question available."
+            })
+            return
+
+        current_question = room.tie_break_questions[room.tie_break_current_index]
+        player_answer = data.get("data", {}).get("answer", "")
+        
+        # Cancel timeout task if exists
+        if room_id in self.active_tasks:
+            self.active_tasks[room_id].cancel()
+            self.active_tasks.pop(room_id, None)
+        
+        try:
+            # Submit answer using tie-break service
+            room, result = await self.tie_break_service.submit_tie_break_answer(
+                room, wallet_id, player_answer, current_question.id
+            )
+            
+            # Send response to player
+            is_correct = player_answer.lower().strip() == current_question.correct_answer.lower().strip()
+            await send_json_safe(websocket, {
+                "type": "tie_break_answer_submitted",
+                "payload": {
+                    "isCorrect": is_correct,
+                    "correctAnswer": current_question.correct_answer,
+                    "message": "Đáp án đúng!" if is_correct else "Đáp án sai!"
+                }
+            })
+            
+            # Handle result based on status
+            if result["status"] == "winner":
+                await self._handle_tie_break_winner(room_id, result)
+            elif result["status"] == "next_round":
+                await self._handle_tie_break_next_round(room_id, result)
+            elif result["status"] == "continue":
+                await self._handle_tie_break_continue(room_id)
+            elif result["status"] == "cancelled":
+                await self._handle_tie_break_cancelled(room_id, result)
+            elif result["status"] == "sudden_death":
+                await self._handle_sudden_death_activation(room_id, result)
+                
+        except Exception as e:
+            print(f"[ERROR] Error handling tie-break answer: {e}")
+            await send_json_safe(websocket, {
+                "type": "error",
+                "message": "Error processing tie-break answer."
+            })
+
+    # ✅ NEW: Handle tie-break winner
+    async def _handle_tie_break_winner(self, room_id: str, result: dict):
+        """Xử lý khi có người thắng tie-break"""
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "tie_break_winner",
+            "payload": {
+                "winner_wallet_id": result["winner_wallet_id"],
+                "winner_username": result["winner_username"],
+                "message": result["message"]
+            }
+        })
+        
+        # End the game properly
+        await self._handle_game_end(room_id)
+
+    # ✅ NEW: Handle tie-break next round
+    async def _handle_tie_break_next_round(self, room_id: str, result: dict):
+        """Xử lý khi chuyển sang round tie-break tiếp theo"""
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "tie_break_next_round",
+            "payload": {
+                "round": result["round"],
+                "message": f"Bắt đầu round tie-break {result['round']}!"
+            }
+        })
+        
+        # Send next question after 3 seconds
+        async def send_next_tie_break_question():
+            await asyncio.sleep(3)
+            await self._send_tie_break_question(room_id)
+        
+        asyncio.create_task(send_next_tie_break_question())
+
+    # ✅ NEW: Handle tie-break continue
+    async def _handle_tie_break_continue(self, room_id: str):
+        """Xử lý khi tie-break tiếp tục với câu hỏi tiếp theo"""
+        room = await self.room_service.get_room(room_id)
+        if not room:
+            return
+        
+        # Move to next question
+        room.tie_break_current_index += 1
+        await self.room_service.save_room(room)
+        
+        # Send next question after 2 seconds
+        async def send_next_question():
+            await asyncio.sleep(2)
+            await self._send_tie_break_question(room_id)
+        
+        asyncio.create_task(send_next_question())
+
+    # ✅ NEW: Handle tie-break cancelled
+    async def _handle_tie_break_cancelled(self, room_id: str, result: dict):
+        """Xử lý khi tie-break bị hủy"""
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "tie_break_cancelled",
+            "payload": {
+                "message": result["message"]
+            }
+        })
+        
+        # Clean up room
+        await self._cleanup_finished_room(room_id)
+
+    # ✅ NEW: Handle sudden death activation
+    async def _handle_sudden_death_activation(self, room_id: str, result: dict):
+        """Xử lý khi kích hoạt sudden death"""
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "sudden_death_activated",
+            "payload": {
+                "message": "Kích hoạt chế độ Sudden Death! Ai trả lời đúng trước sẽ thắng!"
+            }
+        })
+        
+        # Send sudden death question after 3 seconds
+        async def send_sudden_death_question():
+            await asyncio.sleep(3)
+            await self._send_sudden_death_question(room_id)
+        
+        asyncio.create_task(send_sudden_death_question())
+
+    # ✅ NEW: Send sudden death question
+    async def _send_sudden_death_question(self, room_id: str):
+        """Gửi câu hỏi sudden death"""
+        room = await self.room_service.get_room(room_id)
+        if not room or room.status != GAME_STATUS.SUDDEN_DEATH:
+            return
+
+        # Get a random hard question for sudden death
+        question = await self.question_service.get_random_question_by_difficulty(QUESTION_DIFFICULTY.HARD)
+        if not question:
+            # Fallback to any random question
+            question = await self.question_service.get_random_question()
+        
+        if not question:
+            print(f"[SUDDEN_DEATH] Room {room_id} - No question available for sudden death")
+            return
+        
+        # Prepare question for client
+        client_question = question.model_dump(exclude={"correct_answer"})
+        options = getattr(question, 'options', []) or client_question.get("options", [])
+        if options:
+            shuffled_options = options.copy()
+            random.shuffle(shuffled_options)
+            client_question["options"] = shuffled_options
+        
+        question_start_at = int(time.time() * 1000)
+        question_end_at = question_start_at + (20 * 1000)  # 20 seconds for sudden death
+        
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "sudden_death_question",
+            "payload": {
+                "question": client_question,
+                "timing": {
+                    "questionStartAt": question_start_at,
+                    "questionEndAt": question_end_at,
+                    "timePerQuestion": 20
+                }
+            }
+        })
+        
+        # Set timeout for sudden death question
+        if room_id not in self.active_tasks:
+            async def sudden_death_timeout():
+                try:
+                    await asyncio.sleep(25)  # 20 seconds + 5 seconds buffer
+                    
+                    current_room = await self.room_service.get_room(room_id)
+                    if current_room and current_room.status == GAME_STATUS.SUDDEN_DEATH:
+                        # Handle timeout - no answer submitted
+                        await self._handle_sudden_death_timeout(room_id, question.id)
+                except Exception as e:
+                    print(f"[ERROR] Error in sudden_death_timeout for room {room_id}: {e}")
+                finally:
+                    self.active_tasks.pop(room_id, None)
+            
+            task = asyncio.create_task(sudden_death_timeout())
+            self.active_tasks[room_id] = task
+
+    # ✅ NEW: Handle sudden death answer
+    async def _handle_sudden_death_answer(self, websocket: WebSocket, room_id: str, wallet_id: str, data: dict):
+        """Xử lý khi player submit câu trả lời sudden death"""
+        room = await self.room_service.get_room(room_id)
+        if not room or room.status != GAME_STATUS.SUDDEN_DEATH:
+            await send_json_safe(websocket, {
+                "type": "error",
+                "message": "Sudden death is not active."
+            })
+            return
+
+        player_answer = data.get("data", {}).get("answer", "")
+        
+        # Cancel timeout task if exists
+        if room_id in self.active_tasks:
+            self.active_tasks[room_id].cancel()
+            self.active_tasks.pop(room_id, None)
+        
+        try:
+            # Submit sudden death answer using service
+            room, result = await self.tie_break_service.submit_sudden_death_answer(
+                room, wallet_id, player_answer, ""
+            )
+            
+            # Handle result
+            if result["status"] == "winner":
+                await self._handle_tie_break_winner(room_id, result)
+            elif result["status"] == "continue":
+                await self._handle_sudden_death_continue(room_id)
+                
+        except Exception as e:
+            print(f"[ERROR] Error handling sudden death answer: {e}")
+            await send_json_safe(websocket, {
+                "type": "error",
+                "message": "Error processing sudden death answer."
+            })
+
+    # ✅ NEW: Handle sudden death continue
+    async def _handle_sudden_death_continue(self, room_id: str):
+        """Xử lý khi sudden death tiếp tục với câu hỏi mới"""
+        # Send next sudden death question after 2 seconds
+        async def send_next_sudden_death_question():
+            await asyncio.sleep(2)
+            await self._send_sudden_death_question(room_id)
+        
+        asyncio.create_task(send_next_sudden_death_question())
+
+    # ✅ NEW: Handle tie-break timeout
+    async def _handle_tie_break_timeout(self, room_id: str):
+        """Xử lý khi hết thời gian tie-break question"""
+        room = await self.room_service.get_room(room_id)
+        if not room:
+            return
+        
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "tie_break_timeout",
+            "payload": {
+                "message": "Hết thời gian! Không ai trả lời câu hỏi tie-break."
+            }
+        })
+        
+        # Handle timeout using service
+        result = await self.tie_break_service.handle_no_answer_timeout(room, "")
+        
+        # Handle result
+        if result["status"] == "cancelled":
+            await self._handle_tie_break_cancelled(room_id, result)
+        elif result["status"] == "next_round":
+            await self._handle_tie_break_next_round(room_id, result)
+        elif result["status"] == "sudden_death":
+            await self._handle_sudden_death_activation(room_id, result)
+
+    # ✅ NEW: Handle sudden death timeout
+    async def _handle_sudden_death_timeout(self, room_id: str, question_id: str):
+        """Xử lý khi hết thời gian sudden death question"""
+        room = await self.room_service.get_room(room_id)
+        if not room:
+            return
+        
+        await self.manager.broadcast_to_room(room_id, {
+            "type": "sudden_death_timeout",
+            "payload": {
+                "message": "Hết thời gian! Không ai trả lời câu hỏi sudden death."
+            }
+        })
+        
+        # Handle timeout using service
+        result = await self.tie_break_service.handle_no_answer_timeout(room, question_id)
+        
+        # Handle result
+        if result["status"] == "continue":
+            await self._handle_sudden_death_continue(room_id)
 
     # ✅ Update player statistics after game
     async def _update_player_statistics(self, room: Room, leaderboard: list):
@@ -553,9 +946,6 @@ class WebSocketController:
                         
                         # Show question result with all answers (including no answers)
                         await self._show_question_result(room_id, handle_unanswered=False)
-                        
-                        # ✅ FIXED: The result will automatically trigger next question after 3 seconds
-                        # (handled by next_question_delay in _show_question_result)
                     else:
                         print(f"[FALLBACK] Room {room_id} - Skipping fallback (game ended or question already moved)")
                 except Exception as e:
@@ -742,8 +1132,6 @@ class WebSocketController:
 
         await self.room_service.save_room(room)
 
-        # ✅ FIXED: Check if all players have answered this question
-        # If all players have answered, show question result and move to next question
         try:
             # Get all answers for current question from database using question_id
             current_question_answers = await self.answer_service.get_answers_by_room_and_question_id(room_id, current_question.id)
@@ -833,8 +1221,6 @@ class WebSocketController:
             }
         })
 
-        # ✅ FIXED: Move to next question after showing result
-        # Chỉ tạo task nếu chưa có task active cho room này
         if room_id not in self.active_tasks:
             async def next_question_delay():
                 try:
@@ -1028,6 +1414,8 @@ class WebSocketController:
             "kick_player": self._handle_kick_player,
             "start_game": self._handle_start_game,
             "submit_answer": self._handle_submit_answer,
+            "submit_tie_break_answer": self._handle_tie_break_answer,
+            "submit_sudden_death_answer": self._handle_sudden_death_answer,
         }
 
         try:

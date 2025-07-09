@@ -6,13 +6,14 @@ from helpers.json_helper import json_safe
 from models.room import Room
 from repositories.interfaces.player_repo import IPlayerRepository
 from repositories.interfaces.room_repo import IRoomRepository
+from enums.game_status import GAME_STATUS
 class RoomRepository(IRoomRepository):
     def __init__(self, player_repo: IPlayerRepository, supabase: AsyncClient):
         self.table = "challenge_rooms"
         self.supabase = supabase
         self.player_repo = player_repo
 
-    async def get_all(self, status: str = None) -> List[Room]:
+    async def get_all(self, status: str = GAME_STATUS.WAITING) -> List[Room]:
         try:
             query = self.supabase.table(self.table).select("*")
             if status:
@@ -41,7 +42,7 @@ class RoomRepository(IRoomRepository):
 
     async def save(self, room: Room) -> bool:
         try:
-            data = json_safe(room, exclude={"players", "proof", "question_configs"})
+            data = json_safe(room, exclude={"players", "proof", "question_configs", "tie_break_winners"})
             await self.supabase.table(self.table).upsert(data).execute()
             return True
         except Exception as e:
