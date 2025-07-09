@@ -11,18 +11,18 @@ import { useEffect, useState } from "react";
 import { loginUser } from "@/lib/api";
 import { useGameState } from "@/lib/game-state";
 import { Toaster } from "./ui/toaster";
-import { OLYM3_TESTNET, SOLANA_DEVNET, APTOS_TESTNET, RONIN_SAIGON, LISK_TESTNET, VICTION_TESTNET } from "@/lib/constants";
+import { OLYM3_TESTNET, SOLANA_DEVNET, APTOS_DEVNET, RONIN_SAIGON, LISK_TESTNET, VICTION_TESTNET } from "@/lib/constants";
 import UsernameModal from "@/components/username-modal";
 import { updateUser } from "@/lib/api";
 
 const config = getDefaultConfig({
   appName: "Challenge Wave",
   projectId: "325fbe143f7ef647abd49c4a299b304a", // Đăng ký free tại https://cloud.walletconnect.com/
-  chains: [OLYM3_TESTNET, SOLANA_DEVNET, APTOS_TESTNET, RONIN_SAIGON, LISK_TESTNET, VICTION_TESTNET, baseSepolia],
+  chains: [OLYM3_TESTNET, SOLANA_DEVNET, APTOS_DEVNET, RONIN_SAIGON, LISK_TESTNET, VICTION_TESTNET, baseSepolia],
   transports: {
     [OLYM3_TESTNET.id]: http(),
     [SOLANA_DEVNET.id]: http(),
-    [APTOS_TESTNET.id]: http(),
+    [APTOS_DEVNET.id]: http(),
     [RONIN_SAIGON.id]: http(),
     [LISK_TESTNET.id]: http(),
     [VICTION_TESTNET.id]: http(),
