@@ -1,147 +1,42 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings, Info, Plus, Minus } from "lucide-react";
+import { Settings, Info } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Select, SelectItem, SelectContent } from "@/components/ui/select";
+import { NumberInput } from "@/components/ui/number-input";
 
-const Card = ({ children, className }) => (
-  <div className={`rounded-lg ${className}`}>{children}</div>
-);
+interface GameQuestions {
+  easy: number;
+  medium: number;
+  hard: number;
+}
 
-const CardHeader = ({ children }) => <div className="p-4 pb-2">{children}</div>;
+interface GameSettings {
+  timePerQuestion: number;
+  questions: GameQuestions;
+}
 
-const CardTitle = ({ children, className }) => (
-  <h3 className={`text-lg font-semibold ${className}`}>{children}</h3>
-);
+interface EnhancedGameSettingsProps {
+  gameSettings: GameSettings;
+  setGameSettings: (gameSettings: GameSettings) => void;
+  onSave?: (settings: GameSettings) => Promise<void>;
+}
 
-const CardContent = ({ children }) => (
-  <div className="p-4 pt-0">{children}</div>
-);
-
-const Select = ({ value, onValueChange, children }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-left text-white hover:bg-gray-700 transition-colors"
-      >
-        {value}
-      </button>
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 bg-gray-800 border border-gray-700 rounded mt-1 z-10 max-h-40 overflow-y-auto">
-          {React.Children.map(children, (child) =>
-            React.cloneElement(child, {
-              onClick: () => {
-                onValueChange(child.props.value);
-                setIsOpen(false);
-              },
-            })
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const SelectItem = ({ value, children, onClick }) => (
-  <div
-    className="px-3 py-2 hover:bg-gray-700 cursor-pointer text-white"
-    onClick={onClick}
-  >
-    {children}
-  </div>
-);
-
-const NumberInput = ({
-  value,
-  onChange,
-  min = 1,
-  max = 50,
-  label,
-  difficulty,
-}) => {
-  const handleInputChange = (e) => {
-    const newValue = parseInt(e.target.value) || 0;
-    if (newValue >= min && newValue <= max) {
-      onChange(newValue);
-    }
-  };
-
-  const increment = () => {
-    if (value < max) onChange(value + 1);
-  };
-
-  const decrement = () => {
-    if (value > min) onChange(value - 1);
-  };
-
-  const getDifficultyColor = (diff) => {
-    switch (diff) {
-      case "easy":
-        return "text-green-400 border-green-400/30";
-      case "medium":
-        return "text-yellow-400 border-yellow-400/30";
-      case "hard":
-        return "text-red-400 border-red-400/30";
-      default:
-        return "text-purple-400 border-purple-400/30";
-    }
-  };
-
-  return (
-    <div>
-      <label
-        className={`text-sm mb-2 block font-medium ${getDifficultyColor(
-          difficulty
-        )}`}
-      >
-        {label}
-      </label>
-      <div className="flex items-center space-x-2">
-        <button
-          onClick={decrement}
-          disabled={value <= min}
-          className="w-8 h-8 rounded bg-gray-800 border border-gray-600 flex items-center justify-center hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
-        >
-          <Minus className="w-4 h-4" />
-        </button>
-        <input
-          type="number"
-          value={value}
-          onChange={handleInputChange}
-          min={min}
-          max={max}
-          className={`w-16 px-2 py-1 text-center bg-gray-800 border rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-400/50 ${getDifficultyColor(
-            difficulty
-          )} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-        />
-        <button
-          onClick={increment}
-          disabled={value >= max}
-          className="w-8 h-8 rounded bg-gray-800 border border-gray-600 flex items-center justify-center hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="text-xs text-gray-500 mt-1">
-        {min} - {max} questions
-      </div>
-    </div>
-  );
-};
-
-const EnhancedGameSettings = ({
-  isHost = false,
+const EnhancedGameSettings: React.FC<EnhancedGameSettingsProps> = ({
   gameSettings,
   setGameSettings,
-  onSave, // New prop for save callback
+  onSave,
 }) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveStatus, setSaveStatus] = useState<"success" | "error" | null>(
+    null
+  );
 
   const totalQuestions =
-    gameSettings.questions.easy +
-    gameSettings.questions.medium +
-    gameSettings.questions.hard;
+    (gameSettings.questions?.easy ?? 0) +
+    (gameSettings.questions?.medium ?? 0) +
+    (gameSettings.questions?.hard ?? 0);
+
   const estimatedTime = Math.ceil(
     (totalQuestions * gameSettings.timePerQuestion) / 60
   );
@@ -151,7 +46,6 @@ const EnhancedGameSettings = ({
     setSaveStatus(null);
 
     try {
-      // Call the onSave callback prop if provided
       if (onSave) {
         if (totalQuestions === 0) {
           setSaveStatus("error");
@@ -177,6 +71,29 @@ const EnhancedGameSettings = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleTimeChange = (value: string) => {
+    const timeValue = parseInt(value);
+    setGameSettings({
+      ...gameSettings,
+      timePerQuestion: timeValue,
+    });
+  };
+
+  const handleQuestionChange =
+    (difficulty: keyof GameQuestions) => (value: number) => {
+      setGameSettings({
+        ...gameSettings,
+        questions: { ...gameSettings.questions, [difficulty]: value },
+      });
+    };
+
+  const setQuickPreset = (questions: GameQuestions) => {
+    setGameSettings({
+      ...gameSettings,
+      questions,
+    });
   };
 
   return (
@@ -217,20 +134,17 @@ const EnhancedGameSettings = ({
                 </h4>
                 <Select
                   value={`${gameSettings.timePerQuestion} secs`}
-                  onValueChange={(value) =>
-                    setGameSettings((prev) => ({
-                      ...prev,
-                      timePerQuestion: parseInt(value),
-                    }))
-                  }
+                  onValueChange={handleTimeChange}
                 >
-                  <SelectItem value="10">10 secs</SelectItem>
-                  <SelectItem value="15">15 secs</SelectItem>
-                  <SelectItem value="20">20 secs</SelectItem>
-                  <SelectItem value="25">25 secs</SelectItem>
-                  <SelectItem value="30">30 secs</SelectItem>
-                  <SelectItem value="45">45 secs</SelectItem>
-                  <SelectItem value="60">60 secs</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="10">10 secs</SelectItem>
+                    <SelectItem value="15">15 secs</SelectItem>
+                    <SelectItem value="20">20 secs</SelectItem>
+                    <SelectItem value="25">25 secs</SelectItem>
+                    <SelectItem value="30">30 secs</SelectItem>
+                    <SelectItem value="45">45 secs</SelectItem>
+                    <SelectItem value="60">60 secs</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -243,12 +157,7 @@ const EnhancedGameSettings = ({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <NumberInput
                     value={gameSettings.questions.easy}
-                    onChange={(value) =>
-                      setGameSettings((prev) => ({
-                        ...prev,
-                        questions: { ...prev.questions, easy: value },
-                      }))
-                    }
+                    onChange={handleQuestionChange("easy")}
                     label="🟢 Easy Questions"
                     difficulty="easy"
                     min={0}
@@ -256,12 +165,7 @@ const EnhancedGameSettings = ({
                   />
                   <NumberInput
                     value={gameSettings.questions.medium}
-                    onChange={(value) =>
-                      setGameSettings((prev) => ({
-                        ...prev,
-                        questions: { ...prev.questions, medium: value },
-                      }))
-                    }
+                    onChange={handleQuestionChange("medium")}
                     label="🟡 Medium Questions"
                     difficulty="medium"
                     min={0}
@@ -269,12 +173,7 @@ const EnhancedGameSettings = ({
                   />
                   <NumberInput
                     value={gameSettings.questions.hard}
-                    onChange={(value) =>
-                      setGameSettings((prev) => ({
-                        ...prev,
-                        questions: { ...prev.questions, hard: value },
-                      }))
-                    }
+                    onChange={handleQuestionChange("hard")}
                     label="🔴 Hard Questions"
                     difficulty="hard"
                     min={0}
@@ -331,10 +230,7 @@ const EnhancedGameSettings = ({
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() =>
-                      setGameSettings((prev) => ({
-                        ...prev,
-                        questions: { easy: 5, medium: 3, hard: 2 },
-                      }))
+                      setQuickPreset({ easy: 5, medium: 3, hard: 2 })
                     }
                     className="px-3 py-2 bg-green-600/20 text-green-400 rounded border border-green-600/30 hover:bg-green-600/30 transition-colors text-sm"
                   >
@@ -342,10 +238,7 @@ const EnhancedGameSettings = ({
                   </button>
                   <button
                     onClick={() =>
-                      setGameSettings((prev) => ({
-                        ...prev,
-                        questions: { easy: 3, medium: 4, hard: 3 },
-                      }))
+                      setQuickPreset({ easy: 3, medium: 4, hard: 3 })
                     }
                     className="px-3 py-2 bg-blue-600/20 text-blue-400 rounded border border-blue-600/30 hover:bg-blue-600/30 transition-colors text-sm"
                   >
@@ -353,10 +246,7 @@ const EnhancedGameSettings = ({
                   </button>
                   <button
                     onClick={() =>
-                      setGameSettings((prev) => ({
-                        ...prev,
-                        questions: { easy: 7, medium: 8, hard: 10 },
-                      }))
+                      setQuickPreset({ easy: 7, medium: 8, hard: 10 })
                     }
                     className="px-3 py-2 bg-orange-600/20 text-orange-400 rounded border border-orange-600/30 hover:bg-orange-600/30 transition-colors text-sm"
                   >

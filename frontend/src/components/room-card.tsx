@@ -6,7 +6,7 @@ import { Users, Clock, Trophy } from "lucide-react";
 import type { Room } from "@/types/schema";
 import { ClientMotion } from "./client-motion";
 import { MAX_PLAYERS_PER_ROOM } from "@/lib/constants";
-import { RoomStatus } from "@/types/RoomStatus";
+import { GameStatus } from "@/types/GameStatus";
 
 interface RoomCardProps {
   index: number;
@@ -17,33 +17,33 @@ interface RoomCardProps {
 export default function RoomCard({ index, room, onJoin }: RoomCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case RoomStatus.WAITING:
+      case GameStatus.WAITING:
         return "bg-green-500 bg-opacity-20 text-green-400";
-      case RoomStatus.COUNTING_DOWN:
+      case GameStatus.COUNTING_DOWN:
         return "bg-yellow-500 bg-opacity-20 text-yellow-400";
-      case RoomStatus.IN_PROGRESS:
+      case GameStatus.IN_PROGRESS:
         return "bg-orange-500 bg-opacity-20 text-orange-400";
-      case RoomStatus.FINISHED:
+      case GameStatus.FINISHED:
         return "bg-gray-500 bg-opacity-20 text-gray-400";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case RoomStatus.WAITING:
+      case GameStatus.WAITING:
         return "Waiting";
-      case RoomStatus.COUNTING_DOWN:
+      case GameStatus.COUNTING_DOWN:
         return "Counting Down";
-      case RoomStatus.IN_PROGRESS:
+      case GameStatus.IN_PROGRESS:
         return "In Progress";
-      case RoomStatus.FINISHED:
+      case GameStatus.FINISHED:
         return "Finished";
     }
   };
 
   const currentPlayers = room.players.length;
   const isFull = currentPlayers >= MAX_PLAYERS_PER_ROOM;
-  const canJoin = room.status === RoomStatus.WAITING && !isFull;
+  const canJoin = room.status === GameStatus.WAITING && !isFull;
 
   return (
     <ClientMotion

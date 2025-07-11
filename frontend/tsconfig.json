@@ -22,6 +22,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/components/room-game-settings.jsx", "src/app/room/[roomId]/page.tsx", "src/app/room/[roomId]/page.tsx", "server.s"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/components/room-game-settings.tsx", "src/app/room/[roomId]/page.tsx", "src/app/room/[roomId]/page.tsx", "server.s"],
   "exclude": ["node_modules"]
 } 

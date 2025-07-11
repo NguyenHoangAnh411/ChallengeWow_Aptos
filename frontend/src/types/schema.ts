@@ -1,9 +1,9 @@
-import { RoomStatus } from "./RoomStatus";
+import { GameStatus } from "./GameStatus";
 export interface Room {
   id: string;
   roomCode: string;
   players: Player[];
-  status: RoomStatus;
+  status: GameStatus;
   totalQuestions: number;
   easyQuestions: number;
   mediumQuestions: number;

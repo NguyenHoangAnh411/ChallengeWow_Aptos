@@ -32,9 +32,8 @@ import {
 import { useAccount } from "wagmi";
 import ConnectWalletModal from "@/components/connect-wallet-modal";
 import UsernameModal from "@/components/connect-wallet-modal";
-import { RoomStatus } from "@/types/RoomStatus";
+import { GameStatus } from "@/types/GameStatus";
 import { RECONNECT_WS } from "@/lib/constants";
-
 
 export default function Lobby() {
   const router = useRouter();
@@ -46,7 +45,7 @@ export default function Lobby() {
 
   const { currentUser, setCurrentUser } = useGameState();
   const { isConnected, address } = useAccount();
-  
+
   const [onlineStats, setOnlineStats] = useState({
     activeRooms: 0,
     playersOnline: 0,
@@ -57,9 +56,7 @@ export default function Lobby() {
   const [usernameInput, setUsernameInput] = useState("");
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [hasNewRoom, setHasNewRoom] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>(RoomStatus.WAITING);
-
-
+  const [activeTab, setActiveTab] = useState<string>(GameStatus.WAITING);
 
   // Tham gia phòng hiện tại đang tham gia
   useEffect(() => {
@@ -101,7 +98,12 @@ export default function Lobby() {
       fetchUserByWallet(address).then((user) => {
         console.log("User from API:", user);
         setCurrentUser(user);
-        if (!user || !user.username || user.username === null || user.username === "") {
+        if (
+          !user ||
+          !user.username ||
+          user.username === null ||
+          user.username === ""
+        ) {
           setShowUsernameModal(true);
         }
       });
@@ -153,7 +155,7 @@ export default function Lobby() {
         description: `Room #${onlineStats.activeRooms + 1} has been created!`,
       });
 
-      if (room.status === RoomStatus.WAITING) {
+      if (room.status === GameStatus.WAITING) {
         router.push(`/room/${room.id}/waiting`);
       } else {
         router.push(`/room/${room.id}`);
@@ -325,8 +327,6 @@ export default function Lobby() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-
-              
               <Button
                 variant="ghost"
                 size="sm"
@@ -493,14 +493,18 @@ export default function Lobby() {
             {/* Tabs for room status */}
             <div className="mb-6 flex space-x-2">
               <Button
-                variant={activeTab === RoomStatus.WAITING ? "default" : "outline"}
-                onClick={() => setActiveTab(RoomStatus.WAITING)}
+                variant={
+                  activeTab === GameStatus.WAITING ? "default" : "outline"
+                }
+                onClick={() => setActiveTab(GameStatus.WAITING)}
               >
                 Waiting
               </Button>
               <Button
-                variant={activeTab === RoomStatus.IN_PROGRESS ? "default" : "outline"}
-                onClick={() => setActiveTab(RoomStatus.IN_PROGRESS)}
+                variant={
+                  activeTab === GameStatus.IN_PROGRESS ? "default" : "outline"
+                }
+                onClick={() => setActiveTab(GameStatus.IN_PROGRESS)}
               >
                 In Progress
               </Button>
@@ -643,7 +647,6 @@ export default function Lobby() {
         open={showConnectModal}
         onOpenChange={setShowConnectModal}
       />
-
     </div>
   );
 }

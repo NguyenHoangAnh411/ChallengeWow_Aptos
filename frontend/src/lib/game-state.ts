@@ -2,9 +2,12 @@
 
 import { create } from "zustand";
 import type { Player, Question, Room, User } from "@/types/schema";
+import { DEFAULT_GAME_SETTINGS, GameSettings } from "@/config/GameSettings";
+import { GameStatus } from "@/types/GameStatus";
 
 interface GameState {
   currentUser: User | null;
+  currentPlayer: Player | null;
   currentRoom: any | null;
   currentQuestion: any | null;
   timeRemaining: number;
@@ -14,16 +17,8 @@ interface GameState {
   startAt: number | null;
 
   // Game Flow States
-  gameStatus:
-    | "waiting"
-    | "countdown"
-    | "in_progress"
-    | "question_result"
-    | "finished"
-    | "tie_break"
-    | "tie_break_question"
-    | "sudden_death"
-    | "sudden_death_question";
+  gameSettings: GameSettings;
+  gameStatus: GameStatus;
   questionIndex: number;
   totalQuestions: number;
   questionEndAt: number | null;
@@ -66,6 +61,7 @@ interface GameState {
 
   // Actions
   setCurrentUser: (user: User | null) => void;
+  setCurrentPlayer: (player: Player | null) => void;
   setCurrentRoom: (room: Room | null) => void;
   setCurrentQuestion: (question: Question | null) => void;
   setTimeRemaining: (time: number) => void;
@@ -80,18 +76,8 @@ interface GameState {
   ) => void;
 
   // Game Flow Actions
-  setGameStatus: (
-    status:
-      | "waiting"
-      | "countdown"
-      | "in_progress"
-      | "question_result"
-      | "finished"
-      | "tie_break"
-      | "tie_break_question"
-      | "sudden_death"
-      | "sudden_death_question"
-  ) => void;
+  setGameSettings: (gameSettings: GameSettings) => void;
+  setGameStatus: (status: GameStatus) => void;
   setQuestionIndex: (index: number) => void;
   setTotalQuestions: (total: number) => void;
   setQuestionEndAt: (endAt: number | null) => void;
@@ -120,6 +106,7 @@ export const useGameState = create<GameState>((set, get) => ({
   currentUser: null,
   currentRoom: null,
   currentQuestion: null,
+  currentPlayer: null,
   timeRemaining: 15,
   isGameActive: false,
   players: [],
@@ -127,7 +114,8 @@ export const useGameState = create<GameState>((set, get) => ({
   startAt: null,
 
   // Game Flow States
-  gameStatus: "waiting",
+  gameSettings: DEFAULT_GAME_SETTINGS,
+  gameStatus: GameStatus.WAITING,
   questionIndex: 0,
   totalQuestions: 0,
   questionEndAt: null,
@@ -153,6 +141,16 @@ export const useGameState = create<GameState>((set, get) => ({
   selectedTieBreakAnswer: null,
 
   setCurrentUser: (user) => set({ currentUser: user }),
+  setCurrentPlayer: (player) => {
+    const { players, currentUser } = get();
+    if (players.length > 0 && currentUser) {
+      const currentPlayer = players.find(
+        (p) => p.walletId === currentUser?.walletId
+      );
+
+      set({ currentPlayer });
+    }
+  },
   setCurrentRoom: (room) => set({ currentRoom: room }),
   setCurrentQuestion: (question) => {
     console.log("[ZUSTAND] setCurrentQuestion called", question);
@@ -175,10 +173,8 @@ export const useGameState = create<GameState>((set, get) => ({
   },
 
   // Game Flow Actions
-  setGameStatus: (status) => {
-    console.log("[ZUSTAND] setGameStatus called with:", status);
-    set({ gameStatus: status });
-  },
+  setGameSettings: (gameSettings) => set({ gameSettings }),
+  setGameStatus: (status) => set({ gameStatus: status }),
   setQuestionIndex: (index) => set({ questionIndex: index }),
   setTotalQuestions: (total) => set({ totalQuestions: total }),
   setQuestionEndAt: (endAt) => set({ questionEndAt: endAt }),
@@ -205,7 +201,7 @@ export const useGameState = create<GameState>((set, get) => ({
   resetGameState: () => {
     console.log("[ZUSTAND] resetGameState called");
     set({
-      gameStatus: "waiting",
+      gameStatus: GameStatus.WAITING,
       questionIndex: 0,
       totalQuestions: 0,
       questionEndAt: null,

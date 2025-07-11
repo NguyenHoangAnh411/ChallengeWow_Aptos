@@ -37,7 +37,11 @@ import {
   START_GAME_TYPE,
   CHAT_TYPE,
   KICKED_TYPE,
+<<<<<<< HEAD
   ROOM_CONFIG_UPDATE_TYPE,
+=======
+  ROOM_CONFIG_UPDATE,
+>>>>>>> 22ba7df (feat(ui): separate game ui)
   PLAYER_JOINED_TYPE,
   PLAYER_READY_TYPE,
   PLAYER_LEFT_TYPE,
@@ -678,10 +682,12 @@ export default function ChallengeRoom({
         }
 
         setCurrentRoom(room);
-        setGameStatus(room.status);
         setPlayers(room.players || []);
-        setGameStatus(room.status);
         setTotalQuestions(room.totalQuestions);
+        setCurrentPlayer(
+          room.players.find((p) => p.walletId === currentUser?.walletId) ?? null
+        );
+        setGameStatus(room.status);
         setGameSettings({
           questions: {
             easy: room.easyQuestions,
