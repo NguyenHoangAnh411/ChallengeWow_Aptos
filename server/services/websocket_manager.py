@@ -10,7 +10,7 @@ class WebSocketManager:
         self.room_connections: dict[str, set[WebSocket]] = {}
         self.lobby_connections: set[WebSocket] = set()
         self.player_connections: dict[str, WebSocket] = {}
-        self.room_states: dict[str, GAME_STATUS] = {}
+        self.room_states: dict[str, str] = {}
         self.room_timeouts: dict[str, asyncio.Task] = {}
 
     async def connect_room(self, websocket: WebSocket, room_id: str, wallet_id: str):
@@ -18,7 +18,7 @@ class WebSocketManager:
         self.room_connections.setdefault(room_id, set()).add(websocket)
         self.player_connections[wallet_id] = websocket
     
-    def disconnect_room(self, websocket: WebSocket, room_id: str, wallet_id: str):
+    async def disconnect_room(self, websocket: WebSocket, room_id: str, wallet_id: str):
         if room_id in self.room_connections:
             if websocket in self.room_connections[room_id]:
                 self.room_connections[room_id].discard(websocket)
@@ -26,6 +26,16 @@ class WebSocketManager:
         # Gỡ kết nối theo wallet_id luôn
         if self.player_connections.get(wallet_id) == websocket:
             del self.player_connections[wallet_id]
+        
+        await self.broadcast_to_room(
+            room_id,
+            {
+                "type": "player_disconnected",
+                "payload": {
+                    "walletId": wallet_id,
+                },
+            },
+        )
 
     def disconnect_room_by_room_id(self, room_id: str):
         if room_id in self.room_connections:
@@ -92,7 +102,7 @@ class WebSocketManager:
             task.cancel()
             del self.room_timeouts[room_id]
 
-    def set_room_state(self, room_id: str, state: GAME_STATUS):
+    def set_room_state(self, room_id: str, state: str):
         self.room_states[room_id] = state
 
     def get_room_state(self, room_id: str) -> str:

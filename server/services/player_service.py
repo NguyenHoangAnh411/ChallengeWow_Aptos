@@ -75,19 +75,25 @@ class PlayerService:
                 "closed": True
             }
 
+        host_transfer_info = None
         if current_player.is_host:
             new_host = next((p for p in updated_players if p.wallet_id != wallet_id), None)
             if new_host:
                 await self.player_repo.update_player(
                     new_host.wallet_id,
-                    {"is_host": True},
+                    {"is_host": True, "is_ready": True},
                     room_id=room_id
                 )
+                host_transfer_info = {
+                    "new_host_wallet_id": new_host.wallet_id,
+                    "new_host_username": new_host.username
+                }
 
         return {
             "success": True,
             "message": "Leave successfully",
-            "data": current_player
+            "data": current_player,
+            "host_transfer": host_transfer_info
         }
 
     async def update_is_winner(self, room_id: str, wallet_id: str, is_winner: bool) -> None:
@@ -96,3 +102,13 @@ class PlayerService:
             {"is_winner": is_winner},
             room_id=room_id
         )
+        
+    async def update_player(self, wallet_id, room_id, data: dict) -> None:
+        if not wallet_id or not room_id:
+            return
+        
+        player = await self.player_repo.get_player_by_wallet_and_room_id(room_id, wallet_id)
+        if not player:
+            return Response(content="Not found player", status_code=404)
+
+        await self.player_repo.update_player(wallet_id, data, room_id)

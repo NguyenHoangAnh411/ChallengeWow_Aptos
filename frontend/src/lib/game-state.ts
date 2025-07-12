@@ -17,6 +17,7 @@ interface GameState {
   startAt: number | null;
 
   // Game Flow States
+  readyCount: number;
   gameSettings: GameSettings;
   gameStatus: GameStatus;
   questionIndex: number;
@@ -76,6 +77,7 @@ interface GameState {
   ) => void;
 
   // Game Flow Actions
+  setReadyCount: (count: number) => void;
   setGameSettings: (gameSettings: GameSettings) => void;
   setGameStatus: (status: GameStatus) => void;
   setQuestionIndex: (index: number) => void;
@@ -114,6 +116,7 @@ export const useGameState = create<GameState>((set, get) => ({
   startAt: null,
 
   // Game Flow States
+  readyCount: 0,
   gameSettings: DEFAULT_GAME_SETTINGS,
   gameStatus: GameStatus.WAITING,
   questionIndex: 0,
@@ -173,6 +176,7 @@ export const useGameState = create<GameState>((set, get) => ({
   },
 
   // Game Flow Actions
+  setReadyCount: (count) => set({ readyCount: count }),
   setGameSettings: (gameSettings) => set({ gameSettings }),
   setGameStatus: (status) => set({ gameStatus: status }),
   setQuestionIndex: (index) => set({ questionIndex: index }),
@@ -201,6 +205,11 @@ export const useGameState = create<GameState>((set, get) => ({
   resetGameState: () => {
     console.log("[ZUSTAND] resetGameState called");
     set({
+      readyCount: 0,
+      currentPlayer: null,
+      players: [],
+      currentRoom: null,
+      questions: [],
       gameStatus: GameStatus.WAITING,
       questionIndex: 0,
       totalQuestions: 0,

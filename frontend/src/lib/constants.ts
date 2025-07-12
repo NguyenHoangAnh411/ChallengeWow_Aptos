@@ -8,6 +8,8 @@ export const PLAYER_LEFT_TYPE = "player_left";
 export const KICK_PLAYER_TYPE = "kick_player";
 export const COUNT_DOWN_UPDATE = "count_down_update";
 export const ROOM_CONFIG_UPDATE = "room_config_update";
+export const PLAYER_DISCONNECTED = "player_disconnected";
+export const HOST_TRANSFER_TYPE = "host_transfer";
 
 // Game Flow Message Types
 export const GAME_STARTED_TYPE = "game_started";

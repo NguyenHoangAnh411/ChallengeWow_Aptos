@@ -22,6 +22,11 @@ def create_room_router(room_controller: RoomController):
     @router.get("/rooms/{room_id}", response_model=Room)
     async def get_room(room_id: str):
         room = await room_controller.get_room_by_id(room_id)
+        print(f"✅ ROOM FOUND: {room_id}")
+        print(f"👥 TOTAL PLAYERS: {len(room.players)}")
+
+        for idx, p in enumerate(room.players):
+            print(f"[{idx+1}] wallet_id={p.wallet_id}, username={p.username}, is_ready={p.is_ready}, score={p.score}, winner={p.is_winner}")
         if room is None:
             raise HTTPException(status_code=404, detail="Room not found")
         return room

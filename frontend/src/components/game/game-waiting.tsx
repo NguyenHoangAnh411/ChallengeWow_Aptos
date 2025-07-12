@@ -58,6 +58,7 @@ export const GameWaiting = ({
     gameStatus,
     gameSettings,
     setGameSettings,
+    readyCount,
   } = useGameState();
 
   const [kickConfirmation, setKickConfirmation] = useState<{
@@ -68,7 +69,6 @@ export const GameWaiting = ({
   const [isVoiceChatEnabled, setIsVoiceChatEnabled] = useState(false);
   const [newMessage, setNewMessage] = useState("");
 
-  const readyCount = players.filter((p) => p.isReady).length;
   const readyPercentage =
     players.length > 0 ? (readyCount / players.length) * 100 : 0;
 
@@ -236,8 +236,8 @@ export const GameWaiting = ({
                         )}
 
                       {/* Kick Button for host */}
-                      {currentUser?.walletId !== player.walletId &&
-                        !player.isHost && (
+                      {currentPlayer?.isHost &&
+                        currentUser?.walletId !== player.walletId && (
                           <Button
                             variant="ghost"
                             size="sm"

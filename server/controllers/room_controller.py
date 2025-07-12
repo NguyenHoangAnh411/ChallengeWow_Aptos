@@ -125,6 +125,7 @@ class RoomController:
 
         is_closed = result.get("closed", False)
         player_data = result.get("data")
+        host_transfer = result.get("host_transfer")
 
         if is_closed:
             self.websocket_manager.disconnect_room_by_room_id(room_id)
@@ -134,7 +135,7 @@ class RoomController:
 
         ws = await self.websocket_manager.get_player_socket_by_wallet(wallet_id)
         if ws:
-            self.websocket_manager.disconnect_room(ws, room_id, wallet_id)
+            await self.websocket_manager.disconnect_room(ws, room_id, wallet_id)
 
         await self.websocket_manager.broadcast_to_lobby({
             "type": "room_update",
@@ -147,25 +148,42 @@ class RoomController:
             "action": "leave",
             "payload": {
                 "walletId": player_data.wallet_id,
-                "username": player_data.username
+                "username": player_data.username,
             }
         })
+
+        # Send host transfer message if host left
+        if host_transfer:
+            await self.websocket_manager.broadcast_to_room(room_id, {
+                "type": "host_transfer",
+                "payload": {
+                    "new_host_wallet_id": host_transfer["new_host_wallet_id"],
+                    "new_host_username": host_transfer["new_host_username"]
+                }
+            })
 
         return result
 
     async def get_current_room(self, wallet_id: str):
         players = await self.player_service.get_player_by_wallet_id(wallet_id)
-        if not players or all(p.player_status in [PLAYER_STATUS.QUIT, PLAYER_STATUS.FINISHED] for p in players):
-            return Response(status_code=404, content="Not found")
-
-        active_player = next((p for p in players if p.player_status not in [PLAYER_STATUS.QUIT, PLAYER_STATUS.FINISHED]), None)
+        valid_status = [PLAYER_STATUS.ACTIVE, PLAYER_STATUS.READY, PLAYER_STATUS.DISCONNECTED, PLAYER_STATUS.WAITING]
+        active_player = next((p for p in players if p.player_status in valid_status), None)
         if not active_player:
             return Response(status_code=404, content="No active room found")
 
         room = await self.room_service.get_room(active_player.room_id)
-        if not room or room.status == GAME_STATUS.FINISHED:
+        if not room or room.status in [GAME_STATUS.FINISHED, GAME_STATUS.CANCELLED]:
             return Response(status_code=404, content="No active room found")
-
+        
+        player_status = PLAYER_STATUS.WAITING if room.status == GAME_STATUS.WAITING else PLAYER_STATUS.ACTIVE 
+        await self.player_service.update_player_status(room.id, wallet_id, player_status)
+        await self.websocket_manager.broadcast_to_room(room.id, {
+                "type": "player_joined",
+                "payload": {
+                    "player": active_player
+                }
+            })
+        
         return {
             "roomId": active_player.room_id,
             "walletId": active_player.wallet_id,

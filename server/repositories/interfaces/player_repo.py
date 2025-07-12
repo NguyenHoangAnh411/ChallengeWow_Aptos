@@ -24,5 +24,5 @@ class IPlayerRepository(ABC):
         pass
 
     @abstractmethod
-    async def update_player(self, player_id: str, updates: dict) -> None:
+    async def update_player(self, player_id: str, updates: dict, room_id: str) -> None:
         pass
