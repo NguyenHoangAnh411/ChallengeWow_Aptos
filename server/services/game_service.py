@@ -1,8 +1,10 @@
 import asyncio
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 from config.question_config import QUESTION_CONFIG
 from models.question import Question
 from models.room import Room
+from services.answer_service import AnswerService
 from services.question_service import QuestionService
 from services.zkproof_service import ZkProofService
 from services.room_service import RoomService
@@ -18,12 +20,50 @@ class GameService:
         room_service: RoomService,
         question_service: QuestionService,
         zkproof_service: ZkProofService,
-        tie_break_service: TieBreakService,
+        answer_service: AnswerService,
     ):
         self.room_service = room_service
         self.question_service = question_service
         self.zkproof_service = zkproof_service
-        self.tie_break_service = tie_break_service
+        self.answer_service = answer_service
+    
+    async def get_final_results(self, room_id: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]], datetime, Optional[str]]:
+        room: Room = await self.room_service.get_room(room_id)
+        if not room:
+            raise ValueError("Room not found")
+
+        # 📝 Giả định bạn lưu kết quả answers ở đâu đó (ví dụ trong room hoặc DB riêng)
+        results = await self.answer_service.get_game_results(room_id)
+
+        if not results:
+            return {}, [], datetime.now(timezone.utc), None
+
+        # Sort kết quả theo điểm
+        sorted_results = sorted(results, key=lambda x: x["score"], reverse=True)
+
+        # Người chiến thắng là người có điểm cao nhất
+        winner_wallet = sorted_results[0]["wallet"] if sorted_results else None
+
+        # Tính game_stats tổng quan
+        total_players = len(sorted_results)
+        total_questions = room.total_questions if hasattr(room, 'total_questions') else 0
+        total_correct_answers = sum(
+            len([a for a in player["answers"] if a.get("score", 0) > 0]) for player in sorted_results
+        )
+        total_answers = sum(len(player["answers"]) for player in sorted_results)
+
+        game_stats = {
+            "totalPlayers": total_players,
+            "totalQuestions": total_questions,
+            "totalCorrectAnswers": total_correct_answers,
+            "totalAnswers": total_answers,
+            "accuracy": round((total_correct_answers / total_answers * 100), 2) if total_answers > 0 else 0.0
+        }
+
+        # Thời gian kết thúc: lấy từ room hoặc fallback là now
+        game_end_time = getattr(room, 'ended_at', datetime.utcnow())
+
+        return game_stats, sorted_results, game_end_time, winner_wallet
 
     async def start_countdown(self, room: Room):
         room.status = GAME_STATUS.COUNTING_DOWN

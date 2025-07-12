@@ -37,6 +37,10 @@ export async function fetchCurrentRoom(walletId: string) {
   return fetchData(`/current-room?wallet_id=${walletId}`);
 }
 
+export async function fetchRoomResults(roomId: string) {
+  return fetchData(`/rooms/${roomId}/game-results`);
+}
+
 // Tạo phòng mới
 export async function createRoom(data: any) {
   return fetchData("/rooms", {

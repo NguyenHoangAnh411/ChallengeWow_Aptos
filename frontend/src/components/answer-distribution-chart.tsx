@@ -43,7 +43,10 @@ const AnswerDistributionChart: React.FC<AnswerDistributionChartProps> = ({
   currentUserSelection = "Option B",
 }) => {
   const maxCount = Math.max(...Object.values(answerStats));
-  const maxHeight = 300;
+
+  const availableHeight =
+    typeof window !== "undefined" ? window.innerHeight - 450 : 300;
+  const maxHeight = Math.min(Math.max(availableHeight, 150), 350);
 
   // Neon colors for different answer options
   const colors = [
@@ -80,142 +83,153 @@ const AnswerDistributionChart: React.FC<AnswerDistributionChartProps> = ({
   const filteredOptions = options.filter((opt) => opt !== "No Answer");
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-black min-h-screen">
+    <div className="max-w-7xl mx-auto p-6 bg-black flex flex-col">
       {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold text-white mb-6 font-mono tracking-wider">
+      <div className="text-center mb-8 flex-shrink-0">
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 md:mb-6 font-mono tracking-wider">
           ANSWER DISTRIBUTION
         </h1>
-        <div className="flex justify-center items-center gap-8 text-gray-400 font-mono">
-          <div className="flex items-center gap-2 border border-gray-700 px-4 py-2 rounded-lg">
-            <Users size={18} className="text-cyan-400" />
+        <div className="flex justify-center items-center gap-4 md:gap-8 text-gray-400 font-mono text-sm md:text-base">
+          <div className="flex items-center gap-2 border border-gray-700 px-3 md:px-4 py-2 rounded-lg">
+            <Users
+              size={16}
+              className="text-cyan-400 md:w-[18px] md:h-[18px]"
+            />
             <span>{totalPlayers} PLAYERS</span>
           </div>
-          <div className="flex items-center gap-2 border border-gray-700 px-4 py-2 rounded-lg">
-            <Zap size={18} className="text-yellow-400" />
+          <div className="flex items-center gap-2 border border-gray-700 px-3 md:px-4 py-2 rounded-lg">
+            <Zap
+              size={16}
+              className="text-yellow-400 md:w-[18px] md:h-[18px]"
+            />
             <span>{totalResponses} RESPONSES</span>
           </div>
         </div>
       </div>
 
       {/* Answer Distribution - Column Chart */}
-      <div
-        className="flex items-end justify-center gap-12 mb-8"
-        style={{ height: `${maxHeight + 120}px` }}
-      >
-        {filteredOptions.map((answer, index) => {
-          const count = (answerStats as Record<string, number>)[answer] || 0;
-          const isCorrect = answer === correctAnswer;
-          const isUserSelection = answer === currentUserSelection;
-          const barHeight =
-            maxCount > 0 ? Math.max((count / maxCount) * maxHeight, 40) : 40;
-          const color = colors[index % colors.length];
+      <div className="flex-1 flex items-end justify-center">
+        <div
+          className="flex items-end justify-center gap-8 md:gap-12 mb-8"
+          style={{ height: `${maxHeight + 120}px` }}
+        >
+          {filteredOptions.map((answer, index) => {
+            const count = (answerStats as Record<string, number>)[answer] || 0;
+            const isCorrect = answer === correctAnswer;
+            const isUserSelection = answer === currentUserSelection;
+            const barHeight =
+              maxCount > 0 ? Math.max((count / maxCount) * maxHeight, 40) : 40;
+            const color = colors[index % colors.length];
 
-          return (
-            <div key={answer} className="flex flex-col items-center group w-24">
-              {/* User icon above column - Fixed width container */}
-              <div className="h-12 w-full flex items-end justify-center mb-4">
-                {isUserSelection && (
-                  <div
-                    className={`
-                      w-10 h-10 rounded-full border-2 flex items-center justify-center
-                      animate-pulse
-                      ${
-                        isCorrect
-                          ? "bg-gradient-to-r from-green-400 to-emerald-500 border-green-300 shadow-lg shadow-green-400/50"
-                          : "bg-gradient-to-r from-blue-400 to-cyan-500 border-cyan-300 shadow-lg shadow-cyan-400/50"
-                      }
-                    `}
-                  >
-                    <div className="text-white text-lg">⚡</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Column - Centered in fixed width container */}
-              <div className="relative flex flex-col items-center w-full">
-                <div
-                  className={`
-                    w-20 relative overflow-hidden transition-all duration-1000 ease-out mx-auto
-                    ${
-                      isCorrect
-                        ? `bg-gradient-to-t ${color.neon} shadow-2xl ${color.glow} border-t-4 border-white`
-                        : `${color.bg} opacity-30 border-t-2 border-gray-600`
-                    }
-                    group-hover:scale-105 group-hover:brightness-110
-                  `}
-                  style={{ height: `${barHeight}px` }}
-                >
-                  {/* Subtle grid pattern overlay */}
-                  <div
-                    className="absolute inset-0 opacity-20"
-                    style={{
-                      backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px),
-                                         linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)`,
-                      backgroundSize: "10px 10px",
-                    }}
-                  />
-
-                  {/* Count number inside column */}
-                  <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <span
+            return (
+              <div
+                key={answer}
+                className="flex flex-col items-center group w-20 md:w-24"
+              >
+                {/* User icon above column - Fixed width container */}
+                <div className="h-10 md:h-12 w-full flex items-end justify-center mb-3 md:mb-4">
+                  {isUserSelection && (
+                    <div
                       className={`
-                        font-bold text-2xl font-mono
+                        w-8 h-8 md:w-10 md:h-10 rounded-full border-2 flex items-center justify-center
+                        animate-pulse
                         ${
                           isCorrect
-                            ? "text-white drop-shadow-lg"
-                            : "text-gray-300"
+                            ? "bg-gradient-to-r from-green-400 to-emerald-500 border-green-300 shadow-lg shadow-green-400/50"
+                            : "bg-gradient-to-r from-blue-400 to-cyan-500 border-cyan-300 shadow-lg shadow-cyan-400/50"
                         }
                       `}
                     >
-                      {count}
-                    </span>
-                  </div>
-
-                  {/* Neon glow effect for correct answer */}
-                  {isCorrect && (
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-t ${color.neon} opacity-20 animate-pulse`}
-                    />
+                      <div className="text-white text-sm md:text-lg">⚡</div>
+                    </div>
                   )}
                 </div>
 
-                {/* Base line - Centered with column */}
-                <div
-                  className={`w-24 h-1 ${
-                    isCorrect ? "bg-white shadow-lg" : "bg-gray-600"
-                  }`}
-                />
-              </div>
+                {/* Column - Centered in fixed width container */}
+                <div className="relative flex flex-col items-center w-full">
+                  <div
+                    className={`
+                      w-16 md:w-20 relative overflow-hidden transition-all duration-1000 ease-out mx-auto
+                      ${
+                        isCorrect
+                          ? `bg-gradient-to-t ${color.neon} shadow-2xl ${color.glow} border-t-4 border-white`
+                          : `${color.bg} opacity-30 border-t-2 border-gray-600`
+                      }
+                      group-hover:scale-105 group-hover:brightness-110
+                    `}
+                    style={{ height: `${barHeight}px` }}
+                  >
+                    {/* Subtle grid pattern overlay */}
+                    <div
+                      className="absolute inset-0 opacity-20"
+                      style={{
+                        backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px),
+                                           linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)`,
+                        backgroundSize: "10px 10px",
+                      }}
+                    />
 
-              {/* Letter and label below - Centered in fixed width container */}
-              <div className="mt-6 text-center w-full flex flex-col items-center">
-                <div
-                  className={`
-                    w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold font-mono mb-3 border-2
-                    transition-all duration-300
-                    ${
-                      isCorrect
-                        ? `bg-gradient-to-r ${color.neon} text-white border-white shadow-2xl ${color.glow} animate-pulse`
-                        : "bg-gray-800 text-gray-400 border-gray-600"
-                    }
-                  `}
-                >
-                  {letters[index]}
+                    {/* Count number inside column */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20">
+                      <span
+                        className={`
+                          font-bold text-xl md:text-2xl font-mono
+                          ${
+                            isCorrect
+                              ? "text-white drop-shadow-lg"
+                              : "text-gray-300"
+                          }
+                        `}
+                      >
+                        {count}
+                      </span>
+                    </div>
+
+                    {/* Neon glow effect for correct answer */}
+                    {isCorrect && (
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-t ${color.neon} opacity-20 animate-pulse`}
+                      />
+                    )}
+                  </div>
+
+                  {/* Base line - Centered with column */}
+                  <div
+                    className={`w-20 md:w-24 h-1 ${
+                      isCorrect ? "bg-white shadow-lg" : "bg-gray-600"
+                    }`}
+                  />
                 </div>
-                <div
-                  className={`
-                    text-xs font-mono leading-tight uppercase tracking-wide text-center
-                    max-w-full px-1 break-words
-                    ${isCorrect ? "text-white font-bold" : "text-gray-500"}
-                  `}
-                >
-                  {answer}
+
+                {/* Letter and label below - Centered in fixed width container */}
+                <div className="mt-4 md:mt-6 text-center w-full flex flex-col items-center">
+                  <div
+                    className={`
+                      w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg md:text-xl font-bold font-mono mb-2 md:mb-3 border-2
+                      transition-all duration-300
+                      ${
+                        isCorrect
+                          ? `bg-gradient-to-r ${color.neon} text-white border-white shadow-2xl ${color.glow} animate-pulse`
+                          : "bg-gray-800 text-gray-400 border-gray-600"
+                      }
+                    `}
+                  >
+                    {letters[index]}
+                  </div>
+                  <div
+                    className={`
+                      text-xs font-mono leading-tight uppercase tracking-wide text-center
+                      max-w-full px-1 break-words
+                      ${isCorrect ? "text-white font-bold" : "text-gray-500"}
+                    `}
+                  >
+                    {answer}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

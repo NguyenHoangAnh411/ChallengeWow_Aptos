@@ -46,7 +46,10 @@ app = FastAPI(title="Challenge Wave API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:6789",
+        "http://127.0.0.1:6789",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,25 +65,24 @@ async def lifespan(app: FastAPI):
     player_repo = PlayerRepository(supabase=supabase)
     room_repo = RoomRepository(player_repo=player_repo, supabase=supabase)
     question_repo = QuestionRepository(supabase=supabase)
-    answer_repo = AnswerRepository(supabase=supabase)
     user_repo = UserRepository(supabase=supabase)
+    answer_repo = AnswerRepository(supabase=supabase)
     user_stats_repo = UserStatsRepository(supabase=supabase)
 
     # Services
     room_service = RoomService(room_repo, player_repo, answer_repo)
     player_service = PlayerService(player_repo, room_repo)
     question_service = QuestionService(question_repo)
-    answer_service = AnswerService(answer_repo)
+    answer_service = AnswerService(answer_repo, user_repo)
     zkproof_service = ZkProofService(ZkProofRepository())
-    tie_break_service = TieBreakService(room_service, question_service, answer_service)
-    game_service = GameService(room_service, question_service, zkproof_service, tie_break_service)
+    game_service = GameService(room_service, question_service, zkproof_service, answer_service)
     websocket_manager = WebSocketManager()
 
     # Controllers
     app.state.room_controller = RoomController(room_service, game_service, player_service, websocket_manager)
     app.state.player_controller = PlayerController(player_service, websocket_manager)
     app.state.question_controller = QuestionController(question_service)
-    app.state.answer_controller = AnswerController(answer_service, room_service, game_service, tie_break_service)
+    app.state.answer_controller = AnswerController(answer_service, room_service, game_service)
     app.state.user_controller = UserController(user_repo, user_stats_repo)
     app.state.zkproof_controller = ZkProofController(zkproof_service)
     app.state.websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service, answer_service, user_repo, user_stats_repo)

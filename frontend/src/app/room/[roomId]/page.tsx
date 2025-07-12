@@ -37,11 +37,7 @@ import {
   START_GAME_TYPE,
   CHAT_TYPE,
   KICKED_TYPE,
-<<<<<<< HEAD
   ROOM_CONFIG_UPDATE_TYPE,
-=======
-  ROOM_CONFIG_UPDATE,
->>>>>>> 22ba7df (feat(ui): separate game ui)
   PLAYER_JOINED_TYPE,
   PLAYER_READY_TYPE,
   PLAYER_LEFT_TYPE,
@@ -110,6 +106,7 @@ export default function ChallengeRoom({
   const [startAt, setStartAt] = useState<number | null>(null);
   const [isLoadingRoom, setIsLoadingRoom] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
+  const readyCount = players.filter((p) => p.isReady).length;
 
   // WebSocket connection
   const { sendMessage, isWsConnected, closeConnection } = useWebSocket({
@@ -382,7 +379,10 @@ export default function ChallengeRoom({
     const { walletId, username } = data.payload;
     const action = data.action;
     const updatedPlayers = players.filter((p) => p.walletId !== walletId);
+<<<<<<< HEAD
 
+=======
+>>>>>>> fd9a8f2 (feat(ui): game result when game end for disconnected user)
     setPlayers(updatedPlayers);
 
     const sysSender: Sender = {

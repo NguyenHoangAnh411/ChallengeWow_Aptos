@@ -19,7 +19,7 @@ interface GameResultsProps {
 }
 
 export const GameResults = ({ handleFinished }: GameResultsProps) => {
-  const { gameResults, currentUser, winnerWallet, totalQuestions } =
+  const { gameResults, currentUser, winnerWallet, totalQuestions, players } =
     useGameState();
   // Sort results by score for proper ranking
   const sortedResults = [...gameResults].sort((a, b) => b.score - a.score);
@@ -178,7 +178,7 @@ export const GameResults = ({ handleFinished }: GameResultsProps) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-cyber-darker/50 rounded-lg">
                     <div className="text-2xl font-orbitron font-bold text-neon-blue">
-                      {sortedResults.length}
+                      {players.length}
                     </div>
                     <div className="text-sm text-gray-400">Players</div>
                   </div>
@@ -472,7 +472,7 @@ export const GameResults = ({ handleFinished }: GameResultsProps) => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 onClick={handleFinished}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all duration-200 px-8 py-4 text-xl font-bold shadow-lg hover:shadow-xl"
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all duration-200 px-4 py-4 text-sm font-bold shadow-lg hover:shadow-xl"
               >
                 <ArrowLeft className="w-6 h-6 mr-3" />
                 Back to Home
@@ -497,7 +497,7 @@ export const GameResults = ({ handleFinished }: GameResultsProps) => {
                   });
                 }}
                 variant="outline"
-                className="border-neon-purple/50 text-neon-purple hover:bg-neon-purple/20 transition-all duration-200 px-6 py-4 text-lg font-bold"
+                className="border-neon-purple/50 text-neon-purple hover:bg-neon-purple/20 transition-all duration-200 px-4 py-4 text-md font-bold"
               >
                 <Share2 className="w-5 h-5 mr-2" />
                 Share Results

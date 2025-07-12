@@ -31,7 +31,6 @@ import {
 
 import { useAccount } from "wagmi";
 import ConnectWalletModal from "@/components/connect-wallet-modal";
-import UsernameModal from "@/components/connect-wallet-modal";
 import { GameStatus } from "@/types/GameStatus";
 import { RECONNECT_WS } from "@/lib/constants";
 
@@ -96,7 +95,6 @@ export default function Lobby() {
   useEffect(() => {
     if (isConnected && address) {
       fetchUserByWallet(address).then((user) => {
-        console.log("User from API:", user);
         setCurrentUser(user);
         if (
           !user ||

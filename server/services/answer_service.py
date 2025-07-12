@@ -1,9 +1,13 @@
-from typing import List
+from collections import defaultdict
+from typing import Any, Dict, List
 from models.answer import Answer
 from repositories.interfaces.answer_repo import IAnswerRepository
+from models.player_result import PlayerResult
+from repositories.implement.user_repo_impl import UserRepository
 
 class AnswerService:
-    def __init__(self, answer_repo: IAnswerRepository):
+    def __init__(self, answer_repo: IAnswerRepository, user_repo: UserRepository):
+        self.user_repo = user_repo
         self.answer_repo = answer_repo
 
     async def save_player_answer(self, answer: Answer):
@@ -33,32 +37,46 @@ class AnswerService:
         correct_answers = [answer for answer in answers if answer.is_correct]
         correct_answers.sort(key=lambda x: x.submitted_at if x.submitted_at else 0)
         return correct_answers
+    
+    async def get_game_results(self, room_id: str) -> List[Dict[str, Any]]:
+        """
+        Tổng hợp kết quả cuối cùng của room: điểm số, câu trả lời, username từng player.
+        """
 
-    # Tie-break specific methods
-    async def get_tie_break_answers_by_room(self, room_id: str) -> List[Answer]:
-        """Get all tie-break and sudden death answers for a room"""
-        return await self.answer_repo.get_tie_break_answers_by_room(room_id)
+        # 1. Lấy tất cả answers của room
+        all_answers: List[Answer] = await self.answer_repo.get_answers_by_room(room_id)
 
-    async def get_tie_break_answers_by_round(self, room_id: str, tie_break_round: int) -> List[Answer]:
-        """Get tie-break answers for a specific round"""
-        return await self.answer_repo.get_tie_break_answers_by_round(room_id, tie_break_round)
+        if not all_answers:
+            return []
 
-    async def get_tie_break_winner_streak(self, room_id: str) -> dict:
-        """Get current win streak for each player in tie-break"""
-        tie_break_answers = await self.get_tie_break_answers_by_room(room_id)
-        
-        # Sort by submission time
-        tie_break_answers.sort(key=lambda x: x.submitted_at or x.created_at)
-        
-        streaks = {}
-        for answer in tie_break_answers:
-            wallet_id = answer.wallet_id
-            if wallet_id not in streaks:
-                streaks[wallet_id] = 0
-            
-            if answer.is_correct:
-                streaks[wallet_id] += 1
-            else:
-                streaks[wallet_id] = 0
-        
-        return streaks
+        # 2. Gom nhóm theo player
+        player_answers_map: Dict[str, List[Answer]] = defaultdict(list)
+        for answer in all_answers:
+            player_answers_map[answer.wallet_id].append(answer)
+
+        # 3. Tính kết quả cho từng player
+        results: List[PlayerResult] = []
+        for wallet_id, answers in player_answers_map.items():
+            user = await self.user_repo.get_by_wallet(wallet_id)
+            username = user.username if user else "Unknown"
+            total_score = sum(a.score for a in answers)
+            answer_list = [
+                {
+                    "question_id": a.question_id,
+                    "selected_option": a.answer,
+                    "score": a.score,
+                    "response_time": a.response_time,
+                    "is_correct": a.is_correct,
+                    "submitted_at": a.submitted_at.isoformat() if a.submitted_at else None
+                }
+                for a in answers
+            ]
+
+            results.append({
+                "wallet": wallet_id,
+                "oath": username,
+                "score": total_score,
+                "answers": answer_list
+            })
+
+        return results

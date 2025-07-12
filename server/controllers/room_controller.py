@@ -1,3 +1,4 @@
+from typing import Any, Dict
 from fastapi import HTTPException, Response
 from enums.game_status import GAME_STATUS
 from enums.player_status import PLAYER_STATUS
@@ -218,6 +219,56 @@ class RoomController:
             "winner_wallet": winner_wallet
         }
 
+    async def get_game_results(self, room_id: str) -> Dict[str, Any]:
+        room: Room = await self.room_service.get_room(room_id)
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        player_wallet_ids = [p.wallet_id for p in room.players]
+        # if current_user.wallet_id not in player_wallet_ids:
+        #     raise HTTPException(status_code=403, detail="You are not a player in this room")
+        if room.status != GAME_STATUS.FINISHED:
+            raise HTTPException(status_code=400, detail="Game has not ended yet")
+        
+        game_stats, sorted_results, game_end_time, winner_wallet = await self.game_service.get_final_results(room_id)
+        if sorted_results is None:
+            raise HTTPException(status_code=500, detail="Game results not available")
+        
+        leaderboard = []
+        for idx, result in enumerate(sorted_results):
+            player = next((p for p in room.players if p.wallet_id == result["wallet"]), None)
+
+            correct_answers = len([a for a in result["answers"] if a.get("score", 0) > 0])
+            total_answers = len(result["answers"])
+            accuracy = (correct_answers / total_answers * 100) if total_answers > 0 else 0.0
+
+            response_times = [a.get("response_time", 0) for a in result["answers"] if "response_time" in a]
+            average_time = sum(response_times) / len(response_times) if response_times else 0.0
+
+            player_stats = {
+                "rank": idx + 1,
+                "walletId": result["wallet"],
+                "username": result["oath"],
+                "avatar": getattr(player, 'avatar', None) if player else None,
+                "score": result["score"],
+                "correctAnswers": correct_answers,
+                "totalAnswers": total_answers,
+                "accuracy": round(accuracy, 2),
+                "averageTime": round(average_time, 2),
+                "isWinner": result["wallet"] == winner_wallet,
+                "reward": 0
+            }
+            leaderboard.append(player_stats)
+
+        # 6. Trả về payload chuẩn
+        return {
+            "gameStats": game_stats,
+            "leaderboard": leaderboard,
+            "winner": leaderboard[0] if leaderboard else None,
+            "endedAt": int(game_end_time.timestamp() * 1000),
+            "roomId": room_id
+        }
+
+        
     async def get_room_settings(self, room_id: str) -> GameSettings | None:
         return await self.room_service.get_room_settings(room_id)
 

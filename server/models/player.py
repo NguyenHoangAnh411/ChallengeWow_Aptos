@@ -1,7 +1,6 @@
 from typing import List, Optional
 from pydantic import Field, field_validator
 from datetime import datetime, timezone
-import uuid
 
 from enums.player_status import PLAYER_STATUS
 from models.answer import Answer

@@ -33,6 +33,10 @@ def create_room_router(room_controller: RoomController):
     @router.get("/rooms/{room_id}/results")
     async def get_room_result(room_id: str) -> dict:
         return await room_controller.get_room_result(room_id)
+    
+    @router.get("/rooms/{room_id}/game-results")
+    async def get_game_results(room_id: str):
+        return await room_controller.get_game_results(room_id)
 
     @router.post("/join-room")
     async def join_room(request: JoinRoomRequest):
