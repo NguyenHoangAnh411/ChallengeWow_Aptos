@@ -41,11 +41,24 @@ class WebSocketController:
         self.active_tasks = {}
 
     async def _handle_disconnect_ws(self, websocket, room_id: str, wallet_id: str, data: dict):
-        await self.player_service.update_player(room_id, wallet_id, {
+        await self.player_service.update_player(wallet_id, room_id, {
             "player_status": PLAYER_STATUS.DISCONNECTED
         })
+        await self.manager.broadcast_to_room(
+            room_id,
+            {
+                "type": "player_disconnected",
+                "payload": {
+                    "walletId": wallet_id,
+                },
+            },
+        )
         print(f"[WS_DICONNECTED] - User {wallet_id} has been disconnected")
         await self.manager.disconnect_room(websocket, room_id, wallet_id)
+
+    async def _handle_leave_room(self, websocket, room_id: str, wallet_id: str, data: dict):
+        await self.manager.disconnect_room(websocket, room_id, wallet_id)
+        await self.player_service.leave_room(wallet_id=wallet_id, room_id=room_id)
 
     async def _handle_kick_player(self, websocket: WebSocket, room_id: str, wallet_id: str, data: dict):
         try:
@@ -146,15 +159,11 @@ class WebSocketController:
         game_end_time = datetime.now(timezone.utc)
         room.ended_at = game_end_time
         
-        # ✅ NEW: Check for tie-break condition
-        if self.tie_break_service.check_for_tie_break(room):
-            print(f"[TIE_BREAK] Room {room_id} - Tie detected, activating tie-break mode")
-            await self._activate_tie_break_mode(room_id)
-            return
-        
-        # Tạo results và tính toán điểm số từ answers
+        # Tạo results và tính toán điểm số từ answers (chỉ cho active players)
         results = []
-        for p in room.players:
+        active_players = [p for p in room.players if p.player_status != PLAYER_STATUS.DISCONNECTED]
+        
+        for p in active_players:
             # Lấy answers từ service (chú ý thứ tự tham số)
             answers = await self.answer_service.get_answers_by_wallet_id(room_id, p.wallet_id)
             if answers is None:
@@ -194,22 +203,22 @@ class WebSocketController:
         winner = max(results, key=lambda x: x['score']) if results else None
         winner_wallet = winner['wallet'] if winner else None
         
-        # Cập nhật is_winner trực tiếp trên object Player trong RAM
-        for p in room.players:
+        # Cập nhật is_winner trực tiếp trên object Player trong RAM (chỉ cho active players)
+        for p in active_players:
             p.is_winner = (p.wallet_id == winner_wallet)
         
         # Sắp xếp results theo điểm số để tạo leaderboard
         sorted_results = sorted(results, key=lambda x: x['score'], reverse=True)
         
-        # Tính toán thống kê game
-        total_players = len(room.players)
+        # Tính toán thống kê game (chỉ cho active players)
+        total_players = len(active_players)
         total_questions = room.total_questions
         
         # Chuẩn bị leaderboard với ranking chi tiết
         leaderboard = []
         for idx, result in enumerate(sorted_results):
-            # Tìm player object để lấy thêm thông tin
-            player = next((p for p in room.players if p.wallet_id == result["wallet"]), None)
+            # Tìm player object để lấy thêm thông tin (chỉ trong active players)
+            player = next((p for p in active_players if p.wallet_id == result["wallet"]), None)
             
             # Tính toán thống kê chi tiết
             correct_answers = len([a for a in result["answers"] if a.get("score", 0) > 0])
@@ -1110,6 +1119,8 @@ class WebSocketController:
 
         # Phản hồi cho player đã submit
         response_time = submit_time - question_start_at
+        if response_time < 0:
+            response_time = 0
         
         # Determine response message based on answer type
         if not player_answer or player_answer == "":
@@ -1139,7 +1150,7 @@ class WebSocketController:
         await self.room_service.save_room(room)
 
         try:
-            await self._check_and_show_question_result(room)
+            await self._check_and_show_question_result(room_id)
         except Exception as e:
             print(f"Error checking submitted answers: {e}")
             pass
@@ -1155,8 +1166,8 @@ class WebSocketController:
         if not current_question:
             return
         
+        # Chỉ tự động submit "no answer" khi handle_unanswered=True (tức là hết thời gian)
         if handle_unanswered:
-            print("start handle unanswers")
             await self._handle_unanswered_questions(room_id, current_question)
         
         # Thống kê câu trả lời từ database
@@ -1182,6 +1193,9 @@ class WebSocketController:
         # Calculate total responses (excluding "No Answer" for percentage calculations)
         total_responses = sum(count for option, count in answer_stats.items() if option != "No Answer")
         
+        # Chỉ tính active players trong thống kê
+        active_players = [p for p in room.players if p.player_status != PLAYER_STATUS.DISCONNECTED]
+        
         await self.manager.broadcast_to_room(room_id, {
             "type": "question_result",
             "payload": {
@@ -1190,7 +1204,7 @@ class WebSocketController:
                 "explanation": getattr(current_question, 'explanation', None),
                 "answerStats": answer_stats,
                 "totalResponses": total_responses,
-                "totalPlayers": len(room.players),
+                "totalPlayers": len(active_players),
                 "options": current_question.options,
                 "leaderboard": [
                     {
@@ -1198,7 +1212,7 @@ class WebSocketController:
                         "username": p.username,
                         "score": p.score,
                         "rank": idx + 1
-                    } for idx, p in enumerate(sorted(room.players, key=lambda x: x.score, reverse=True))
+                    } for idx, p in enumerate(sorted(active_players, key=lambda x: x.score, reverse=True))
                 ]
             }
         })
@@ -1242,14 +1256,14 @@ class WebSocketController:
                     if answer.wallet_id:
                         answered_players.add(answer.wallet_id)
             
-            # Find players who didn't answer
-            all_players = set(p.wallet_id for p in room.players)
-            unanswered_players = all_players - answered_players
+            # Find active players who didn't answer (exclude disconnected players)
+            active_players = set(p.wallet_id for p in room.players if p.player_status != PLAYER_STATUS.DISCONNECTED)
+            unanswered_active_players = active_players - answered_players
             
-            print(f"[UNANSWERED] Room {room_id} - Question {room.current_index + 1}: {len(unanswered_players)} players didn't answer")
+            print(f"[UNANSWERED] Room {room_id} - Question {room.current_index + 1}: {len(unanswered_active_players)} active players didn't answer")
             
-            # Submit "no answer" for each player who didn't respond
-            for wallet_id in unanswered_players:
+            # Submit "no answer" for each active player who didn't respond
+            for wallet_id in unanswered_active_players:
                 try:
                     # Create answer record with no answer (empty string)
                     answer_record = Answer(
@@ -1263,11 +1277,12 @@ class WebSocketController:
                         correct_answer=current_question.correct_answer,
                         is_correct=False,
                         points_earned=0,
-                        response_time=0
+                        response_time=0,
+                        submitted_at=datetime.now(timezone.utc)
                     )
                     
                     await self.answer_service.save_answer(answer_record)
-                    print(f"[UNANSWERED] Auto-submitted no answer for player {wallet_id}")
+                    print(f"[UNANSWERED] Auto-submitted no answer for active player {wallet_id}")
                     
                 except Exception as e:
                     print(f"Error auto-submitting no answer for player {wallet_id}: {e}")
@@ -1421,6 +1436,7 @@ class WebSocketController:
             "start_game": self._handle_start_game,
             "submit_answer": self._handle_submit_answer,
             "player_disconnected": self._handle_disconnect_ws,
+            "leave_room": self._handle_leave_room,
         }
 
         try:
@@ -1437,13 +1453,17 @@ class WebSocketController:
         finally:
             await self.manager.disconnect_room(websocket, room_id, wallet_id)
             
-    async def _check_and_show_question_result(self, room: Room):
+    async def _check_and_show_question_result(self, room_id: str):
+        room = await self.room_service.get_room(room_id)
+        if not room or not room.current_question:
+            return
         if not room.current_question:
             return
         
         current_question_answers = await self.answer_service.get_answers_by_room_and_question_id(room.id, room.current_question.id)
         answered_players = set(a.wallet_id for a in current_question_answers)
 
+        # Chỉ tính những player thực sự active (không bị disconnected)
         active_players = [p for p in room.players if p.player_status != PLAYER_STATUS.DISCONNECTED]
         active_player_wallets = set(p.wallet_id for p in active_players)
         
@@ -1452,6 +1472,7 @@ class WebSocketController:
         print(f"[CHECK_RESULT] Answered wallets: {answered_players}")
 
         # Kiểm tra xem tất cả active players đã trả lời chưa
+        # Chỉ chuyển sang câu hỏi tiếp theo khi TẤT CẢ active players đã trả lời
         if len(answered_players) >= len(active_players) and len(active_players) > 0:
             if room.id in self.active_tasks:
                 self.active_tasks[room.id].cancel()

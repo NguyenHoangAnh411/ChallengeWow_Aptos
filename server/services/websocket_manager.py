@@ -26,16 +26,6 @@ class WebSocketManager:
         # Gỡ kết nối theo wallet_id luôn
         if self.player_connections.get(wallet_id) == websocket:
             del self.player_connections[wallet_id]
-        
-        await self.broadcast_to_room(
-            room_id,
-            {
-                "type": "player_disconnected",
-                "payload": {
-                    "walletId": wallet_id,
-                },
-            },
-        )
 
     def disconnect_room_by_room_id(self, room_id: str):
         if room_id in self.room_connections:

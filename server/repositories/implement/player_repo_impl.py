@@ -67,7 +67,6 @@ class PlayerRepository(IPlayerRepository):
                     is_host=p["is_host"],
                     player_status=p['player_status'],
                     is_ready=p["is_ready"],
-                    joined_at=datetime.fromisoformat(p["joined_at"].replace("Z", "+00:00")) if p.get("joined_at") else None,
                     is_winner=p.get("is_winner", False),
                 )
                 players.append(player)
