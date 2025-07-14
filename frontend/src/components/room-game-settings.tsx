@@ -4,17 +4,7 @@ import { Settings, Info } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectItem, SelectContent } from "@/components/ui/select";
 import { NumberInput } from "@/components/ui/number-input";
-
-interface GameQuestions {
-  easy: number;
-  medium: number;
-  hard: number;
-}
-
-interface GameSettings {
-  timePerQuestion: number;
-  questions: GameQuestions;
-}
+import { GameQuestions, GameSettings } from "@/config/GameSettings";
 
 interface EnhancedGameSettingsProps {
   gameSettings: GameSettings;

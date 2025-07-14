@@ -52,6 +52,7 @@ class RoomController:
                     break
                 
                 if p.player_status not in [PLAYER_STATUS.QUIT, PLAYER_STATUS.FINISHED]:
+                    print(f"PLAYER_STATUS: {p.player_status}")
                     raise HTTPException(status_code=400, detail=f"Player is already in an active room {p.room_id}")
 
             player = Player(
@@ -177,12 +178,6 @@ class RoomController:
         
         player_status = PLAYER_STATUS.WAITING if room.status == GAME_STATUS.WAITING else PLAYER_STATUS.ACTIVE 
         await self.player_service.update_player_status(room.id, wallet_id, player_status)
-        await self.websocket_manager.broadcast_to_room(room.id, {
-                "type": "player_joined",
-                "payload": {
-                    "player": active_player
-                }
-            })
         
         return {
             "roomId": active_player.room_id,

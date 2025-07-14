@@ -1,22 +1,18 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Info, Clock, HelpCircle, Users, Target } from "lucide-react";
+import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card";
+import { GameSettings } from "@/config/GameSettings";
 
-const Card = ({ children, className }) => (
-  <div className={`rounded-lg ${className}`}>{children}</div>
-);
+interface StatCardProps {
+  icon: string;
+  label: string;
+  value: string | number;
+  color?: string;
+  bgColor?: string;
+}
 
-const CardHeader = ({ children }) => <div className="p-4 pb-2">{children}</div>;
-
-const CardTitle = ({ children, className }) => (
-  <h3 className={`text-lg font-semibold ${className}`}>{children}</h3>
-);
-
-const CardContent = ({ children }) => (
-  <div className="p-4 pt-0">{children}</div>
-);
-
-const StatCard = ({
+const StatCard: React.FC<StatCardProps> = ({
   icon,
   label,
   value,
@@ -34,7 +30,17 @@ const StatCard = ({
   </div>
 );
 
-const DifficultyBar = ({ easy, medium, hard }) => {
+interface DifficultyBarProps {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
+const DifficultyBar: React.FC<DifficultyBarProps> = ({
+  easy,
+  medium,
+  hard,
+}) => {
   const total = easy + medium + hard;
   const easyPercent = total > 0 ? (easy / total) * 100 : 0;
   const mediumPercent = total > 0 ? (medium / total) * 100 : 0;
@@ -90,20 +96,33 @@ const DifficultyBar = ({ easy, medium, hard }) => {
   );
 };
 
-const GameSettingsView = ({ gameSettings }) => {
+interface GameSettingsViewProps {
+  gameSettings: GameSettings;
+}
+
+interface DifficultyInfo {
+  level: string;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+const GameSettingsView: React.FC<GameSettingsViewProps> = ({
+  gameSettings,
+}) => {
   const totalQuestions =
-    gameSettings.questions.easy +
-    gameSettings.questions.medium +
-    gameSettings.questions.hard;
+    (gameSettings.questions?.easy ?? 0) +
+    (gameSettings.questions?.medium ?? 0) +
+    (gameSettings.questions?.hard ?? 0);
   const estimatedTime = Math.ceil(
     (totalQuestions * gameSettings.timePerQuestion) / 60
   );
   const totalPoints =
-    gameSettings.questions.easy * 50 +
-    gameSettings.questions.medium * 100 +
-    gameSettings.questions.hard * 150;
+    gameSettings.questions?.easy * 50 +
+    gameSettings.questions?.medium * 100 +
+    gameSettings.questions?.hard * 150;
 
-  const getDifficultyLevel = () => {
+  const getDifficultyLevel = (): DifficultyInfo => {
     const hardRatio = gameSettings.questions.hard / totalQuestions;
     const mediumRatio = gameSettings.questions.medium / totalQuestions;
 

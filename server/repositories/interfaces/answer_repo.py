@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from models.answer import Answer
 
@@ -33,4 +33,8 @@ class IAnswerRepository(ABC):
     @abstractmethod
     async def get_score_by_user(self, room_id: str, wallet_id: str) -> float:
         """Tính tổng điểm của người chơi trong phòng"""
+        pass
+    
+    @abstractmethod
+    async def get_answer_by_question_and_wallet(self, room_id: str, question_id: str, wallet_id: str) -> Optional[Answer]:
         pass

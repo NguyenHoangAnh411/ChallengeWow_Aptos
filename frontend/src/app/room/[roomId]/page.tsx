@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CheckCircle,
   Trophy,
@@ -209,6 +210,7 @@ export default function ChallengeRoom({
     const inactivePlayer = players.find((p) => p.walletId === walletId);
     if (!inactivePlayer) return;
 
+    // --- THAY ĐỔI Ở ĐÂY ---
     // Thay vì xóa, hãy cập nhật trạng thái của họ
     const updatedPlayers = players.map((player) =>
       player.walletId === walletId
@@ -377,14 +379,7 @@ export default function ChallengeRoom({
     const { walletId, username } = data.payload;
     const action = data.action;
     const updatedPlayers = players.filter((p) => p.walletId !== walletId);
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
->>>>>>> fd9a8f2 (feat(ui): game result when game end for disconnected user)
-=======
-
->>>>>>> c272a52 (feat(ui): host change logic)
     setPlayers(updatedPlayers);
 
     const sysSender: Sender = {
@@ -683,18 +678,11 @@ export default function ChallengeRoom({
           setTotalQuestions(results.gameStats.totalQuestions);
         }
 
-        console.log("ROOMM: ", room.players);
-
         setCurrentRoom(room);
-        setPlayers(room.players || []);
-<<<<<<< HEAD
-        setTotalQuestions(room.totalQuestions);
-        setCurrentPlayer(
-          room.players.find((p) => p.walletId === currentUser?.walletId) ?? null
-        );
-=======
->>>>>>> c272a52 (feat(ui): host change logic)
         setGameStatus(room.status);
+        setPlayers(room.players || []);
+        setGameStatus(room.status);
+        setTotalQuestions(room.totalQuestions);
         setGameSettings({
           questions: {
             easy: room.easyQuestions,

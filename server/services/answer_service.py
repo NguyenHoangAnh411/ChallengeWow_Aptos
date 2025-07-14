@@ -80,3 +80,6 @@ class AnswerService:
             })
 
         return results
+    
+    async def get_answer_by_question_and_wallet(self, room_id: str, question_id: str, wallet_id: str) -> Answer:
+        return await self.answer_repo.get_answer_by_question_and_wallet(room_id, question_id, wallet_id)

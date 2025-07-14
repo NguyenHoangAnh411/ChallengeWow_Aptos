@@ -185,6 +185,15 @@ export const GameWaiting = ({
                               Ready
                             </Badge>
                           )}
+
+                          {player.status === "disconnected" && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-red-500/20 text-red-400 animate-pulse text-xs px-2 py-1"
+                            >
+                              Disconnected
+                            </Badge>
+                          )}
                         </div>
 
                         {/* Wallet ID */}

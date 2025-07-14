@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from supabase import AsyncClient
 from models.answer import Answer
@@ -117,35 +117,20 @@ class AnswerRepository(IAnswerRepository):
             print(f"Error calculating score for user {wallet_id} in room {room_id}: {e}")
             return 0.0
 
-    async def get_tie_break_answers_by_room(self, room_id: str) -> List[Answer]:
-        """Get all tie-break and sudden death answers for a room"""
-        try:
-            response = await (
-                self.supabase.table(self.table)
+    async def get_answer_by_question_and_wallet(
+        self, room_id: str, question_id: str, wallet_id: str
+    ) -> Optional[Answer]:
+        result = await (
+                self.supabase
+                .table(self.table)
                 .select("*")
                 .eq("room_id", room_id)
-                .in_("answer_type", ["tie_break", "sudden_death"])
-                .order("created_at", desc=False)
+                .eq("question_id", question_id)
+                .eq("wallet_id", wallet_id)
+                .limit(1)
                 .execute()
             )
-            return [Answer(**item) for item in (response.data or [])]
-        except Exception as e:
-            print(f"Error fetching tie-break answers for room {room_id}: {e}")
-            return []
 
-    async def get_tie_break_answers_by_round(self, room_id: str, tie_break_round: int) -> List[Answer]:
-        """Get tie-break answers for a specific round"""
-        try:
-            response = await (
-                self.supabase.table(self.table)
-                .select("*")
-                .eq("room_id", room_id)
-                .eq("tie_break_round", tie_break_round)
-                .in_("answer_type", ["tie_break", "sudden_death"])
-                .order("created_at", desc=False)
-                .execute()
-            )
-            return [Answer(**item) for item in (response.data or [])]
-        except Exception as e:
-            print(f"Error fetching tie-break answers for round {tie_break_round} in room {room_id}: {e}")
-            return []
+        if result.data:
+            return Answer(**result.data[0])
+        return None

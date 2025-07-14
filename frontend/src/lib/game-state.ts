@@ -22,6 +22,7 @@ interface GameState {
   gameStatus: GameStatus;
   questionIndex: number;
   totalQuestions: number;
+  questionStartAt: number | null;
   questionEndAt: number | null;
   questionCountdown: number;
   hasAnswered: boolean;
@@ -82,6 +83,7 @@ interface GameState {
   setGameStatus: (status: GameStatus) => void;
   setQuestionIndex: (index: number) => void;
   setTotalQuestions: (total: number) => void;
+  setQuestionStartAt: (startAt: number | null) => void;
   setQuestionEndAt: (endAt: number | null) => void;
   setQuestionCountdown: (countdown: number) => void;
   setHasAnswered: (answered: boolean) => void;
@@ -121,6 +123,7 @@ export const useGameState = create<GameState>((set, get) => ({
   gameStatus: GameStatus.WAITING,
   questionIndex: 0,
   totalQuestions: 0,
+  questionStartAt: null,
   questionEndAt: null,
   questionCountdown: 0,
   hasAnswered: false,
@@ -181,6 +184,7 @@ export const useGameState = create<GameState>((set, get) => ({
   setGameStatus: (status) => set({ gameStatus: status }),
   setQuestionIndex: (index) => set({ questionIndex: index }),
   setTotalQuestions: (total) => set({ totalQuestions: total }),
+  setQuestionStartAt: (startAt) => set({ questionStartAt: startAt }),
   setQuestionEndAt: (endAt) => set({ questionEndAt: endAt }),
   setQuestionCountdown: (countdown) => set({ questionCountdown: countdown }),
   setHasAnswered: (answered) => set({ hasAnswered: answered }),

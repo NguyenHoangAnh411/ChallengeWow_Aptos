@@ -1,10 +1,12 @@
+export interface GameQuestions {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
 export interface GameSettings {
   timePerQuestion: number;
-  questions: {
-    easy: number;
-    medium: number;
-    hard: number;
-  };
+  questions: GameQuestions;
 }
 
 const TIME_PER_QUESTION = 10;

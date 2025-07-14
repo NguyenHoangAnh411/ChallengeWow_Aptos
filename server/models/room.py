@@ -33,14 +33,7 @@ class Room(CamelModel):
     current_questions: Optional[List[Question]] = None
     current_index: int = 0
     question_configs: dict[QUESTION_DIFFICULTY, Any] = QUESTION_CONFIG
-    
-    # Tie-break fields
-    tie_break_round: int = 0
-    tie_break_questions: Optional[List[Question]] = None
-    tie_break_current_index: int = 0
-    sudden_death_activated: bool = False
-    tie_break_started_at: Optional[datetime] = None
-    tie_break_winners: Optional[List[Optional[str]]] = None
+    current_question_started_at: Optional[datetime] = None
 
     @model_validator(mode="before")
     @classmethod
