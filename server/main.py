@@ -12,6 +12,7 @@ from routers.answer_router import create_answer_router
 from routers.zkproof_router import create_zkproof_router
 from routers.user_router import create_user_router
 from routers.nft_router import create_nft_router
+from routers.aptos_router import create_aptos_router
 
 from controllers.websocket_controller import WebSocketController
 from controllers.room_controller import RoomController
@@ -21,6 +22,7 @@ from controllers.answer_controller import AnswerController
 from controllers.zkproof_controller import ZkProofController
 from controllers.user_controller import UserController
 from controllers.nft_controller import NFTController
+from controllers.aptos_controller import AptosController
 
 from services.websocket_manager import WebSocketManager
 from repositories.implement.zkproof_repo_impl import ZkProofRepository
@@ -83,6 +85,7 @@ async def lifespan(app: FastAPI):
     app.state.zkproof_controller = ZkProofController(zkproof_service)
     app.state.websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service, answer_service, user_repo, user_stats_repo)
     app.state.nft_controller = NFTController()
+    app.state.aptos_controller = AptosController()
 
     # Router Setup
     api_router = APIRouter(prefix="/api")
@@ -93,6 +96,7 @@ async def lifespan(app: FastAPI):
     api_router.include_router(create_zkproof_router(app.state.zkproof_controller))
     api_router.include_router(create_user_router(app.state.user_controller))
     api_router.include_router(create_nft_router(app.state.nft_controller))
+    api_router.include_router(create_aptos_router(app.state.aptos_controller))
 
     ws_router = create_ws_router(app.state.websocket_controller)
     app.include_router(ws_router, prefix="/ws")

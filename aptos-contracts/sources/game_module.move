@@ -1,18 +1,19 @@
 module challenge_wow_aptos::game_module {
     use std::signer;
     use std::error;
+    use std::string;
     use aptos_framework::coin;
-    use aptos_framework::coin::Coin;
-    use aptos_framework::coin::BurnCapability;
-    use aptos_framework::aptos_coin;
 
     struct PlayerData has key, store {
         score: u64,
         games_played: u64,
     }
 
+    struct MyToken has store, drop {}
+
     struct CapStore has key {
-        burn_cap: BurnCapability<aptos_coin::AptosCoin>,
+        burn_cap: coin::BurnCapability<MyToken>,
+        mint_cap: coin::MintCapability<MyToken>,
     }
 
     public entry fun init_player(account: &signer) {
@@ -36,39 +37,42 @@ module challenge_wow_aptos::game_module {
         borrow_global<PlayerData>(addr).games_played
     }
 
-    public entry fun send_reward(sender: &signer, receiver: address, amount: u64) {
-        coin::transfer<aptos_coin::AptosCoin>(sender, receiver, amount);
-    }
-
-    public fun get_burn_cap(account: &signer): BurnCapability<aptos_coin::AptosCoin> {
-        let (burn_cap, _, _) = coin::initialize<aptos_coin::AptosCoin>(
-            account,
-            b"Aptos Coin", // name
-            b"APT",        // symbol
-            8,             // decimals
-            false          // monitor_supply
-        );
-        burn_cap
-    }
-
     public entry fun init_caps(account: &signer) {
-        if (exists<CapStore>(signer::address_of(account))) {
-            return;
-        }
-        let (burn_cap, _, _) = coin::initialize<aptos_coin::AptosCoin>(
+        let addr = signer::address_of(account);
+        assert!(!exists<CapStore>(addr), error::already_exists(2));
+
+        let (burn_cap, freeze_cap, mint_cap) = coin::initialize<MyToken>(
             account,
-            b"Aptos Coin", // name
-            b"APT",        // symbol
-            8,             // decimals
-            false          // monitor_supply
+            string::utf8(b"My Token"),
+            string::utf8(b"MTK"),
+            6,
+            false
         );
-        move_to(account, CapStore { burn_cap });
+
+        move_to(account, CapStore {
+            burn_cap,
+            mint_cap,
+        });
+
+        coin::destroy_freeze_cap(freeze_cap);
+
+        coin::register<MyToken>(account);
+    }
+
+
+    public entry fun mint_tokens(account: &signer, to: address, amount: u64) acquires CapStore {
+        let caps = borrow_global<CapStore>(signer::address_of(account));
+        let minted = coin::mint<MyToken>(amount, &caps.mint_cap);
+        coin::deposit(to, minted);
+    }
+
+    public entry fun send_reward(sender: &signer, receiver: address, amount: u64) {
+        coin::transfer<MyToken>(sender, receiver, amount);
     }
 
     public entry fun burn_tokens(account: &signer, amount: u64) acquires CapStore {
-        let cap = borrow_global<CapStore>(signer::address_of(account));
-        let coin_to_burn: Coin<aptos_coin::AptosCoin> = coin::withdraw<aptos_coin::AptosCoin>(account, amount);
-        coin::burn<aptos_coin::AptosCoin>(coin_to_burn, &cap.burn_cap);
+        let caps = borrow_global<CapStore>(signer::address_of(account));
+        let coin_to_burn = coin::withdraw<MyToken>(account, amount);
+        coin::burn<MyToken>(coin_to_burn, &caps.burn_cap);
     }
-
 }

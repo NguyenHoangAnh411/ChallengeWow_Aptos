@@ -138,7 +138,17 @@ export default function Landing() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
+              className="flex items-center gap-4"
             >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/aptos-demo')}
+                className="border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10"
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Aptos Demo
+              </Button>
               <ConnectButton />
             </motion.div>
           </div>
