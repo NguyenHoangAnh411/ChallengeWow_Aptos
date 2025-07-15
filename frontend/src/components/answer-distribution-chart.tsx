@@ -45,7 +45,7 @@ const AnswerDistributionChart: React.FC<AnswerDistributionChartProps> = ({
   const maxCount = Math.max(...Object.values(answerStats));
 
   const availableHeight =
-    typeof window !== "undefined" ? window.innerHeight - 600 : 250;
+    typeof window !== "undefined" ? window.innerHeight - 800 : 250;
   const maxHeight = Math.min(Math.max(availableHeight, 150), 200);
 
   // Neon colors for different answer options
@@ -108,7 +108,7 @@ const AnswerDistributionChart: React.FC<AnswerDistributionChartProps> = ({
       </div>
 
       {/* Answer Distribution - Column Chart */}
-      <div className="mt-15 flex-1 flex items-end justify-center">
+      <div className="mt-20 flex-1 flex items-end justify-center">
         <div
           className="flex items-end justify-center gap-8 md:gap-12 mb-8"
           style={{ height: `${maxHeight + 120}px` }}

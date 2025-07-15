@@ -41,7 +41,7 @@ class WebSocketController:
 
     async def _handle_disconnect_ws(self, websocket: WebSocket, room_id: str, wallet_id: str, data: dict):
         # Lấy ra kết nối HIỆN TẠI (có thể là một kết nối mới nếu người dùng đã reconnect)
-        current_socket = await self.manager.get_player_socket_by_wallet(wallet_id)
+        current_socket = await self.manager.get_player_socket(wallet_id)
 
         is_truly_disconnected = not current_socket or current_socket == websocket
         
@@ -54,7 +54,7 @@ class WebSocketController:
                 PLAYER_STATUS.READY,
                 PLAYER_STATUS.WAITING,
             }
-            if current_player.player_status in DISCONNECTABLE_STATUSES:
+            if current_player and current_player.player_status in DISCONNECTABLE_STATUSES:
                 # 1. Cập nhật trạng thái trong DB/cache
                 await self.player_service.update_player(wallet_id, room_id, {
                     "player_status": PLAYER_STATUS.DISCONNECTED
@@ -84,10 +84,10 @@ class WebSocketController:
             print(f"[WS_RECONNECT] User {wallet_id} disconnected but reconnected instantly. Skipping full disconnect logic.")
 
         # Cuối cùng, luôn luôn dọn dẹp kết nối CŨ ra khỏi manager.
-        await self.manager.disconnect_room(websocket, room_id, wallet_id)    
+        self.manager.disconnect_room(websocket, room_id)    
     
     async def _handle_leave_room(self, websocket, room_id: str, wallet_id: str, data: dict):
-        await self.manager.disconnect_room(websocket, room_id, wallet_id)
+        self.manager.disconnect_room(websocket, room_id)
         await self.player_service.leave_room(wallet_id=wallet_id, room_id=room_id)
 
     async def _handle_kick_player(self, websocket: WebSocket, room_id: str, wallet_id: str, data: dict):
@@ -101,7 +101,7 @@ class WebSocketController:
             await send_json_safe(websocket, {"type": "error", "message": "Only the host can kick players."})
             return
 
-        kicked_ws = await self.manager.get_player_socket_by_wallet(payload.wallet_id)
+        kicked_ws = await self.manager.get_player_socket(payload.wallet_id)
         if wallet_id == payload.wallet_id:
             await send_json_safe(websocket, {"type": "error", "payload": {"message": "You cannot kick yourself"}})
             return
@@ -1036,7 +1036,7 @@ class WebSocketController:
             await self._handle_disconnect_ws(websocket, room_id, wallet_id, {})
         finally:
             # Luôn đảm bảo ngắt kết nối khỏi manager khi coroutine kết thúc
-            await self.manager.disconnect_room(websocket, room_id, wallet_id)    
+            self.manager.disconnect_room(websocket, room_id)
     
     async def _check_and_show_question_result(self, room_id: str):
         room = await self.room_service.get_room(room_id)

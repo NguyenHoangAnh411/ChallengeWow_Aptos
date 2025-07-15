@@ -134,9 +134,9 @@ class RoomController:
         if not player_data:
             return result
 
-        ws = await self.websocket_manager.get_player_socket_by_wallet(wallet_id)
+        ws = await self.websocket_manager.get_player_socket(wallet_id)
         if ws:
-            await self.websocket_manager.disconnect_room(ws, room_id, wallet_id)
+            self.websocket_manager.disconnect_room(ws, room_id)
 
         await self.websocket_manager.broadcast_to_lobby({
             "type": "room_update",
