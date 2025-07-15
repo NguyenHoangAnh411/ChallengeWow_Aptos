@@ -4,4 +4,5 @@ export enum GameStatus {
   IN_PROGRESS = "in_progress",
   FINISHED = "finished",
   QUESTION_RESULT = "question_result",
+  CANCELLED = "cancelled",
 }

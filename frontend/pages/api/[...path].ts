@@ -10,7 +10,7 @@ export const config = {
 };
 
 const apiProxy = createProxyMiddleware({
-  target: "http://localhost:9000",
+  target: process.env.NEXT_PUBLIC_API_PROXY,
   changeOrigin: true,
   pathRewrite: {
     "^/api": "/api", // giữ nguyên /api path

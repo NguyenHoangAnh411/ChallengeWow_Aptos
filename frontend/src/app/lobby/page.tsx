@@ -12,6 +12,7 @@ import {
   Plus,
   Users,
   RefreshCw,
+  ScrollText,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import RoomCard from "@/components/room-card";
@@ -332,6 +333,14 @@ export default function Lobby() {
                 className="text-gray-400 hover:text-neon-blue transition-all duration-300 hover:scale-110 p-2 rounded-lg glass-morphism"
               >
                 <Settings className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/leaderboard")}
+                className="text-gray-400 hover:text-neon-blue transition-all duration-300 hover:scale-110 p-2 rounded-lg glass-morphism"
+              >
+                <ScrollText className="w-5 h-5" />
               </Button>
               <Button
                 variant="ghost"
