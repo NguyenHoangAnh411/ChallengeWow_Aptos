@@ -23,12 +23,11 @@ import {
 } from "lucide-react";
 import { ethers } from "ethers";
 import "@rainbow-me/rainbowkit/styles.css";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { NetworkStatusBanner } from "@/components/network-status-banner";
+import { ConnectButtonWithPetra } from "@/components/connect-button-with-petra";
 import {
   OLYM3_TESTNET,
   SOLANA_DEVNET,
-  APTOS_DEVNET,
   RONIN_SAIGON,
   LISK_TESTNET,
   VICTION_TESTNET,
@@ -37,7 +36,6 @@ import {
 const NETWORKS = [
   OLYM3_TESTNET,
   SOLANA_DEVNET,
-  APTOS_DEVNET,
   RONIN_SAIGON,
   LISK_TESTNET,
   VICTION_TESTNET,
@@ -140,16 +138,7 @@ export default function Landing() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="flex items-center gap-4"
             >
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/aptos-demo')}
-                className="border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10"
-              >
-                <Wallet className="w-4 h-4 mr-2" />
-                Aptos Demo
-              </Button>
-              <ConnectButton />
+              <ConnectButtonWithPetra />
             </motion.div>
           </div>
         </div>

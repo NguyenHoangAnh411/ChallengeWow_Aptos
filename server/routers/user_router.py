@@ -16,8 +16,12 @@ def create_user_router(controller: UserController):
         return await controller.get_by_wallet(wallet_id)
 
     @router.post("/users/update")
-    async def update_user(wallet_id: str = Body(...), username: str = Body(...)):
-        return await controller.update_username(wallet_id, username)
+    async def update_user(
+        wallet_id: str = Body(...), 
+        username: str = Body(None), 
+        aptos_wallet: str = Body(None)
+    ):
+        return await controller.update_user(wallet_id, username, aptos_wallet)
 
     @router.get("/leaderboard", response_model=list[LeaderboardEntry])
     async def leaderboard(limit: int = 10, period = LEADERBOARD_PERIOD.ALL_TIME):

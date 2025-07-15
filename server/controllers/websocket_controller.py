@@ -16,6 +16,7 @@ from services.question_service import QuestionService
 from services.room_service import RoomService
 from services.websocket_manager import WebSocketManager
 from services.tie_break_service import TieBreakService
+from services.aptos_service import AptosService
 from pydantic import ValidationError
 from enums.game_status import GAME_STATUS
 from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
@@ -35,6 +36,7 @@ class WebSocketController:
         self.user_repo = user_repo
         self.user_stats_repo = user_stats_repo
         self.nft_service = BlockchainService()  # Thêm NFT service
+        self.aptos_service = AptosService()  # Thêm Aptos service
         self.tie_break_service = TieBreakService(room_service, question_service, answer_service)  # Thêm Tie-break service
         # Thêm tracking cho active tasks
         self.active_tasks = {}
@@ -278,29 +280,41 @@ class WebSocketController:
 
         # print(f"[GAME_ENDED] Room {room_id} finished. Results: {results}")
 
-        # Mint và transfer NFT cho winner (nếu có)
+        # ✅ UPDATED: Mint và transfer NFT cho winner từ cả 2 service
         if winner_wallet:
             try:
-                # Không cần tự tạo metadata_uri nữa, chỉ truyền room_id và winner_wallet
-                nft_result = await self._mint_and_transfer_nft(room_id, winner_wallet)
-                # print(f"[NFT] Mint and transfer result for room {room_id}: {nft_result}")
-                # Broadcast NFT result to room
+                print(f"[NFT] Starting NFT minting process for winner {winner_wallet} in room {room_id}")
+                
+                # 1. Mint NFT từ BlockchainService (code cũ)
+                blockchain_nft_result = await self._mint_and_transfer_nft(room_id, winner_wallet)
+                print(f"[BLOCKCHAIN_NFT] Result: {blockchain_nft_result}")
+                
+                # 2. Mint NFT từ AptosService (code mới)
+                aptos_nft_result = await self._mint_aptos_nft(room_id, winner_wallet)
+                print(f"[APTOS_NFT] Result: {aptos_nft_result}")
+                
+                # 3. Broadcast kết quả tổng hợp
                 await self.manager.broadcast_to_room(room_id, {
                     "type": "nft_awarded",
                     "payload": {
                         "winner_wallet": winner_wallet,
-                        "nft_result": nft_result,
-                        "room_id": room_id
+                        "room_id": room_id,
+                        "blockchain_nft": blockchain_nft_result,
+                        "aptos_nft": aptos_nft_result,
+                        "message": "🎉 Congratulations! You've won NFTs from both blockchain and Aptos!"
                     }
                 })
+                
             except Exception as e:
-                # print(f"[NFT_ERROR] Failed to mint/transfer NFT for room {room_id}: {str(e)}")
+                print(f"[NFT_ERROR] Exception during NFT minting: {str(e)}")
                 # Broadcast error to room
                 await self.manager.broadcast_to_room(room_id, {
                     "type": "nft_error",
                     "payload": {
+                        "winner_wallet": winner_wallet,
                         "error": str(e),
-                        "room_id": room_id
+                        "room_id": room_id,
+                        "message": "Sorry, there was an error minting your NFTs."
                     }
                 })
 
@@ -1238,7 +1252,6 @@ class WebSocketController:
             
             task = asyncio.create_task(next_question_delay())
             self.active_tasks[room_id] = task
-            print(f"[NEXT_QUESTION] Room {room_id} - Created next question delay task")
         else:
             print(f"[NEXT_QUESTION] Room {room_id} - Skipping next question delay task (already exists)")
 
@@ -1330,11 +1343,92 @@ class WebSocketController:
             print(f"[NFT_ERROR] Error in _mint_and_transfer_nft: {str(e)}")
             raise e
 
+    # ✅ NEW: Mint NFT using AptosService
+    async def _mint_aptos_nft(self, room_id: str, winner_wallet: str) -> dict:
+        """Mint NFT cho winner sử dụng AptosService"""
+        try:
+            # Lấy thông tin user để có aptos_wallet
+            user = await self.user_repo.get_by_wallet(winner_wallet)
+            if not user or not user.aptos_wallet:
+                return {
+                    "success": False,
+                    "message": "Winner does not have an Aptos wallet connected",
+                    "error": "No aptos_wallet found for winner",
+                    "winner_wallet": winner_wallet
+                }
+            
+            aptos_wallet_address = user.aptos_wallet
+            
+            # Tạo metadata cho NFT
+            collection_name = "ChallengeWave Winners"
+            token_name = f"Winner Trophy - Room {room_id}"
+            token_description = f"Winner NFT for ChallengeWave game room {room_id}"
+            token_uri = f"https://challengewave.com/nft/{room_id}/metadata.json"
+            
+            print(f"[APTOS_NFT] Minting NFT for winner {winner_wallet} (Aptos: {aptos_wallet_address}) in room {room_id}")
+            
+            # Sử dụng AptosService để mint NFT với aptos_wallet
+            mint_result = await self.aptos_service.mint_nft_to_player(
+                recipient_address=aptos_wallet_address,
+                collection_name=collection_name,
+                token_name=token_name,
+                token_description=token_description,
+                token_uri=token_uri
+            )
+            
+            if mint_result.get("success"):
+                print(f"[APTOS_NFT] Successfully minted NFT for winner {winner_wallet} to Aptos wallet {aptos_wallet_address}")
+                return {
+                    "success": True,
+                    "message": "Aptos NFT minted and transferred successfully",
+                    "transaction_hash": mint_result.get("transaction_hash"),
+                    "explorer_url": mint_result.get("explorer_url"),
+                    "winner_wallet": winner_wallet,
+                    "aptos_wallet": aptos_wallet_address,
+                    "token_name": token_name
+                }
+            else:
+                print(f"[APTOS_NFT_ERROR] Failed to mint NFT: {mint_result.get('error')}")
+                return {
+                    "success": False,
+                    "message": "Failed to mint Aptos NFT",
+                    "error": mint_result.get("error"),
+                    "winner_wallet": winner_wallet,
+                    "aptos_wallet": aptos_wallet_address
+                }
+            
+        except Exception as e:
+            print(f"[APTOS_NFT_ERROR] Error in _mint_aptos_nft: {str(e)}")
+            return {
+                "success": False,
+                "message": "Error minting Aptos NFT",
+                "error": str(e),
+                "winner_wallet": winner_wallet
+            }
+
     async def force_end_game_for_test(self, room_id: str):
         """Force kết thúc game cho mục đích test NFT"""
         # print(f"[TEST] Force ending game for room {room_id}")
         await self._handle_game_end(room_id)
         return {"message": f"Game force ended for room {room_id}"}
+
+    async def test_aptos_nft_mint(self, room_id: str, winner_wallet: str):
+        """Test Aptos NFT minting cho mục đích test"""
+        print(f"[TEST] Testing Aptos NFT mint for room {room_id}, winner {winner_wallet}")
+        
+        # Lấy thông tin user để có aptos_wallet
+        user = await self.user_repo.get_by_wallet(winner_wallet)
+        if not user or not user.aptos_wallet:
+            return {
+                "success": False,
+                "message": "User does not have an Aptos wallet connected",
+                "error": "No aptos_wallet found for user",
+                "winner_wallet": winner_wallet
+            }
+        
+        print(f"[TEST] User {winner_wallet} has Aptos wallet: {user.aptos_wallet}")
+        result = await self._mint_aptos_nft(room_id, winner_wallet)
+        return result
 
     async def handle_lobby_socket(self, websocket: WebSocket):
         await self.manager.connect_lobby(websocket)

@@ -89,30 +89,6 @@ export const SOLANA_DEVNET = {
   iconUrl: "/solana-sol-logo.svg",
 } as const;
 
-// Aptos Testnet Configuration (dummy EVM config for UI dropdown)
-export const APTOS_DEVNET = {
-  id: 104,
-  name: "Aptos Devnet",
-  network: "aptos-devnet",
-  nativeCurrency: {
-    decimals: 8,
-    name: "APT",
-    symbol: "APT",
-  },
-  rpcUrls: {
-    default: { http: ["https://fullnode.testnet.aptoslabs.com/v1"] },
-    public: { http: ["https://fullnode.testnet.aptoslabs.com/v1"] },
-  },
-  blockExplorers: {
-    default: {
-      name: "Aptos Explorer",
-      url: "https://explorer.aptoslabs.com?network=testnet",
-    },
-  },
-  testnet: true,
-  iconUrl: "/aptos-apt-logo.svg",
-} as const;
-
 // Ronin Saigon Configuration (dummy EVM config for UI dropdown)
 export const RONIN_SAIGON = {
   id: 2021,
