@@ -29,16 +29,28 @@ class UserRepository:
         res = await self.supabase.table(self.table).insert(data).execute()
         return User(**res.data[0])
 
-    async def update_username(self, wallet_id: str, username: str):
+    async def update_user(self, wallet_id: str, username: str = None, aptos_wallet: str = None):
+        update_data = {}
+        if username is not None:
+            update_data["username"] = username
+        if aptos_wallet is not None:
+            update_data["aptos_wallet"] = aptos_wallet
+            
+        if not update_data:
+            return None
+            
         res = (
             await self.supabase.table(self.table)
-            .update({"username": username})
+            .update(update_data)
             .eq("wallet_id", wallet_id)
             .execute()
         )
         if res.data and len(res.data) > 0:
             return User(**res.data[0])
         return None
+
+    async def update_username(self, wallet_id: str, username: str):
+        return await self.update_user(wallet_id, username=username)
 
     async def update_user_stats(self, wallet_id: str, score: int, is_winner: bool):
         res = await self.supabase.table(self.table).select("*").eq("wallet_id", wallet_id).execute()

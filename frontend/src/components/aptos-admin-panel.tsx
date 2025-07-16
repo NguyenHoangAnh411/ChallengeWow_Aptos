@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { useAptos } from '../hooks/use-aptos'; 
+import { useBlockchain } from '../hooks/use-blockchain'; 
 // SỬA LỖI: Import tĩnh tất cả những gì cần thiết ở đây.
 import { aptosClient, aptosUtils, getBalanceWithSdk } from '../lib/aptos'; 
 import { 
@@ -26,7 +26,7 @@ const APT_IN_OCTA = 100000000;
 
 export const AptosAdminPanel: React.FC = () => {
   // Chỉ lấy những gì cần dùng từ hook
-  const { getExplorerUrl } = useAptos();
+  const { getExplorerUrl } = useBlockchain();
 
   const [recipientAddress, setRecipientAddress] = useState('');
   const [tokenAmount, setTokenAmount] = useState('1000');

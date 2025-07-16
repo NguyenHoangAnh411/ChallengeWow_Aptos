@@ -22,8 +22,11 @@ class UserController:
             raise HTTPException(status_code=404, detail="User not found")
         return user
     
+    async def update_user(self, wallet_id: str, username: str = None, aptos_wallet: str = None):
+        return await self.user_repo.update_user(wallet_id, username, aptos_wallet)
+
     async def update_username(self, wallet_id: str, username: str):
-        return await self.user_repo.update_username(wallet_id, username)
+        return await self.update_user(wallet_id, username=username)
 
     async def get_leaderboard(self, limit: int = 10, period=LEADERBOARD_PERIOD.ALL_TIME):
         data = await self.user_stats_repo.get_leaderboard(limit, period)

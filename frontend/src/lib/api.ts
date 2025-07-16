@@ -144,11 +144,15 @@ export async function fetchUserByWallet(wallet_id: string) {
 }
 
 // Cập nhật username cho user
-export async function updateUser(walletId: string, username: string) {
+export async function updateUser(walletId: string, username?: string, aptosWallet?: string) {
+  const body: any = { wallet_id: walletId };
+  if (username !== undefined) body.username = username;
+  if (aptosWallet !== undefined) body.aptos_wallet = aptosWallet;
+  
   return fetchData("/users/update", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wallet_id: walletId, username }),
+    body: JSON.stringify(body),
   });
 }
 
