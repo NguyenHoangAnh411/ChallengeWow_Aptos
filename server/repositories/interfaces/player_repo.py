@@ -20,7 +20,7 @@ class IPlayerRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete_by_player_and_room(self, player_id, room_id) -> None:
+    async def delete_player_by_room(self, player_id, room_id) -> None:
         pass
 
     @abstractmethod

@@ -143,13 +143,13 @@ class RoomController:
             "action": "leave",
             "roomId": room_id
         })
-
+        
         await self.websocket_manager.broadcast_to_room(room_id, {
             "type": "player_left",
             "action": "leave",
             "payload": {
-                "walletId": player_data.wallet_id,
-                "username": player_data.username,
+                "walletId": player_data["wallet_id"],
+                "username": player_data["username"],
             }
         })
 

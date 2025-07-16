@@ -44,17 +44,18 @@ class PlayerService:
         }
 
     async def leave_room(self, wallet_id: str, room_id: str) -> dict:
+        room: Optional[Room] = await self.room_repo.get(room_id)
+        if not room:
+            return {"success": True, "message": "Room not found."}
+
         players = await self.player_repo.get_by_room(room_id)
         current_player = next((p for p in players if p.wallet_id == wallet_id), None)
 
         if not current_player:
-            await self.room_repo.delete_room(room_id)
-            return {"success": True, "message": "Room deleted because no players left"}
-
-        room: Optional[Room] = await self.room_repo.get(room_id)
-
-        if room and room.status in [GAME_STATUS.WAITING, GAME_STATUS.COUNTING_DOWN]:
-            await self.player_repo.delete_by_player_and_room(wallet_id, room_id)
+            return {"success": True, "message": "Player is not in the room."}
+        
+        if room.status == GAME_STATUS.WAITING:
+            await self.player_repo.delete_player_by_room(wallet_id, room_id)
         else:
             await self.player_repo.update_player(
                 wallet_id,
@@ -62,39 +63,42 @@ class PlayerService:
                     "player_status": PLAYER_STATUS.QUIT,
                     "quit_at": datetime.now(timezone.utc),
                 },
-                room_id=room_id
+                room_id=room_id,
             )
 
-        updated_players = await self.player_repo.get_by_room(room_id)
+        updated_players = [p for p in players if p.wallet_id != wallet_id]
 
         if not updated_players:
             await self.room_repo.delete_room(room_id)
             return {
                 "success": True,
-                "message": "Room deleted because no players left",
-                "closed": True
+                "message": "Room deleted because no players left.",
+                "closed": True,
             }
 
         host_transfer_info = None
         if current_player.is_host:
-            new_host = next((p for p in updated_players if p.wallet_id != wallet_id), None)
-            if new_host:
-                await self.player_repo.update_player(
-                    new_host.wallet_id,
-                    {"is_host": True, "is_ready": True},
-                    room_id=room_id
-                )
-                host_transfer_info = {
-                    "new_host_wallet_id": new_host.wallet_id,
-                    "new_host_username": new_host.username
-                }
+            new_host = updated_players[0] 
+            await self.player_repo.update_player(
+                new_host.wallet_id,
+                {"is_host": True, "is_ready": True}, 
+                room_id=room_id,
+            )
+            host_transfer_info = {
+                "new_host_wallet_id": new_host.wallet_id,
+                "new_host_username": new_host.username,
+            }
 
         return {
             "success": True,
-            "message": "Leave successfully",
-            "data": current_player,
-            "host_transfer": host_transfer_info
+            "message": "Left room successfully.",
+            "data": {
+                "wallet_id": current_player.wallet_id,
+                "username": current_player.username,
+            },
+            "host_transfer": host_transfer_info,
         }
+
 
     async def update_is_winner(self, room_id: str, wallet_id: str, is_winner: bool) -> None:
         await self.player_repo.update_player(

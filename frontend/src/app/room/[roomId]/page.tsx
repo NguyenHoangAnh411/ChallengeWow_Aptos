@@ -108,11 +108,23 @@ export default function ChallengeRoom({
   const [isLoadingRoom, setIsLoadingRoom] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  if (!roomId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Initializing Room...</p>
+      </div>
+    );
+  }
+
   // WebSocket connection
   const { sendMessage, isWsConnected, closeConnection } = useWebSocket({
-    url: currentUser?.walletId
-      ? `/${roomId}?wallet_id=${currentUser?.walletId}`
-      : undefined,
+    url:
+      roomId && currentUser?.walletId
+        ? `/${roomId}?wallet_id=${currentUser?.walletId}`
+        : undefined,
+    onOpen: () => {
+      console.log(`[WS] Open inside game: ${roomId}`);
+    },
     onMessage: handleWebSocketMessage,
     onClose: () => {
       sendMessage({

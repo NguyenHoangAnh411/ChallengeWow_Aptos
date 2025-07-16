@@ -40,6 +40,7 @@ def create_room_router(room_controller: RoomController):
 
     @router.post("/join-room")
     async def join_room(request: JoinRoomRequest):
+        print(f"room: {request.room_id} + {request.room_code}")
         return await room_controller.join_room(request)
 
     @router.get("/current-room")

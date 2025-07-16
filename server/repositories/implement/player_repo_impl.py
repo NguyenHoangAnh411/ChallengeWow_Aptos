@@ -83,10 +83,14 @@ class PlayerRepository(IPlayerRepository):
                 .select("*")
                 .eq("wallet_id", wallet_id)
                 .eq("room_id", room_id)
-                .single()
+                .limit(1)
                 .execute()
             )
-            return Player(**res.data)
+            
+            if not res.data:
+                return None
+            
+            return Player(**res.data[0])
         except Exception as e:
             print(f"{room_id} - Fetch player {wallet_id} failed: {e}")
             return None
@@ -104,7 +108,7 @@ class PlayerRepository(IPlayerRepository):
             print(f"Fetch player by wallet {wallet_id} failed: {e}")
             return []
 
-    async def delete_by_player_and_room(self, wallet_id: str, room_id: str) -> None:
+    async def delete_player_by_room(self, wallet_id: str, room_id: str) -> None:
         try:
             await (
                 self.supabase.table(self.table)
