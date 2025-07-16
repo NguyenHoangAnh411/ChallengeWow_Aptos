@@ -12,6 +12,7 @@ from models.player import Player
 from models.room import Room
 from config.constants import NEXT_QUESTION_DELAY, SEND_ONLY_REAMIN_TIME_IN_SECONDS
 from models.question import Question
+from services.aptos_service import AptosService
 from services.answer_service import AnswerService
 from services.player_service import PlayerService
 from services.question_service import QuestionService
