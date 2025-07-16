@@ -17,7 +17,6 @@ class PlayerController:
     async def update_player_status(self, room_id: str, wallet_id: str, status: PLAYER_STATUS):
         try:
             status_enum = PLAYER_STATUS(status)
-            print("STATUS: ", status)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid status")
 

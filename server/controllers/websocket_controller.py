@@ -516,6 +516,9 @@ class WebSocketController:
             return
 
         current_question = room.current_question
+        if not current_question:
+            return
+        
         # Thêm kiểm tra: nếu người chơi đã trả lời rồi thì không xử lý nữa
         # Điều này cần một cơ chế kiểm tra trong answer_service
         existing_answer = await self.answer_service.get_answer_by_question_and_wallet(room_id, current_question.id, wallet_id)

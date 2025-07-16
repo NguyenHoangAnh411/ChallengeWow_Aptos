@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import APIRouter, Body, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Query
 from models.create_room_request import CreateRoomRequest
 from models.join_request import JoinRoomRequest
 from controllers.room_controller import RoomController
@@ -61,5 +61,10 @@ def create_room_router(room_controller: RoomController):
     @router.put("/rooms/{room_id}/settings")
     async def update_room_settings(room_id: str, request: GameSettings):
         return await room_controller.update_room_settings(room_id, request)
+
+    @router.get("/history/{wallet_id}", response_model=List[Room])
+    async def get_user_game_histories(wallet_id: str, status: Optional[str] = Query(None), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)) -> List[Room]:
+        rooms = await room_controller.get_user_game_histories(wallet_id, status, limit, offset)
+        return rooms
     
     return router

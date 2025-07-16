@@ -27,15 +27,14 @@ import {
   Flame,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import PlayerCard from "@/components/player-card";
 import { useGameState } from "@/lib/game-state";
-import type { User, LeaderboardEntry } from "@/types/schema";
+import type { LeaderboardEntry } from "@/types/schema";
 import { fetchLeaderboard } from "@/lib/api";
 
 export default function EnhancedLeaderboard() {
   const router = useRouter();
   const { currentUser } = useGameState();
-  const [selectedPeriod, setSelectedPeriod] = useState("week");
+  const [selectedPeriod, setSelectedPeriod] = useState("all");
   const [showMore, setShowMore] = useState(false);
   const [search, setSearch] = useState("");
   const [filtered, setFiltered] = useState<LeaderboardEntry[]>([]);

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from models.room import Room
 
@@ -26,4 +26,8 @@ class IRoomRepository(ABC):
 
     @abstractmethod
     async def delete_old_rooms(self, hours_old: int = 24) -> None:
+        pass
+
+    @abstractmethod
+    async def get_user_game_histories(self, wallet_id: str, status: Optional[str], limit: int, offset: int) -> List[Room]:
         pass

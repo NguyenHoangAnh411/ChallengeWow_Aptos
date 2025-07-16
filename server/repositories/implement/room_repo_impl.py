@@ -1,3 +1,4 @@
+from collections import defaultdict
 from supabase import AsyncClient
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
@@ -7,6 +8,7 @@ from models.room import Room
 from repositories.interfaces.player_repo import IPlayerRepository
 from repositories.interfaces.room_repo import IRoomRepository
 from enums.game_status import GAME_STATUS
+from models.player import Player
 class RoomRepository(IRoomRepository):
     def __init__(self, player_repo: IPlayerRepository, supabase: AsyncClient):
         self.table = "challenge_rooms"
@@ -98,3 +100,75 @@ class RoomRepository(IRoomRepository):
         except Exception as e:
             print(f"Error deleting old rooms from self.Supabase: {str(e)}")
             return False
+        
+    async def get_user_game_histories(
+        self,
+        wallet_id: str,
+        status: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[Room]:
+        room_players_res = await (
+            self.supabase
+            .from_("room_players")
+            .select("room_id")
+            .eq("wallet_id", wallet_id)
+            .execute()
+        )
+
+        all_user_room_ids = list(set([r["room_id"] for r in (room_players_res.data or [])]))
+        if not all_user_room_ids:
+            return []
+
+        query = (
+            self.supabase
+            .from_(self.table)
+            .select("*")
+            .in_("id", all_user_room_ids)
+            .order("ended_at", desc=True)
+            .limit(limit)
+            .offset(offset)
+        )
+
+        if status:
+            query = query.eq("status", status)
+
+        paginated_rooms_res = await query.execute()
+        paginated_rooms_data = paginated_rooms_res.data or []
+
+        if not paginated_rooms_data:
+            return []
+
+        paginated_room_ids = [room["id"] for room in paginated_rooms_data]
+
+        all_players_res = await (
+            self.supabase
+            .from_("room_players")
+            .select("*")
+            .in_("room_id", paginated_room_ids)
+            .execute()
+        )
+        players_data = all_players_res.data or []
+
+        players_by_room_id = defaultdict(list)
+        for p_data in players_data:
+            try:
+                # Chuyển đổi thành đối tượng Player ngay tại đây
+                players_by_room_id[p_data["room_id"]].append(Player(**p_data))
+            except Exception as e:
+                print(f"Error parsing player data: {p_data}. Error: {e}")
+                continue
+
+        # --- BƯỚC 5: Xây dựng danh sách Room cuối cùng (không có truy vấn DB nào nữa) ---
+        final_rooms = []
+        for room_data in paginated_rooms_data:
+            try:
+                room_id = room_data["id"]
+                # Gán danh sách người chơi đã được nhóm từ điển
+                room_data["players"] = players_by_room_id.get(room_id, [])
+                final_rooms.append(Room(**room_data))
+            except Exception as e:
+                print(f"Error parsing room data: {room_data}. Error: {e}")
+                continue
+
+        return final_rooms

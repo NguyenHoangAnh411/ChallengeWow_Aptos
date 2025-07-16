@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, Response
 from enums.game_status import GAME_STATUS
 from enums.player_status import PLAYER_STATUS
@@ -292,6 +292,9 @@ class RoomController:
             "payload": settings
         })
         return { "success": is_updated }
+    
+    async def get_user_game_histories(self, wallet_id: str, status: Optional[str], limit: int, offset: int) -> List[Room]:
+        return await self.room_service.get_user_game_histories(wallet_id, status, limit, offset)
 
     def make_timeout_callback(self, room_id: str):
         async def on_timeout():

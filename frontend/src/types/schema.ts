@@ -17,6 +17,7 @@ export interface Room {
   startedAt: number | null;
   endedAt?: number | null;
   countdownDuration: number;
+  currentQuestions: Question[];
 }
 
 export interface User {
@@ -50,6 +51,7 @@ export interface Question {
   id: string;
   content: string;
   options: string[];
+  correctAnswer: string;
 }
 
 export interface QuestionPayload {

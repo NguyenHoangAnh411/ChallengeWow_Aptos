@@ -28,7 +28,6 @@ export async function fetchRoomById(roomId: string) {
 
 // Lấy data bằng room code
 export async function fetchRoomByCode(roomCode: string) {
-  alert("room : " + roomCode);
   return fetchData(`/rooms/by-code/${roomCode}`);
 }
 
@@ -169,11 +168,29 @@ export async function awardNFT(to_address: string, token_id?: number) {
   });
 }
 
+export async function fetchHistories(
+  walletId: string,
+  limit: number,
+  offset: number,
+  status?: string
+) {
+  const params = new URLSearchParams({
+    limit: limit.toString(),
+    offset: offset.toString(),
+  });
+
+  if (status) {
+    params.append("status", status);
+  }
+
+  return fetchData(`/history/${walletId}?${params.toString()}`);
+}
+
 // Aptos Blockchain API calls
 export const aptosApi = {
   // Get network information
   getNetworkInfo: async () => {
-    const response = await fetch('/api/aptos/network');
+    const response = await fetch("/api/aptos/network");
     return response.json();
   },
 
@@ -197,10 +214,10 @@ export const aptosApi = {
 
   // Fund account
   fundAccount: async (address: string, amount?: number) => {
-    const url = amount 
+    const url = amount
       ? `/api/aptos/fund/${address}?amount=${amount}`
       : `/api/aptos/fund/${address}`;
-    const response = await fetch(url, { method: 'POST' });
+    const response = await fetch(url, { method: "POST" });
     return response.json();
   },
 

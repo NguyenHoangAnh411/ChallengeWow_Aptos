@@ -34,6 +34,7 @@ import { useAccount } from "wagmi";
 import ConnectWalletModal from "@/components/connect-wallet-modal";
 import { GameStatus } from "@/types/GameStatus";
 import { RECONNECT_WS } from "@/lib/constants";
+import { useJoinRoomMutation } from "@/hooks/use-join-mutation";
 
 export default function Lobby() {
   const router = useRouter();
@@ -169,32 +170,7 @@ export default function Lobby() {
     },
   });
 
-  const joinRoomMutation = useMutation({
-    mutationFn: async (variables: { roomId: string; roomCode?: string }) => {
-      return joinRoom({
-        ...variables,
-        username: currentUser?.username,
-        walletId: currentUser?.walletId,
-      });
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-      toast({
-        title: "Room Joined",
-        description: "Successfully joined the room!",
-      });
-
-      router.push(`/room/${variables.roomId}/waiting`);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to join room. It might be full or unavailable.",
-        variant: "destructive",
-      });
-      return;
-    },
-  });
+  const { mutate: join, isPending } = useJoinRoomMutation();
 
   const { isWsConnected, sendMessage } = useWebSocket({
     url: "/lobby",
@@ -273,7 +249,7 @@ export default function Lobby() {
         return;
       }
 
-      joinRoomMutation.mutate({ roomId: room.id, roomCode: room.roomCode });
+      join({ roomId: room.id });
     });
   };
 
@@ -334,14 +310,16 @@ export default function Lobby() {
               >
                 <Settings className="w-5 h-5" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/leaderboard")}
-                className="text-gray-400 hover:text-neon-blue transition-all duration-300 hover:scale-110 p-2 rounded-lg glass-morphism"
-              >
-                <ScrollText className="w-5 h-5" />
-              </Button>
+              {currentUser && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/history")}
+                  className="text-gray-400 hover:text-neon-blue transition-all duration-300 hover:scale-110 p-2 rounded-lg glass-morphism"
+                >
+                  <ScrollText className="w-5 h-5" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -433,6 +411,37 @@ export default function Lobby() {
                           <span className="text-neon-purple font-bold">
                             #{currentUser?.rank ?? "N/A"}
                           </span>
+                        </div>
+                      </div>
+
+                      {/* Update Username Form */}
+                      <div className="pt-4 mt-4 border-t border-neon-blue/20">
+                        <h4 className="font-semibold text-neon-blue text-sm mb-2">
+                          {currentUser.username ? "Update" : "Set"} your
+                          username
+                        </h4>
+                        <div className="flex space-x-2">
+                          <input
+                            className="px-3 py-2 rounded border border-gray-600 bg-gray-900 text-white w-full"
+                            placeholder={
+                              currentUser.username || "Enter username"
+                            }
+                            value={usernameInput}
+                            onChange={(e) => setUsernameInput(e.target.value)}
+                          />
+                          <Button
+                            onClick={async () =>
+                              await handleSaveUsername(usernameInput)
+                            }
+                            disabled={isSavingUsername || !usernameInput.trim()}
+                            className="bg-neon-blue hover:bg-blue-600 px-4 py-2 text-white"
+                          >
+                            {isSavingUsername ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                            ) : (
+                              "Save"
+                            )}
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -584,10 +593,10 @@ export default function Lobby() {
                   />
                   <Button
                     onClick={() => handleJoinRoom(inviteCode)}
-                    disabled={joinRoomMutation.isPending || !inviteCode.trim()}
+                    disabled={isPending || !inviteCode.trim()}
                     className="bg-neon-purple hover:bg-purple-600 text-white font-bold transition-all duration-300 neon-glow-purple px-4 py-2 relative z-50"
                   >
-                    {joinRoomMutation.isPending ? (
+                    {isPending ? (
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     ) : (
                       "Join"
