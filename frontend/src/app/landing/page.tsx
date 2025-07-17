@@ -32,6 +32,7 @@ import {
   LISK_TESTNET,
   VICTION_TESTNET,
 } from "@/lib/constants";
+import Header from "@/components/header";
 
 const NETWORKS = [
   OLYM3_TESTNET,
@@ -97,6 +98,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen cyber-grid overflow-hidden relative">
+      <Header showConnectButton showToFeed />
       {/* Animated Background Elements */}
       <div className="absolute inset-0 neural-network opacity-20 pointer-events-none"></div>
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
@@ -110,39 +112,6 @@ export default function Landing() {
           style={{ animationDelay: "4s" }}
         ></div>
       </div>
-
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 glass-morphism border-b border-neon-blue/20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <motion.div
-              className="flex items-center space-x-3"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-r from-neon-blue to-neon-purple rounded-lg flex items-center justify-center animate-glow-pulse">
-                  <Brain className="w-6 h-6 text-white" />
-                </div>
-                <div className="cursor-pointer absolute inset-0 bg-gradient-to-r from-neon-blue to-neon-purple rounded-lg blur opacity-50 animate-pulse"></div>
-              </div>
-              <h1 className="text-2xl font-orbitron font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">
-                Challenge Wave
-              </h1>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex items-center gap-4"
-            >
-              <ConnectButtonWithPetra />
-            </motion.div>
-          </div>
-        </div>
-      </nav>
 
       {/* Hero Section */}
       <div className="container mx-auto px-4 pt-32 pb-16 text-center">

@@ -13,6 +13,7 @@ from routers.zkproof_router import create_zkproof_router
 from routers.user_router import create_user_router
 from routers.nft_router import create_nft_router
 from routers.aptos_router import create_aptos_router
+from routers.user_post_router import create_user_post_router
 
 from controllers.websocket_controller import WebSocketController
 from controllers.room_controller import RoomController
@@ -23,6 +24,7 @@ from controllers.zkproof_controller import ZkProofController
 from controllers.user_controller import UserController
 from controllers.nft_controller import NFTController
 from controllers.aptos_controller import AptosController
+from controllers.user_post_controller import UserPostController
 
 from services.websocket_manager import WebSocketManager
 from repositories.implement.zkproof_repo_impl import ZkProofRepository
@@ -35,11 +37,13 @@ from repositories.implement.player_repo_impl import PlayerRepository
 from repositories.implement.question_repo_impl import QuestionRepository
 from repositories.implement.answer_repo_impl import AnswerRepository
 from repositories.implement.user_repo_impl import UserRepository, UserStatsRepository
+from repositories.implement.user_post_repo_impl import UserPostRepository
 
 from services.room_service import RoomService
 from services.player_service import PlayerService
 from services.question_service import QuestionService
 from services.answer_service import AnswerService
+from services.user_post_service import UserPostService
 
 # -------------------- App Init --------------------
 app = FastAPI(title="Challenge Wave API")
@@ -68,6 +72,7 @@ async def lifespan(app: FastAPI):
     user_repo = UserRepository(supabase=supabase)
     answer_repo = AnswerRepository(supabase=supabase)
     user_stats_repo = UserStatsRepository(supabase=supabase)
+    user_post_repo = UserPostRepository(supabase=supabase)
 
     # Services
     room_service = RoomService(room_repo, player_repo, answer_repo)
@@ -77,6 +82,7 @@ async def lifespan(app: FastAPI):
     zkproof_service = ZkProofService(ZkProofRepository())
     game_service = GameService(room_service, question_service, zkproof_service, answer_service)
     websocket_manager = WebSocketManager()
+    user_post_service = UserPostService(user_post_repo)
 
     # Controllers
     app.state.room_controller = RoomController(room_service, game_service, player_service, websocket_manager)
@@ -88,6 +94,7 @@ async def lifespan(app: FastAPI):
     app.state.websocket_controller = WebSocketController(websocket_manager, player_service, room_service, question_service, answer_service, user_repo, user_stats_repo)
     app.state.nft_controller = NFTController()
     app.state.aptos_controller = AptosController()
+    app.state.user_post_controller = UserPostController(user_post_service)
 
     # Router Setup
     api_router = APIRouter(prefix="/api")
@@ -99,6 +106,7 @@ async def lifespan(app: FastAPI):
     api_router.include_router(create_user_router(app.state.user_controller))
     api_router.include_router(create_nft_router(app.state.nft_controller))
     api_router.include_router(create_aptos_router(app.state.aptos_controller))
+    api_router.include_router(create_user_post_router(app.state.user_post_controller))
 
     ws_router = create_ws_router(app.state.websocket_controller)
     app.include_router(ws_router, prefix="/ws")

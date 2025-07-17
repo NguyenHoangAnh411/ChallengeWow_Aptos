@@ -198,72 +198,87 @@ export async function fetchHistories(
 export const aptosApi = {
   // Get network information
   getNetworkInfo: async () => {
-    const response = await fetch("/api/aptos/network");
+    const response = await fetch(`${BASE_URL}/aptos/network`);
     return response.json();
   },
 
   // Get account balance
   getAccountBalance: async (address: string) => {
-    const response = await fetch(`/api/aptos/balance/${address}`);
+    const response = await fetch(`${BASE_URL}/aptos/balance/${address}`);
     return response.json();
   },
 
   // Get token balance
   getTokenBalance: async (address: string) => {
-    const response = await fetch(`/api/aptos/token-balance/${address}`);
+    const response = await fetch(`${BASE_URL}/aptos/token-balance/${address}`);
     return response.json();
   },
 
   // Get player data
   getPlayerData: async (address: string) => {
-    const response = await fetch(`/api/aptos/player-data/${address}`);
+    const response = await fetch(`${BASE_URL}/aptos/player-data/${address}`);
     return response.json();
   },
 
   // Fund account
   fundAccount: async (address: string, amount?: number) => {
     const url = amount
-      ? `/api/aptos/fund/${address}?amount=${amount}`
-      : `/api/aptos/fund/${address}`;
+      ? `${BASE_URL}/aptos/fund/${address}?amount=${amount}`
+      : `${BASE_URL}/aptos/fund/${address}`;
     const response = await fetch(url, { method: "POST" });
     return response.json();
   },
 
   // Get account information
   getAccountInfo: async (address: string) => {
-    const response = await fetch(`/api/aptos/account/${address}`);
+    const response = await fetch(`${BASE_URL}/aptos/account/${address}`);
     return response.json();
   },
 
   // Get account resources
   getAccountResources: async (address: string) => {
-    const response = await fetch(`/api/aptos/account/${address}/resources`);
+    const response = await fetch(`${BASE_URL}/aptos/account/${address}/resources`);
     return response.json();
   },
 
   // Get account summary
   getAccountSummary: async (address: string) => {
-    const response = await fetch(`/api/aptos/account/${address}/summary`);
+    const response = await fetch(`${BASE_URL}/aptos/account/${address}/summary`);
     return response.json();
   },
 
   // Get transaction details
   getTransaction: async (hash: string) => {
-    const response = await fetch(`/api/aptos/transaction/${hash}`);
+    const response = await fetch(`${BASE_URL}/aptos/transaction/${hash}`);
     return response.json();
   },
 
   // Validate address
   validateAddress: async (address: string) => {
-    const response = await fetch(`/api/aptos/validate-address/${address}`);
+    const response = await fetch(`${BASE_URL}/aptos/validate-address/${address}`);
     return response.json();
   },
 };
 
-// Usage example (in your component or store):
-// const rooms = await fetchRooms();
-// const roomStatus = await fetchRoomStatus('room-id');
-// const players = await fetchPlayers('room-id');
-// const randomQuestion = await fetchRandomQuestion();
-// const answerSubmission = await submitAnswer({ questionId: 'question-id', answer: 'answer' });
-// const zkProofSubmission = await submitZkProof({ proof: 'zk-proof' });
+export const userPostApi = {
+  createPost: async (formData: FormData) => {
+    const res = await fetch(`${BASE_URL}/posts/create`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) throw new Error("Tạo bài đăng thất bại");
+    return res.json();
+  },
+
+  getPostsByWallet: async (wallet_id: string) => {
+    return fetchData(`/posts/user/${wallet_id}`);
+  },
+
+  getPostById: async (post_id: string) => {
+    return fetchData(`/posts/${post_id}`);
+  },
+
+  getAllPosts: async (limit = 20, offset = 0) => {
+    return fetchData(`/posts?limit=${limit}&offset=${offset}`);
+  },
+}

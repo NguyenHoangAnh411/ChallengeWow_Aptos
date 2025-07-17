@@ -146,3 +146,4 @@ zope.event==5.0
 zope.interface==7.2
 zope.schema==7.0.1
 aptos-sdk==0.1.0
+firebase-admin==6.9.0
