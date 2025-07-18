@@ -13,7 +13,7 @@ interface PetraWalletOptionProps {
 
 export function PetraWalletOption({ onConnect, className }: PetraWalletOptionProps) {
   const [showInstallModal, setShowInstallModal] = useState(false);
-  const { installed, isConnected, account, isLoading, connect, disconnect } = usePetraWallet();
+  const { installed, isConnected, isLoading, connect, disconnect } = usePetraWallet();
 
   const handleConnect = async () => {
     if (!installed) {
@@ -23,9 +23,9 @@ export function PetraWalletOption({ onConnect, className }: PetraWalletOptionPro
 
     try {
       await connect();
-      if (account && onConnect) {
-        onConnect(account);
-      }
+      // if (account && onConnect) {
+      //   onConnect(account);
+      // }
     } catch (error) {
       console.error('Failed to connect Petra:', error);
     }
@@ -37,7 +37,7 @@ export function PetraWalletOption({ onConnect, className }: PetraWalletOptionPro
 
   return (
     <>
-      <div className={`flex items-center justify-between p-4 rounded-lg border border-gray-700 hover:border-neon-purple transition-colors ${className}`}>
+      {/* <div className={`flex items-center justify-between p-4 rounded-lg border border-gray-700 hover:border-neon-purple transition-colors ${className}`}>
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-r from-neon-purple to-purple-500 rounded-lg flex items-center justify-center">
             <Wallet className="w-5 h-5 text-white" />
@@ -67,7 +67,7 @@ export function PetraWalletOption({ onConnect, className }: PetraWalletOptionPro
             </Button>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Installation Modal */}
       <Dialog open={showInstallModal} onOpenChange={setShowInstallModal}>
