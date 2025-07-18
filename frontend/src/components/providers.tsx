@@ -15,6 +15,7 @@ import { OLYM3_TESTNET, SOLANA_DEVNET, RONIN_SAIGON, LISK_TESTNET, VICTION_TESTN
 import UsernameModal from "@/components/username-modal";
 import { updateUser } from "@/lib/api";
 import { CustomRainbowKitProvider } from "@/components/custom-rainbowkit-provider";
+import { usePetraWallet } from "@/hooks/use-petra-wallet";
 
 const config = getDefaultConfig({
   appName: "Challenge Wave",
@@ -31,22 +32,22 @@ const config = getDefaultConfig({
 });
 
 function UserAutoLogin({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useAccount();
-  const { setCurrentUser } = useGameState();
+  const { isConnected } = usePetraWallet();
+  const { currentUser, setCurrentUser } = useGameState();
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [pendingAddress, setPendingAddress] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isConnected && address) {
-      loginUser(address).then((user) => {
+    if (isConnected && currentUser?.walletId) {
+      loginUser(currentUser.walletId).then((user) => {
         setCurrentUser(user);
         if (!user?.username) {
           setShowUsernameModal(true);
-          setPendingAddress(address);
+          setPendingAddress(currentUser.walletId);
         }
       });
     }
-  }, [isConnected, address, setCurrentUser]);
+  }, [isConnected, currentUser?.walletId, setCurrentUser]);
 
   const handleSaveUsername = async (username: string) => {
     if (!pendingAddress) return;

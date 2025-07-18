@@ -42,22 +42,19 @@ export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProp
     autoConnectPetra();
   }, [currentUser?.walletId, installed, isConnected, isLoading, autoConnect]);
 
-  // useEffect(() => {
-  //   const saveAptosWallet = async () => {
-  //     if (currentUser?.walletId && account && isConnected) {
-  //       try {
-  //         const result = await updateUser(account, undefined);
-
-  //         const updatedUser = await loginUser(currentUser.walletId);
-  //         setCurrentUser(updatedUser);
-  //       } catch (error) {
-  //         console.error('Failed to auto-save aptos_wallet:', error);
-  //       }
-  //     }
-  //   };
-
-  //   saveAptosWallet();
-  // }, [currentUser?.walletId, account, isConnected, setCurrentUser]);
+  // Thêm useEffect để lưu aptos_wallet khi currentUser.walletId và isConnected thay đổi
+  useEffect(() => {
+    if (currentUser?.walletId && isConnected) {
+      (async () => {
+        try {
+          const updatedUser = await loginUser(currentUser.walletId);
+          setCurrentUser(updatedUser);
+        } catch (error) {
+          console.error('Failed to save aptos_wallet to database:', error);
+        }
+      })();
+    }
+  }, [currentUser?.walletId, isConnected]);
 
   const handlePetraConnect = async () => {
     if (!installed) {
@@ -67,24 +64,7 @@ export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProp
 
     try {
       await connect();
-      
-      // Save aptos_wallet to database if user is logged in
-      // if (currentUser?.walletId) {
-      //   try {
-      //     const result = await updateUser(currentUser.walletId, undefined);
-      //     const updatedUser = await loginUser(currentUser.walletId);
-      //     setCurrentUser(updatedUser);
-      //   } catch (error) {
-      //     console.error('Failed to save aptos_wallet to database:', error);
-      //   }
-      // } else {
-      //   console.log('Cannot save aptos_wallet - missing walletId or account:', {
-      //     walletId: currentUser?.walletId,
-      //     // account,
-      //     currentUser
-      //   });
-      // }
-      
+      // Không cần lưu wallet ở đây nữa, đã chuyển vào useEffect
       setShowPetraModal(false);
     } catch (error) {
       console.error('Failed to connect Petra:', error);
