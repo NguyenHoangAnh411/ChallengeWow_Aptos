@@ -281,4 +281,14 @@ export const userPostApi = {
   getAllPosts: async (limit = 20, offset = 0) => {
     return fetchData(`/posts?limit=${limit}&offset=${offset}`);
   },
+
+  likePost: async (postId: string, walletId: string, isLiked: boolean) => {
+    const res = await fetch(`${BASE_URL}/posts/${postId}/like`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet_id: walletId, is_liked: isLiked }),
+    });
+    if (!res.ok) throw new Error("Like post failed");
+    return res.json();
+  },
 }

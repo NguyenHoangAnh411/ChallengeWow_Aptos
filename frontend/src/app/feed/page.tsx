@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { userPostApi } from "@/lib/api";
+import { userPostApi, loginUser } from "@/lib/api";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import Header from "@/components/header";
 import { Pencil, Hash, Image, Video, User, Gamepad2, Star } from "lucide-react";
+import { useGameState } from "@/lib/game-state";
 
 // Type cho bài đăng
 interface UserPost {
@@ -22,7 +23,15 @@ interface UserPost {
   username?: string;
   content?: string;
   image_url?: string;
+  video_url?: string;
   created_at?: string;
+  hashtag?: string;
+  like_count?: number;
+  comment_count?: number;
+  is_liked?: boolean;
+  is_commented?: boolean;
+  is_deleted?: boolean;
+  is_hidden?: boolean;
 }
 
 const HASHTAGS = [
@@ -59,9 +68,31 @@ export default function FeedPage() {
   const [posting, setPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [postType, setPostType] = useState<"text" | "image" | "video">("text");
-  // Giả lập wallet_id, thực tế lấy từ context hoặc state đăng nhập
-  const walletId = "0xUSERDEMO";
+  const [hashtag, setHashtag] = useState<string>("");
+  const currentUser = useGameState(state => state.currentUser);
 
+  // Like/unlike handler
+  const handleLike = async (postId: string, isLiked: boolean) => {
+    if (!currentUser?.walletId) return;
+    // Optimistic update
+    setPosts(prev => prev.map(post =>
+      post.id === postId
+        ? { ...post, is_liked: isLiked, like_count: (post.like_count || 0) + (isLiked ? 1 : -1) }
+        : post
+    ));
+    try {
+      await userPostApi.likePost(postId, currentUser.walletId, isLiked);
+    } catch (e) {
+      // Nếu lỗi, revert lại
+      setPosts(prev => prev.map(post =>
+        post.id === postId
+          ? { ...post, is_liked: !isLiked, like_count: (post.like_count || 0) + (isLiked ? -1 : 1) }
+          : post
+      ));
+    }
+  };
+
+  // Restore openPostModal
   const openPostModal = (type: "text" | "image" | "video") => {
     setPostType(type);
     setOpen(true);
@@ -72,7 +103,30 @@ export default function FeedPage() {
     userPostApi.getAllPosts(20, 0)
       .then(setPosts)
       .finally(() => setLoading(false));
-  }, []);
+
+    // Kết nối WebSocket feed
+    const wsBase = process.env.NEXT_PUBLIC_WS_BASE || "ws://localhost:9000";
+    const wsUrl = wsBase.replace(/\/$/, "") + "/ws/feed";
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "new_post" && data.payload) {
+          setPosts(prev => [data.payload, ...prev]);
+        }
+        if (data.type === "like_post" && data.payload) {
+          setPosts(prev => prev.map(post =>
+            post.id === data.payload.post_id
+              ? { ...post, like_count: data.payload.like_count, is_liked: data.payload.wallet_id === currentUser?.walletId ? data.payload.is_liked : post.is_liked }
+              : post
+          ));
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    return () => ws.close();
+  }, [currentUser?.walletId]);
 
   // Đăng bài mới
   const handlePost = async (e: React.FormEvent) => {
@@ -80,18 +134,29 @@ export default function FeedPage() {
     if (!content && !file) return;
     setPosting(true);
     const formData = new FormData();
-    formData.append("wallet_id", walletId);
+    formData.append("wallet_id", currentUser?.walletId || "");
+    formData.append("username", currentUser?.username || "");
     formData.append("content", content);
     if (file) formData.append("file", file);
+    if (hashtag) formData.append("hashtag", hashtag);
+    if (postType === "video" && file) formData.append("video_url", ""); // backend sẽ tự xử lý video_url nếu có file video
+    formData.append("like_count", "0");
+    formData.append("comment_count", "0");
+    formData.append("is_liked", "false");
+    formData.append("is_commented", "false");
+    formData.append("is_deleted", "false");
+    formData.append("is_hidden", "false");
     try {
+      // Đảm bảo user đã tồn tại
+      if (currentUser?.walletId) {
+        await loginUser(currentUser.walletId);
+      }
       await userPostApi.createPost(formData);
       setContent("");
       setFile(null);
+      setHashtag("");
       setOpen(false);
-      // Reload feed
-      setLoading(true);
-      const newPosts = await userPostApi.getAllPosts(20, 0);
-      setPosts(newPosts);
+      // Không cần reload lại feed, bài mới sẽ được thêm qua WebSocket
     } catch (err) {
       alert("Failed to post!");
     } finally {
@@ -111,7 +176,8 @@ export default function FeedPage() {
             </div>
             <div className="flex flex-col gap-4">
               {HASHTAGS.map(tag => (
-                <div key={tag} className="flex items-center gap-2 text-blue-600 font-semibold cursor-pointer hover:underline text-base">
+                <div key={tag} className={`flex items-center gap-2 text-blue-600 font-semibold cursor-pointer hover:underline text-base ${hashtag === tag ? 'underline' : ''}`}
+                  onClick={() => setHashtag(tag)}>
                   #{tag}
                 </div>
               ))}
@@ -150,6 +216,9 @@ export default function FeedPage() {
                           <div className="text-xs text-gray-500 mt-1">
                             {post.created_at && new Date(post.created_at).toLocaleString()}
                           </div>
+                          {post.hashtag && (
+                            <div className="text-xs text-blue-600 font-semibold mt-1">#{post.hashtag}</div>
+                          )}
                         </div>
                       </div>
                       {/* Content */}
@@ -166,6 +235,28 @@ export default function FeedPage() {
                           className="rounded-2xl border mt-2 max-h-96 object-contain mx-auto shadow-lg"
                         />
                       )}
+                      {/* Video */}
+                      {post.video_url && (
+                        <video controls className="rounded-2xl border mt-2 max-h-96 object-contain mx-auto shadow-lg">
+                          <source src={post.video_url} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+                      )}
+                      {/* Like/Comment/Status */}
+                      <div className="flex gap-6 items-center mt-2">
+                        <div className="text-sm text-gray-600">👍 {post.like_count ?? 0}</div>
+                        <div className="text-sm text-gray-600">💬 {post.comment_count ?? 0}</div>
+                        <button
+                          className={`text-xs font-semibold px-2 py-1 rounded ${post.is_liked ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}
+                          onClick={() => handleLike(post.id, !post.is_liked)}
+                          disabled={!currentUser?.walletId}
+                        >
+                          {post.is_liked ? 'Unlike' : 'Like'}
+                        </button>
+                        {post.is_commented && <div className="text-xs text-green-500 font-semibold">Commented</div>}
+                        {post.is_deleted && <div className="text-xs text-red-500 font-semibold">Deleted</div>}
+                        {post.is_hidden && <div className="text-xs text-gray-400 font-semibold">Hidden</div>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -231,8 +322,6 @@ export default function FeedPage() {
           </div>
         </aside>
       </div>
-      {/* Left Sidebar */}
-      
       {/* Post Button */}
       <Dialog open={open} onOpenChange={(v) => {
         setOpen(v);
@@ -240,6 +329,7 @@ export default function FeedPage() {
           setContent("");
           setFile(null);
           setPostType("text");
+          setHashtag("");
         }
       }}>
         <DialogContent>
@@ -254,6 +344,18 @@ export default function FeedPage() {
               onChange={e => setContent(e.target.value)}
               required={!file}
             />
+            <div className="flex flex-wrap gap-2">
+              {HASHTAGS.map(tag => (
+                <button
+                  type="button"
+                  key={tag}
+                  className={`px-3 py-1 rounded-full border text-xs font-semibold ${hashtag === tag ? 'bg-blue-500 text-white' : 'bg-white text-blue-600 border-blue-300'}`}
+                  onClick={() => setHashtag(tag)}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
             {(postType === "image" || postType === "video") && (
               <div className="flex items-center gap-3">
                 <button

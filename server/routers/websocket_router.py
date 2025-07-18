@@ -12,6 +12,10 @@ def create_ws_router(controller: WebSocketController):
     async def websocket_lobby(websocket: WebSocket):
         await controller.handle_lobby_socket(websocket)
 
+    @router.websocket("/feed")
+    async def websocket_feed(websocket: WebSocket):
+        await controller.handle_feed_socket(websocket)
+
     @router.websocket("/{room_id}")
     async def websocket_room(websocket: WebSocket, room_id: str, wallet_id: str = Query(None)):
         if not wallet_id:

@@ -29,6 +29,9 @@ class WebSocketManager:
         # Quản lý các kết nối ở sảnh chờ chung
         self.lobby_connections: Set[WebSocket] = set()
         
+        # Quản lý các kết nối feed (bài post)
+        self.feed_connections: Set[WebSocket] = set()
+        
         # Quản lý trạng thái và timeout của phòng (tùy chọn, có thể di chuyển ra service riêng)
         self.room_states: Dict[str, str] = {}
         self.room_timeouts: Dict[str, asyncio.Task] = {}
@@ -122,6 +125,23 @@ class WebSocketManager:
 
     async def broadcast_to_lobby(self, message: dict):
         connections_to_send = list(self.lobby_connections)
+        if connections_to_send:
+            tasks = [send_json_safe(ws, message) for ws in connections_to_send]
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    # ==================================
+    # Quản lý Feed (Bài Post)
+    # ==================================
+    
+    async def connect_feed(self, websocket: WebSocket):
+        await websocket.accept()
+        self.feed_connections.add(websocket)
+
+    def disconnect_feed(self, websocket: WebSocket):
+        self.feed_connections.discard(websocket)
+
+    async def broadcast_to_feed(self, message: dict):
+        connections_to_send = list(self.feed_connections)
         if connections_to_send:
             tasks = [send_json_safe(ws, message) for ws in connections_to_send]
             await asyncio.gather(*tasks, return_exceptions=True)

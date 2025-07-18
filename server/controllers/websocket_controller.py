@@ -1273,3 +1273,13 @@ class WebSocketController:
         additional_time = question_config.get("time_per_question", 0) if question.difficulty != QUESTION_DIFFICULTY.EASY else 0
         
         return base_time + additional_time
+
+    async def handle_feed_socket(self, websocket: WebSocket):
+        await self.manager.connect_feed(websocket)
+        try:
+            while True:
+                await websocket.receive_text()
+        except Exception:
+            pass
+        finally:
+            self.manager.disconnect_feed(websocket)

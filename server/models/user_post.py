@@ -11,3 +11,10 @@ class UserPost(CamelModel):
     username: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    hashtag: Optional[str] = None
+    like_count: Optional[int] = 0
+    comment_count: Optional[int] = 0
+    is_liked: Optional[bool] = False
+    is_commented: Optional[bool] = False
+    is_deleted: Optional[bool] = False
+    is_hidden: Optional[bool] = False
