@@ -16,16 +16,17 @@ interface ConnectButtonWithPetraProps {
 
 export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProps) {
   const [showPetraModal, setShowPetraModal] = useState(false);
-  const { installed, isConnected, account, isLoading, connect, disconnect, autoConnect } = usePetraWallet();
-  const { balance, loading: loadingBalance } = useAptosBalanceApi(isConnected ? account : undefined);
+  const { installed, isConnected, isLoading, connect, disconnect, autoConnect } = usePetraWallet();
   const { currentUser, setCurrentUser } = useGameState();
+  const { balance, loading: loadingBalance } = useAptosBalanceApi(isConnected ? currentUser?.walletId : undefined);
+
 
   // Debug logging
   useEffect(() => {
     console.log('ConnectButtonWithPetra - currentUser:', currentUser);
     console.log('ConnectButtonWithPetra - isConnected:', isConnected);
-    console.log('ConnectButtonWithPetra - account:', account);
-  }, [currentUser, isConnected, account]);
+    console.log('ConnectButtonWithPetra - walletId:', currentUser?.walletId);
+  }, [currentUser, isConnected]);
 
   useEffect(() => {
     const autoConnectPetra = async () => {
@@ -105,7 +106,7 @@ export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProp
         {/* <ConnectButton /> */}
 
         {/* Aptos Wallet Button */}
-        {isConnected && account ? (
+        {isConnected ? (
           <div className="flex items-center gap-2">
             {/* Aptos Balance Display */}
             <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-900/50 to-blue-900/50 border border-purple-500/30 rounded-xl backdrop-blur-sm hover:border-purple-400/50 transition-all duration-300 group">
