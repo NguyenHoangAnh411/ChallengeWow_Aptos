@@ -12,8 +12,6 @@ def create_user_post_router(controller: UserPostController):
         hashtag: str = Body(None),
         file: UploadFile = File(None),
         video_url: str = Body(None),
-        like_count: int = Body(0),
-        comment_count: int = Body(0),
         is_liked: bool = Body(False),
         is_commented: bool = Body(False),
         is_deleted: bool = Body(False),
@@ -28,7 +26,7 @@ def create_user_post_router(controller: UserPostController):
             image_url = blob.public_url
 
         return await controller.create_post(
-            wallet_id, content, image_url, video_url, hashtag, like_count, comment_count, is_liked, is_commented, is_deleted, is_hidden
+            wallet_id, content, image_url, video_url, hashtag, is_liked, is_commented, is_deleted, is_hidden
         )
 
     @router.get("/posts/user/{wallet_id}")
@@ -40,8 +38,8 @@ def create_user_post_router(controller: UserPostController):
         return await controller.get_post_by_id(post_id)
 
     @router.get("/posts")
-    async def get_all_posts(limit: int = 20, offset: int = 0):
-        return await controller.get_all_posts(limit, offset)
+    async def get_all_posts(limit: int = 20, offset: int = 0, wallet_id: str = None):
+        return await controller.get_all_posts(limit, offset, wallet_id)
 
     @router.post("/posts/{post_id}/like")
     async def like_post(post_id: str, wallet_id: str = Body(...), is_liked: bool = Body(...)):

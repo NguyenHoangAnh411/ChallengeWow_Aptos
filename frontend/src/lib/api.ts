@@ -278,8 +278,10 @@ export const userPostApi = {
     return fetchData(`/posts/${post_id}`);
   },
 
-  getAllPosts: async (limit = 20, offset = 0) => {
-    return fetchData(`/posts?limit=${limit}&offset=${offset}`);
+  getAllPosts: async (limit = 20, offset = 0, walletId?: string) => {
+    let url = `/posts?limit=${limit}&offset=${offset}`;
+    if (walletId) url += `&wallet_id=${walletId}`;
+    return fetchData(url);
   },
 
   likePost: async (postId: string, walletId: string, isLiked: boolean) => {

@@ -59,6 +59,28 @@ const GAME_WIDGETS = [
   { name: "My Stats", icon: <User className="w-5 h-5 text-green-500" /> },
 ];
 
+// Helper to normalize post fields (snake_case)
+function normalizePost(post: any): UserPost {
+  return {
+    ...post,
+    like_count: post.like_count ?? post.likeCount ?? 0,
+    is_liked: post.is_liked ?? post.isLiked ?? false,
+    comment_count: post.comment_count ?? post.commentCount ?? 0,
+    is_commented: post.is_commented ?? post.isCommented ?? false,
+    is_deleted: post.is_deleted ?? post.isDeleted ?? false,
+    is_hidden: post.is_hidden ?? post.isHidden ?? false,
+    image_url: post.image_url ?? post.imageUrl ?? null,
+    video_url: post.video_url ?? post.videoUrl ?? null,
+    wallet_id: post.wallet_id ?? post.walletId ?? "",
+    username: post.username ?? "",
+    created_at: post.created_at ?? post.createdAt ?? null,
+    updated_at: post.updated_at ?? post.updatedAt ?? null,
+    hashtag: post.hashtag ?? null,
+    id: post.id,
+    content: post.content,
+  };
+}
+
 export default function FeedPage() {
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,8 +122,8 @@ export default function FeedPage() {
 
   // Lấy danh sách bài đăng
   useEffect(() => {
-    userPostApi.getAllPosts(20, 0)
-      .then(setPosts)
+    userPostApi.getAllPosts(20, 0, currentUser?.walletId)
+      .then(data => setPosts(data.map(normalizePost)))
       .finally(() => setLoading(false));
 
     // Kết nối WebSocket feed
@@ -112,12 +134,16 @@ export default function FeedPage() {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "new_post" && data.payload) {
-          setPosts(prev => [data.payload, ...prev]);
+          setPosts(prev => [normalizePost(data.payload), ...prev]);
         }
         if (data.type === "like_post" && data.payload) {
           setPosts(prev => prev.map(post =>
             post.id === data.payload.post_id
-              ? { ...post, like_count: data.payload.like_count, is_liked: data.payload.wallet_id === currentUser?.walletId ? data.payload.is_liked : post.is_liked }
+              ? {
+                  ...post,
+                  like_count: data.payload.like_count ?? data.payload.likeCount ?? 0,
+                  is_liked: data.payload.wallet_id === currentUser?.walletId ? (data.payload.is_liked ?? data.payload.isLiked ?? false) : post.is_liked
+                }
               : post
           ));
         }
@@ -244,7 +270,7 @@ export default function FeedPage() {
                       )}
                       {/* Like/Comment/Status */}
                       <div className="flex gap-6 items-center mt-2">
-                        <div className="text-sm text-gray-600">👍 {post.like_count ?? 0}</div>
+                        <div className="text-sm text-gray-600">👍 {post.like_count}</div>
                         <div className="text-sm text-gray-600">💬 {post.comment_count ?? 0}</div>
                         <button
                           className={`text-xs font-semibold px-2 py-1 rounded ${post.is_liked ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}

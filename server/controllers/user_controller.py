@@ -12,8 +12,7 @@ class UserController:
         user = await self.user_repo.get_by_wallet(wallet_id)
         if user:
             return user
-
-        # Nếu chưa có username thì tạo user với username rỗng
+        
         return await self.user_repo.create(wallet_id, username or "")
 
     async def get_by_wallet(self, wallet_id: str):

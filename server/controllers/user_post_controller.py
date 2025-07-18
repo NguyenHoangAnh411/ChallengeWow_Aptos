@@ -4,8 +4,8 @@ class UserPostController:
     def __init__(self, user_post_service):
         self.user_post_service = user_post_service
 
-    async def create_post(self, wallet_id, content=None, image_url=None, video_url=None, hashtag=None, like_count=0, comment_count=0, is_liked=False, is_commented=False, is_deleted=False, is_hidden=False):
-        post = await self.user_post_service.create_post(wallet_id, content, image_url, video_url, hashtag, like_count, comment_count, is_liked, is_commented, is_deleted, is_hidden)
+    async def create_post(self, wallet_id, content=None, image_url=None, video_url=None, hashtag=None, is_liked=False, is_commented=False, is_deleted=False, is_hidden=False):
+        post = await self.user_post_service.create_post(wallet_id, content, image_url, video_url, hashtag, is_liked, is_commented, is_deleted, is_hidden)
         # Broadcast bài post mới qua websocket feed
         from main import app
         websocket_manager = getattr(app.state, 'websocket_controller', None)
@@ -28,8 +28,8 @@ class UserPostController:
             raise HTTPException(status_code=404, detail="Post not found")
         return post
 
-    async def get_all_posts(self, limit=20, offset=0):
-        return await self.user_post_service.get_all_posts(limit, offset)
+    async def get_all_posts(self, limit=20, offset=0, wallet_id=None):
+        return await self.user_post_service.get_all_posts(limit, offset, wallet_id)
 
     async def like_post(self, post_id, wallet_id, is_liked):
         post = await self.user_post_service.like_post(post_id, wallet_id, is_liked)
