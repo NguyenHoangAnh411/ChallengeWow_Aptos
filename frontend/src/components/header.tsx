@@ -47,10 +47,6 @@ export default function Header({ showToFeed, showToLanding, showConnectButton }:
             className="flex items-center gap-4"
           >
             {showConnectButton && <ConnectButtonWithPetra />}
-            {/* Profile giả lập */}
-            {/* <Avatar className="w-10 h-10">
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar> */}
           </motion.div>
         </div>
       </div>

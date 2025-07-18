@@ -27,12 +27,11 @@ export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProp
     console.log('ConnectButtonWithPetra - account:', account);
   }, [currentUser, isConnected, account]);
 
-  // Auto-connect to Petra if user has aptos_wallet in database
   useEffect(() => {
     const autoConnectPetra = async () => {
-      if (currentUser?.aptosWallet && installed && !isConnected && !isLoading) {
+      if (currentUser?.walletId && installed && !isConnected && !isLoading) {
         try {
-          await autoConnect(currentUser.aptosWallet);
+          await autoConnect(currentUser.walletId);
         } catch (error) {
           console.error('Failed to auto-connect Petra:', error);
         }
@@ -40,32 +39,24 @@ export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProp
     };
 
     autoConnectPetra();
-  }, [currentUser?.aptosWallet, installed, isConnected, isLoading, autoConnect]);
+  }, [currentUser?.walletId, installed, isConnected, isLoading, autoConnect]);
 
-  // Save aptos_wallet to database when account becomes available
-  useEffect(() => {
-    const saveAptosWallet = async () => {
-      if (currentUser?.walletId && account && isConnected && !currentUser?.aptosWallet) {
-        console.log('Auto-saving aptos_wallet to database:', {
-          walletId: currentUser.walletId,
-          aptosWallet: account
-        });
-        
-        try {
-          const result = await updateUser(currentUser.walletId, undefined, account);
-          console.log('Auto-save API response:', result);
-          
-          const updatedUser = await loginUser(currentUser.walletId);
-          setCurrentUser(updatedUser);
-          console.log('Updated user data after auto-save:', updatedUser);
-        } catch (error) {
-          console.error('Failed to auto-save aptos_wallet:', error);
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const saveAptosWallet = async () => {
+  //     if (currentUser?.walletId && account && isConnected) {
+  //       try {
+  //         const result = await updateUser(account, undefined);
 
-    saveAptosWallet();
-  }, [currentUser?.walletId, account, isConnected, currentUser?.aptosWallet, setCurrentUser]);
+  //         const updatedUser = await loginUser(currentUser.walletId);
+  //         setCurrentUser(updatedUser);
+  //       } catch (error) {
+  //         console.error('Failed to auto-save aptos_wallet:', error);
+  //       }
+  //     }
+  //   };
+
+  //   saveAptosWallet();
+  // }, [currentUser?.walletId, account, isConnected, setCurrentUser]);
 
   const handlePetraConnect = async () => {
     if (!installed) {
@@ -77,32 +68,21 @@ export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProp
       await connect();
       
       // Save aptos_wallet to database if user is logged in
-      if (currentUser?.walletId && account) {
-        console.log('Saving aptos_wallet to database:', {
-          walletId: currentUser.walletId,
-          aptosWallet: account,
-          currentAptosWallet: currentUser.aptosWallet
-        });
-        
-        try {
-          const result = await updateUser(currentUser.walletId, undefined, account);
-          console.log('API response:', result);
-          console.log('Successfully saved aptos_wallet to database');
-          
-          // Refresh user data without reloading page
-          const updatedUser = await loginUser(currentUser.walletId);
-          setCurrentUser(updatedUser);
-          console.log('Updated user data:', updatedUser);
-        } catch (error) {
-          console.error('Failed to save aptos_wallet to database:', error);
-        }
-      } else {
-        console.log('Cannot save aptos_wallet - missing walletId or account:', {
-          walletId: currentUser?.walletId,
-          account,
-          currentUser
-        });
-      }
+      // if (currentUser?.walletId) {
+      //   try {
+      //     const result = await updateUser(currentUser.walletId, undefined);
+      //     const updatedUser = await loginUser(currentUser.walletId);
+      //     setCurrentUser(updatedUser);
+      //   } catch (error) {
+      //     console.error('Failed to save aptos_wallet to database:', error);
+      //   }
+      // } else {
+      //   console.log('Cannot save aptos_wallet - missing walletId or account:', {
+      //     walletId: currentUser?.walletId,
+      //     // account,
+      //     currentUser
+      //   });
+      // }
       
       setShowPetraModal(false);
     } catch (error) {
@@ -122,7 +102,7 @@ export function ConnectButtonWithPetra({ className }: ConnectButtonWithPetraProp
     <>
       <div className="flex items-center gap-3">
         {/* Original RainbowKit ConnectButton */}
-        <ConnectButton />
+        {/* <ConnectButton /> */}
 
         {/* Aptos Wallet Button */}
         {isConnected && account ? (

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { isPetraInstalled, connectPetraWallet, disconnectPetraWallet, getPetraAccount } from '@/lib/petra-connector';
+import { useGameState } from '@/lib/game-state';
 
 export function usePetraWallet() {
   const [isConnected, setIsConnected] = useState(false);
-  const [account, setAccount] = useState<string | null>(null);
+  // const [account, setAccount] = useState<string | null>(null);
+  const { currentUser, setCurrentUser } = useGameState();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +19,16 @@ export function usePetraWallet() {
         try {
           const currentAccount = await getPetraAccount();
           if (currentAccount) {
-            setAccount(currentAccount.address);
+            // setAccount(currentAccount.address);
+            setCurrentUser({
+              ...currentUser,
+              walletId: currentAccount.address,
+              totalScore: currentUser?.totalScore ?? 0,
+              gamesWon: currentUser?.gamesWon ?? 0,
+              rank: currentUser?.rank ?? 0,
+              createdAt: currentUser?.createdAt ?? "",
+              username: currentUser?.username ?? null,
+            });
             setIsConnected(true);
           }
         } catch (error) {
@@ -38,14 +49,32 @@ export function usePetraWallet() {
 
     try {
       const result = await connectPetraWallet();
-      setAccount(result.address);
+      // setAccount(result.address);
+      setCurrentUser({
+        ...currentUser,
+        walletId: result.address,
+        totalScore: currentUser?.totalScore ?? 0,
+        gamesWon: currentUser?.gamesWon ?? 0,
+        rank: currentUser?.rank ?? 0,
+        createdAt: currentUser?.createdAt ?? "",
+        username: currentUser?.username ?? null,
+      });
       setIsConnected(true);
       
       // If we have an expected address, verify it matches
       if (expectedAddress && result.address !== expectedAddress) {
         console.warn('Connected Petra address does not match expected address');
         await disconnectPetraWallet();
-        setAccount(null);
+        // setAccount(null);
+        setCurrentUser({
+          ...currentUser,
+          walletId: "",
+          totalScore: 0,
+          gamesWon: 0,
+          rank: 0,
+          createdAt: "",
+          username: null,
+        });
         setIsConnected(false);
         setError('Connected wallet address does not match your profile');
       }
@@ -69,7 +98,16 @@ export function usePetraWallet() {
 
     try {
       const result = await connectPetraWallet();
-      setAccount(result.address);
+      // setAccount(result.address);
+      setCurrentUser({
+        ...currentUser,
+        walletId: result.address,
+        totalScore: currentUser?.totalScore ?? 0,
+        gamesWon: currentUser?.gamesWon ?? 0,
+        rank: currentUser?.rank ?? 0,
+        createdAt: currentUser?.createdAt ?? "",
+        username: currentUser?.username ?? null,
+      });
       setIsConnected(true);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect to Petra wallet';
@@ -84,7 +122,16 @@ export function usePetraWallet() {
     setIsLoading(true);
     try {
       await disconnectPetraWallet();
-      setAccount(null);
+      // setAccount(null);
+      setCurrentUser({
+        ...currentUser,
+        walletId: "",
+        totalScore: 0,
+        gamesWon: 0,
+        rank: 0,
+        createdAt: "",
+        username: null,
+      });
       setIsConnected(false);
       setError(null);
     } catch (err) {
@@ -97,7 +144,8 @@ export function usePetraWallet() {
   return {
     installed,
     isConnected,
-    account,
+    // account,
+    // currentUser,
     isLoading,
     error,
     connect,

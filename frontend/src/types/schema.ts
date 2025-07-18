@@ -23,7 +23,6 @@ export interface Room {
 export interface User {
   walletId: string;
   username?: string | null;
-  aptosWallet?: string | null;
   totalScore: number;
   gamesWon: number;
   rank: number;
